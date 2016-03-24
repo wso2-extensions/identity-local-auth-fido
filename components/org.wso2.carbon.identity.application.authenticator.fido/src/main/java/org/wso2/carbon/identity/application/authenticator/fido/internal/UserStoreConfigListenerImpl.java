@@ -19,10 +19,10 @@ package org.wso2.carbon.identity.application.authenticator.fido.internal;
 
 import org.wso2.carbon.identity.application.authenticator.fido.dao.DeviceStoreDAO;
 import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAuthenticatorServerException;
-import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
+import org.wso2.carbon.identity.core.AbstractUserStoreConfigListener;
 import org.wso2.carbon.user.api.UserStoreException;
 
-public class UserStoreConfigListenerImpl implements UserStoreConfigListener {
+public class UserStoreConfigListenerImpl extends AbstractUserStoreConfigListener {
 
     @Override
     public void onUserStoreNamePreUpdate(int tenantId, String currentUserStoreName,
@@ -36,11 +36,6 @@ public class UserStoreConfigListenerImpl implements UserStoreConfigListener {
     }
 
     @Override
-    public void onUserStoreNamePostUpdate(int i, String s, String s2) throws UserStoreException {
-
-    }
-
-    @Override
     public void onUserStorePreDelete(int tenantId, String userStoreName) throws UserStoreException {
 
         try {
@@ -48,10 +43,5 @@ public class UserStoreConfigListenerImpl implements UserStoreConfigListener {
         } catch (FIDOAuthenticatorServerException e) {
             throw new UserStoreException(e.getMessage(), e);
         }
-    }
-
-    @Override
-    public void onUserStorePostDelete(int i, String s) throws UserStoreException {
-
     }
 }
