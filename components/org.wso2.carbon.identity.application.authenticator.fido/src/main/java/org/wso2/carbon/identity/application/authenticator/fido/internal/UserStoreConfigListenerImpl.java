@@ -19,7 +19,7 @@ package org.wso2.carbon.identity.application.authenticator.fido.internal;
 
 import org.wso2.carbon.identity.application.authenticator.fido.dao.DeviceStoreDAO;
 import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAuthenticatorServerException;
-import org.wso2.carbon.identity.core.AbstractUserStoreConfigListener;
+import org.wso2.carbon.identity.user.store.configuration.listener.AbstractUserStoreConfigListener;
 import org.wso2.carbon.user.api.UserStoreException;
 
 public class UserStoreConfigListenerImpl extends AbstractUserStoreConfigListener {

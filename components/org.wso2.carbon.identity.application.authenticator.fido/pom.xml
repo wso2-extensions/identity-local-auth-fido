@@ -46,6 +46,10 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity</groupId>
+            <artifactId>org.wso2.carbon.identity.user.store.configuration</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -79,6 +83,8 @@
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.core.*;version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.user.store.configuration.*;
+                            version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
                             org.wso2.carbon.user.core.service; version="${carbon.kernel.package.import.version.range}",
                             org.wso2.carbon.user.core.tenant; version="${carbon.kernel.package.import.version.range}",
