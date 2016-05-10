@@ -114,6 +114,38 @@
         </pluginRepository>
     </pluginRepositories>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.yubico</groupId>
+                <artifactId>u2flib-server-core</artifactId>
+                <version>${com.yubico.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${google.guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${com.fasterxml.jackson.annotation.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${com.fasterxml.jackson.annotation.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <properties>
+        <com.yubico.version>0.14.0</com.yubico.version>
+        <google.guava.version>15.0</google.guava.version>
+        <com.fasterxml.jackson.annotation.version>2.5.0</com.fasterxml.jackson.annotation.version>
+        <bcprov.version>1.49.0.wso2v2</bcprov.version>
+    </properties>
+
     <modules>
         <module>components/org.wso2.carbon.identity.application.authenticator.fido</module>
         <module>components/org.wso2.carbon.identity.authenticator.fido.stub</module>
