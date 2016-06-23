@@ -96,7 +96,7 @@
                         <Export-Package>
                             !org.wso2.carbon.identity.application.authenticator.fido.u2f.internal,
                             org.wso2.carbon.identity.application.authenticator.fido.*;
-                            version="${carbon.identity.package.export.version}"
+                            version="${identity.application.auth.fido.package.export.version}"
                         </Export-Package>
                     </instructions>
                 </configuration>
