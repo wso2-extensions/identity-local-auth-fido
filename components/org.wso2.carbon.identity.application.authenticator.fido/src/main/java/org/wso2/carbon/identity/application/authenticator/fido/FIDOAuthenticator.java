@@ -65,11 +65,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                  HttpServletResponse response,
                                                  AuthenticationContext context)
             throws AuthenticationFailedException {
-
+        AuthenticatedUser user = null;
         String tokenResponse = request.getParameter("tokenResponse");
         if (tokenResponse != null && !tokenResponse.contains("errorCode")) {
             String appID = FIDOUtil.getOrigin(request);
-            AuthenticatedUser user = getUsername(context);
+            user = getUsername(context);
 
             U2FService u2FService = U2FService.getInstance();
             FIDOUser fidoUser = new FIDOUser(user.getUserName(), user.getTenantDomain(),
@@ -82,7 +82,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 log.debug("FIDO authentication filed : " + tokenResponse);
             }
 
-            throw new InvalidCredentialsException("FIDO device authentication failed ");
+            throw new InvalidCredentialsException("FIDO device authentication failed ", user);
         }
 
     }
@@ -117,6 +117,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throws AuthenticationFailedException {
         //FIDO BE service component
         U2FService u2FService = U2FService.getInstance();
+        AuthenticatedUser user = null;
         try {
             //authentication page's URL.
             String loginPage;
@@ -127,7 +128,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                         "fido-auth.jsp");
             }
             //username from basic authenticator.
-            AuthenticatedUser user = getUsername(context);
+            user = getUsername(context);
             //origin as appID eg.: http://example.com:8080
             String appID = FIDOUtil.getOrigin(request);
             //calls BE service method to generate challenge.
@@ -149,7 +150,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         } catch (IOException e) {
             throw new AuthenticationFailedException(
-                    "Could not initiate FIDO authentication request", e);
+                    "Could not initiate FIDO authentication request", user, e);
         }
     }
 
