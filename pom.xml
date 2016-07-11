@@ -261,7 +261,7 @@
         <identity.application.auth.fido.package.export.version>${project.version}</identity.application.auth.fido.package.export.version>
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
-        <carbon.kernel.version>4.4.5</carbon.kernel.version>
+        <carbon.kernel.version>4.4.7</carbon.kernel.version>
     </properties>
 
     <modules>
