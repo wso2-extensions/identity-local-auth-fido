@@ -245,7 +245,7 @@
 
     <properties>
         <carbon.kernel.package.import.version.range>[4.4.0, 5.0.0)</carbon.kernel.package.import.version.range>
-        <identity.framework.version>5.2.1-SNAPSHOT</identity.framework.version>
+        <identity.framework.version>5.2.0</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>15.0</google.guava.version>
@@ -261,7 +261,7 @@
         <identity.application.auth.fido.package.export.version>${project.version}</identity.application.auth.fido.package.export.version>
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
-        <carbon.kernel.version>4.4.5</carbon.kernel.version>
+        <carbon.kernel.version>4.4.7</carbon.kernel.version>
     </properties>
 
     <modules>
