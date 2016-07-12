@@ -87,7 +87,7 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
-                            org.wso2.carbon.identity.authenticator.fido.stub.*;version="${carbon.identity.package.export.version}",
+                            org.wso2.carbon.identity.authenticator.fido.stub.*;version="${identity.application.auth.fido.package.export.version}",
                         </Export-Package>
                         <Import-Package>
                             !org.wso2.carbon.identity.authenticator.fido.stub.*,
