@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <parent>
-        <groupId>org.wso2.carbon.identity</groupId>
+        <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
         <artifactId>identity-application-auth-fido</artifactId>
         <relativePath>../../pom.xml</relativePath>
         <version>5.1.3-SNAPSHOT</version>
