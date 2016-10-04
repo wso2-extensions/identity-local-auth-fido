@@ -196,12 +196,12 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.wso2.carbon.identity</groupId>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.carbon.identity</groupId>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.user.store.configuration</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
@@ -240,16 +240,22 @@
                 <artifactId>axis2-client</artifactId>
                 <version>${axis2.wso2.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${com.fasterxml.jackson.core.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <properties>
         <carbon.kernel.package.import.version.range>[4.4.0, 5.0.0)</carbon.kernel.package.import.version.range>
-        <identity.framework.version>5.2.1</identity.framework.version>
+        <identity.framework.version>5.5.0</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>15.0</google.guava.version>
         <com.fasterxml.jackson.annotation.version>2.5.0</com.fasterxml.jackson.annotation.version>
+        <com.fasterxml.jackson.core.version>2.5.0</com.fasterxml.jackson.core.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
         <imp.pkg.version.javax.servlet>[2.6.0, 3.0.0)</imp.pkg.version.javax.servlet>
