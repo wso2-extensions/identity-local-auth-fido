@@ -136,10 +136,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             AuthenticateRequestData data = u2FService.startAuthentication(fidoUser);
             //redirect to FIDO login page
             if (data != null) {
-                response.sendRedirect(response.encodeRedirectURL(loginPage + ("?"))
+                String redirectURL = loginPage + ("?")
                         + "&authenticators=" + getName() + ":" + "LOCAL" + "&type=fido&sessionDataKey=" +
                         request.getParameter("sessionDataKey") +
-                        "&data=" + data.toJson());
+                        "&data=" + URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
+                response.sendRedirect(redirectURL);
             } else {
                 String redirectURL = ConfigurationFacade.getInstance().getAuthenticationEndpointRetryURL();
                 redirectURL = response.encodeRedirectURL(redirectURL + ("?")) + "&failedUsername=" + URLEncoder.encode(user.getUserName(), IdentityCoreConstants.UTF_8) +
