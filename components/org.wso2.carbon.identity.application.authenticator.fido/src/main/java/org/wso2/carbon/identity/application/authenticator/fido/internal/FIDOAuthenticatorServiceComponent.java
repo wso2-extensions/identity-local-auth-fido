@@ -63,7 +63,6 @@ public class FIDOAuthenticatorServiceComponent {
             log.error("Error registering U2FService ", e);
         }
 
-        UserStoreConfigListenerImpl userStoreConfigListener = new UserStoreConfigListenerImpl();
         try {
             bundleContext.registerService(UserStoreConfigListener.class.getName(), new UserStoreConfigListenerImpl(), null);
         } catch (Exception e){

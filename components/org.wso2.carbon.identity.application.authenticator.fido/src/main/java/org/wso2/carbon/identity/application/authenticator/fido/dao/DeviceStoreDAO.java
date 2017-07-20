@@ -342,7 +342,6 @@ public class DeviceStoreDAO {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        ArrayList<String> devicesMetadata = new ArrayList<String>();
 
         try {
             preparedStatement = connection.prepareStatement(FIDOAuthenticatorConstants.SQLQueries.GET_DEVICE_REGISTRATION_QUERY);
