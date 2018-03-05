@@ -253,7 +253,7 @@
         <identity.framework.version>5.6.50</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
-        <google.guava.version>15.0</google.guava.version>
+        <google.guava.version>18.0</google.guava.version>
         <com.fasterxml.jackson.annotation.version>2.5.0</com.fasterxml.jackson.annotation.version>
         <com.fasterxml.jackson.core.version>2.5.0</com.fasterxml.jackson.core.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
