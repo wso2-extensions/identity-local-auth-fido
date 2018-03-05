@@ -76,7 +76,7 @@ public class DeviceStoreDAO {
         if (log.isDebugEnabled()) {
             log.debug("addDeviceRegistration inputs {username: " + username + ", tenantDomain: " + tenantDomain +
                       ", userStoreDomain : " + userStoreDomain +", registration :" +
-                      registration.toJsonWithAttestationCert() + "}");
+                      registration.toJson() + "}");
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement preparedStatement = null;
