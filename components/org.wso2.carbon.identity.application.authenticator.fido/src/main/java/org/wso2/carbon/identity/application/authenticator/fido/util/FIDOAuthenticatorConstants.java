@@ -35,6 +35,12 @@ public class FIDOAuthenticatorConstants {
     public static final String U2F_DEVICE_DATA = "DEVICE_DATA";
     public static final String U2F_DEVICE_METADATA = "TIME_REGISTERED";
 
+    public static final String FIDO_AUTH = "FidoAuth";
+    public static final String APP_ID = "AppID";
+
+    public static final String URI_LOGIN = "login.do";
+    public static final String URI_FIDO_LOGIN = "fido-auth.jsp";
+
     public static class SQLQueries {
         private SQLQueries() {
         }

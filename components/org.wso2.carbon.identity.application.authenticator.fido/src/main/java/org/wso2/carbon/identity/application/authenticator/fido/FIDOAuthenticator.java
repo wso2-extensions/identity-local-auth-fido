@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
@@ -119,18 +118,27 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         U2FService u2FService = U2FService.getInstance();
         AuthenticatedUser user = null;
         try {
-            //authentication page's URL.
+            // Authentication page's URL.
             String loginPage;
-            loginPage = context.getAuthenticatorProperties().get(IdentityApplicationConstants.Authenticator.FIDO
-                    .FIDO_AUTH);
-            if (StringUtils.isBlank(loginPage)){
-                loginPage = ConfigurationFacade.getInstance().getAuthenticationEndpointURL().replace("login.do",
-                        "fido-auth.jsp");
+            if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
+                    .get(FIDOAuthenticatorConstants.FIDO_AUTH))) {
+                loginPage = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO_AUTH);
+            } else {
+                loginPage = ConfigurationFacade.getInstance().getAuthenticationEndpointURL()
+                        .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO_LOGIN);
             }
-            //username from basic authenticator.
+
+            // Username from basic authenticator.
             user = getUsername(context);
-            //origin as appID eg.: http://example.com:8080
+
+            // Retrieving AppID
+            // Origin as appID eg: https://example.com:8080
             String appID = FIDOUtil.getOrigin(request);
+            if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
+                    .get(FIDOAuthenticatorConstants.APP_ID))) {
+                appID = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.APP_ID);
+            }
+
             //calls BE service method to generate challenge.
             FIDOUser fidoUser = new FIDOUser(user.getUserName(), user.getTenantDomain(), user.getUserStoreDomain(), appID);
             AuthenticateRequestData data = u2FService.startAuthentication(fidoUser);
