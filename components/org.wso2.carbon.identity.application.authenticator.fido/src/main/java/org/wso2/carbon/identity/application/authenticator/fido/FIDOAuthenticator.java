@@ -78,7 +78,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             context.setSubject(user);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("FIDO authentication filed : " + tokenResponse);
+                log.debug("FIDO authentication failed : " + tokenResponse);
             }
             user = getUsername(context);
             throw new InvalidCredentialsException("FIDO device authentication failed ", user);
