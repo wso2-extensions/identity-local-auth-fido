@@ -13,7 +13,7 @@ info:
   contact:
     name: "WSO2"
     url: "http://wso2.com/products/identity-server/"
-    email: "architecture@wso2.com"
+    email: "architecture@wso2.org"
   license:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
@@ -34,7 +34,7 @@ schemes:
 # The base path of the API.
 # Will be prefixed to all paths.
 
-basePath: /t/{tenant_context}/api/users/v1.0
+basePath: /t/{tenant_context}/api/users/v1
 
 # The following media types can be passed as input in message bodies of the API.
 # The actual media type must be specified in the Content-Type header field of the request.
@@ -54,7 +54,7 @@ produces:
   - application/json
 paths:
   # Endpoint used to start registration
-  "/me/webauthn/start-registration":
+  /me/webauthn/start-registration:
     post:
       description: |
         This API is used to start fido device registration process.
@@ -94,7 +94,7 @@ paths:
             $ref: '#/definitions/Error'
       tags:
         - FIDO
-  "/me/webauthn/finish-registration":
+  /me/webauthn/finish-registration:
     post:
       description: |
         This API is used to complete the device registration
@@ -171,7 +171,7 @@ paths:
       tags:
         - FIDO
   # Endpoint used to get device metadata by username
-  /metadata:
+  /me/webauthn:
     get:
       description: |
         This API is used to get fido metadata by username.

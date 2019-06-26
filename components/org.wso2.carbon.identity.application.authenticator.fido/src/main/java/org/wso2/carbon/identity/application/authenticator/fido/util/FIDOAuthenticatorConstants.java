@@ -36,10 +36,13 @@ public class FIDOAuthenticatorConstants {
     public static final String U2F_DEVICE_METADATA = "TIME_REGISTERED";
 
     public static final String FIDO_AUTH = "FidoAuth";
+    public static final String FIDO2_AUTH = "Fido2Auth";
     public static final String APP_ID = "AppID";
 
     public static final String URI_LOGIN = "login.do";
     public static final String URI_FIDO_LOGIN = "fido-auth.jsp";
+
+    public static final String WEBAUTHN_ENABLED = "Fido2Config.WebAuthn.Enable";
 
     public static class SQLQueries {
         private SQLQueries() {

@@ -19,11 +19,12 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception;
 
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 
-public class FIDORelyingPartyException extends WebApplicationException {
+public class InternalServerErrorException extends WebApplicationException {
 
-    public FIDORelyingPartyException(Throwable cause, int status){
+    public InternalServerErrorException(Throwable cause){
 
-        super(cause, status);
+        super(cause, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
     }
 }

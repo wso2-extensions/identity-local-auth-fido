@@ -25,7 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.RegistrationRequest;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.BadRequestException;
-import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.FIDORelyingPartyException;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.InternalServerErrorException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
@@ -37,27 +37,18 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.text.MessageFormat;
 
-/**
- * WSO2 Identity Server FIDO Rest API 
- *
- * <p>This document specifies a **FIDO RESTfulAPI** for WSO2 **Identity Server** .  It is written with
- * [swagger 2](http://swagger.io/).
- *
- */
+
 public class FidoApiServiceImpl implements FidoApi {
 
     private static Log log = LogFactory.getLog(FidoApiServiceImpl.class);
 
     private static final String EQUAL_OPERATOR = "=";
-    private static final int BAD_REQUEST_CODE = 400;
-    private static final int SERVER_ERROR_CODE = 500;
-
-    private WebAuthnService service = WebAuthnService.getInstance();
 
     @Override
     public String meWebauthnStartRegistrationPost(String username) throws FIDO2AuthenticatorException {
 
         try {
+            WebAuthnService service = new WebAuthnService();
             if(username.contains(EQUAL_OPERATOR)) {
                 username = URLDecoder.decode(username.split(EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
             }
@@ -68,7 +59,7 @@ public class FidoApiServiceImpl implements FidoApi {
                 throw new FIDO2AuthenticatorException(result.left().get());
             }
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
     }
 
@@ -79,11 +70,15 @@ public class FidoApiServiceImpl implements FidoApi {
             log.debug(MessageFormat.format("Received finish registration response: {0}", response));
         }
         try {
+            // WebAuthnService has been initiated multiple times instead of having a single instance to prevent
+            // SecurityPrivilegeException at the time of bean instantiation. This can be reverted once duplicated
+            // jackson dependencies are removed from CXF runtime
+            WebAuthnService service = new WebAuthnService();
             service.finishRegistration(response);
         } catch (FIDO2AuthenticatorServerException ex) {
-            throw new FIDORelyingPartyException(ex, SERVER_ERROR_CODE);
+            throw new InternalServerErrorException(ex);
         } catch (FIDO2AuthenticatorException | IOException e) {
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
         return response;
     }
@@ -92,28 +87,30 @@ public class FidoApiServiceImpl implements FidoApi {
     public void meWebauthnCredentialIdDelete(String credentialId) {
 
         try {
+            WebAuthnService service = new WebAuthnService();
             service.deregisterCredential(credentialId);
         } catch (IOException e) {
             if(log.isDebugEnabled()) {
                 log.debug("Failed to write response as JSON", e);
             }
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
     }
 
     @Override
-    public String metadataGet(String username) {
+    public String meWebauthnGet(String username) {
 
         if (log.isDebugEnabled()) {
             log.debug(MessageFormat.format("fetching device metadata for the username: {0}", username));
         }
         try {
+            WebAuthnService service = new WebAuthnService();
             if(username.contains(EQUAL_OPERATOR)) {
                 username = URLDecoder.decode(username.split(EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
             }
             return FIDOUtil.writeJson(service.getDeviceMetaData(username));
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
     }
 }

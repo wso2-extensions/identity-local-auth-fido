@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
         <artifactId>identity-application-auth-fido</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.1.15-SNAPSHOT</version>
+        <version>5.1.14</version>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.application.authenticator.fido2.server.feature</artifactId>
@@ -59,9 +59,9 @@
             <version>${fasterxml.jackson.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
-            <artifactId>org.wso2.carbon.identity.webauthn.provider</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.wso2.orbit.yubico.webauthn</groupId>
+            <artifactId>yubico-webauthn</artifactId>
+            <version>${orbit.yubico.webauthn.version}</version>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
@@ -97,7 +97,7 @@
                                     <type>war</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${basedir}/src/main/resources/</outputDirectory>
-                                    <destFileName>api#users#v1.0.war</destFileName>
+                                    <destFileName>api#users#v1.war</destFileName>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
@@ -125,7 +125,7 @@
                             </adviceFile>
                             <bundles>
                                 <bundleDef>org.wso2.carbon.identity.local.auth.fido:org.wso2.carbon.identity.application.authenticator.fido2</bundleDef>
-                                <bundleDef>org.wso2.carbon.identity.local.auth.fido:org.wso2.carbon.identity.webauthn.provider</bundleDef>
+                                <bundleDef>org.wso2.orbit.yubico.webauthn:yubico-webauthn</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.dataformat:jackson-dataformat-cbor</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.datatype:jackson-datatype-jdk8</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.core:jackson-databind</bundleDef>
@@ -151,7 +151,7 @@
                                 <resource>
                                     <directory>resources</directory>
                                     <includes>
-                                        <include>api#users#v1.0.war</include>
+                                        <include>api#users#v1.war</include>
                                         <include>p2.inf</include>
                                     </includes>
                                 </resource>

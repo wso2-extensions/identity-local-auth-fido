@@ -31,6 +31,9 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.Optional;
 
+/**
+ * Wrapper for FIDO2 credentials.
+ */
 @Value
 @Builder
 @Wither

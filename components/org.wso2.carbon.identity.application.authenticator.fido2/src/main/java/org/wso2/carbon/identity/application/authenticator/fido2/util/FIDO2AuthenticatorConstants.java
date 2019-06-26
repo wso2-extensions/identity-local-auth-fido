@@ -26,19 +26,6 @@ public class FIDO2AuthenticatorConstants {
     private FIDO2AuthenticatorConstants() {
     }
 
-    public static final String AUTHENTICATOR_NAME = "FIDO2Authenticator";
-    public static final String AUTHENTICATOR_FRIENDLY_NAME = "fido2";
-    public static final String AUTHENTICATION_STATUS = "Authentication Failed !";
-    public static final String AUTHENTICATION_ERROR_MESSAGE = "No registered device found, Please register your device before sign in.";
-
-    public static final String FIDO_AUTH = "FidoAuth";
-    public static final String APP_ID = "AppID";
-
-
-    public static final String URI_LOGIN = "login.do";
-    public static final String URI_FIDO_LOGIN = "fido2-auth.jsp";
-    public static final String FIDO_CONFIG_XML = "fido-config.xml";
-
     public static final String USER_HANDLE = "USER_HANDLE";
     public static final String USER_STORE_DOMAIN = "DOMAIN_NAME";
     public static final String TENANT_ID = "TENANT_ID";
@@ -49,9 +36,14 @@ public class FIDO2AuthenticatorConstants {
 
     public static final String TIME_REGISTERED = "TIME_REGISTERED";
     public static final String USER_IDENTITY = "USER_IDENTITY";
-    public static final String TRUSTED_ORIGINS = "FIDOTrustedOrigins.Origin";
+    public static final String TRUSTED_ORIGINS = "FIDO.FIDO2TrustedOrigins.Origin";
 
     public static final String APPLICATION_NAME = "WSO2 Identity Server";
+    public static final String FIDO2_DEVICE_STORE = "FIDO2_DEVICE_STORE";
+
+    public static final String INVALID_ORIGIN_MESSAGE = "FIDO device registration initialisation " +
+            "failed due to invalid origin.";
+    public static final String DECODING_FAILED_MESSAGE = "Registration failed! Failed to decode response object.";
 
     public static class SQLQueries {
 

@@ -19,8 +19,10 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.util;
 
 import java.util.Optional;
-import java.util.function.Function;
 
+/**
+ * Tree like structure to store relevant data or an error message.
+ */
 public final class Either<L, R> {
 
     private final boolean isRight;
@@ -60,18 +62,6 @@ public final class Either<L, R> {
             return Optional.of(rightValue);
         } else {
             throw new IllegalStateException("Cannot call right() on a left value.");
-        }
-    }
-
-    public final <RO> Either<L, RO> map(Function<R, RO> func) {
-       return flatMap(r -> Either.right(func.apply(r)));
-    }
-
-    public final <RO> Either<L, RO> flatMap(Function<R, Either<L, RO>> func) {
-        if (isRight()) {
-            return func.apply(rightValue);
-        } else {
-            return Either.left(leftValue);
         }
     }
 

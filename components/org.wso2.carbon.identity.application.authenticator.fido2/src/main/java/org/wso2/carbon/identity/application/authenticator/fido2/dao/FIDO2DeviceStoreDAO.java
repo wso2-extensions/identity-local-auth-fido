@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -50,23 +51,19 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
-@SuppressWarnings("ALL")
+/**
+ * FIDO2 DAO.
+ */
 public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
     private static Log log = LogFactory.getLog(FIDO2DeviceStoreDAO.class);
 
+    private static boolean isFIDO2DTOPersistenceStatusChecked = false;
+    private  static boolean isFIDO2DTOPersistenceSupported = false;
     private final ObjectMapper jsonMapper = WebAuthnCodecs.json();
 
-    private FIDO2DeviceStoreDAO(){
-
-    }
-
     public static FIDO2DeviceStoreDAO getInstance() {
-        return LazyHolder.INSTANCE;
-    }
-
-    private static class LazyHolder {
-        private static final FIDO2DeviceStoreDAO INSTANCE = new FIDO2DeviceStoreDAO();
+        return new FIDO2DeviceStoreDAO();
     }
 
     @Override
@@ -127,7 +124,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(3, user.getUserName());
             resultSet = preparedStatement.executeQuery();
 
-            if(resultSet.next()) {
+            if (resultSet.next()) {
                 userHandle = Optional.of(ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants
                         .USER_HANDLE)));
             }
@@ -156,7 +153,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(1, new ByteArray(userHandle.getBytes()).getBase64());
             resultSet = preparedStatement.executeQuery();
 
-            if(resultSet.next()) {
+            if (resultSet.next()) {
                 String tenantDomain = IdentityTenantUtil.getTenantDomain(resultSet.getInt(FIDO2AuthenticatorConstants
                         .TENANT_ID));
                 String userStoreDomain = resultSet.getString(FIDO2AuthenticatorConstants.USER_STORE_DOMAIN);
@@ -196,7 +193,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(2, new ByteArray(userHandle.getBytes()).getBase64());
             resultSet = preparedStatement.executeQuery();
 
-            if(resultSet.next()) {
+            if (resultSet.next()) {
                 String publicKeyCose = resultSet.getString(FIDO2AuthenticatorConstants.PUBLIC_KEY_COSE);
                 long signatureCount = resultSet.getLong(FIDO2AuthenticatorConstants.SIGNATURE_COUNT);
                 registeredCredential = Optional.of(
@@ -232,7 +229,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(1, new ByteArray(credentialId.getBytes()).getBase64());
             resultSet = preparedStatement.executeQuery();
 
-            if(resultSet.next()) {
+            if (resultSet.next()) {
                 String userHandle = resultSet.getString(FIDO2AuthenticatorConstants.USER_HANDLE);
                 String publicKeyCose = resultSet.getString(FIDO2AuthenticatorConstants.PUBLIC_KEY_COSE);
                 long signatureCount = resultSet.getLong(FIDO2AuthenticatorConstants.SIGNATURE_COUNT);
@@ -242,7 +239,6 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                         .publicKeyCose(ByteArray.fromBase64(publicKeyCose))
                         .signatureCount(signatureCount)
                         .build());
-
             }
         } catch (SQLException e) {
             log.error("Error when executing FIDO registration SQL : " + FIDO2AuthenticatorConstants.SQLQueries
@@ -254,7 +250,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         return registeredCredentials;
     }
 
-    public boolean addRegistrationByUsername(String username, CredentialRegistration reg) throws IOException {
+    public void addRegistrationByUsername(String username, CredentialRegistration reg) throws IOException {
 
         if (log.isDebugEnabled()) {
             log.debug("addRegistrationByUsername inputs {username: " + username +  "}");
@@ -276,19 +272,14 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setLong(8, reg.getCredential().getSignatureCount());
             preparedStatement.setString(9, jsonMapper.writeValueAsString(reg.getUserIdentity()));
 
-            return preparedStatement.execute();
+            preparedStatement.execute();
         } catch (SQLException e) {
             log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
                     .SQLQueries.ADD_DEVICE_REGISTRATION_QUERY, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, preparedStatement);
         }
-
-        return false;
     }
-
-    ////// Yubico Issue ///// getUsername by CredentialId
-
 
     public Collection<CredentialRegistration> getRegistrationsByUsername(String username) {
 
@@ -335,7 +326,6 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
                 credentialRegistrations.add(registration);
             }
-
         } catch (SQLException | IOException e) {
             log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
                     .SQLQueries.GET_DEVICE_REGISTRATION_BY_USERNAME, e);
@@ -368,7 +358,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(4, credentialId.getBase64());
             resultSet = preparedStatement.executeQuery();
 
-            if(resultSet.next()) {
+            if (resultSet.next()) {
                 ByteArray userHandle = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.USER_HANDLE));
                 UserIdentity userIdentity = jsonMapper.readValue(resultSet.getString(FIDO2AuthenticatorConstants.USER_IDENTITY), UserIdentity.class);
                 ByteArray publicKeyCose = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.PUBLIC_KEY_COSE));
@@ -390,7 +380,6 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                         .registrationTime(timestamp.toInstant())
                         .build();
                 credentialRegistration = Optional.of(registration);
-
             }
 
         } catch (SQLException | IOException e) {
@@ -403,7 +392,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         return credentialRegistration;
     }
 
-    public boolean removeRegistrationByUsername(String username, CredentialRegistration registration) {
+    public void removeRegistrationByUsername(String username, CredentialRegistration registration) {
 
         User user = User.getUserFromUserName(username);
 
@@ -422,7 +411,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(3, user.getUserName());
             preparedStatement.setString(4, registration.getCredential().getCredentialId().getBase64());
 
-            return preparedStatement.execute();
+            preparedStatement.execute();
 
         } catch (SQLException e) {
             log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
@@ -430,8 +419,6 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
-
-        return false;
     }
 
     public void updateSignatureCount(AssertionResult result) {
@@ -491,5 +478,26 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, preparedStatement);
         }
+    }
+
+    public static boolean isFido2DTOPersistenceSupported() {
+
+        if (!isFIDO2DTOPersistenceStatusChecked) {
+            ResultSet rs = null;
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+
+                DatabaseMetaData metaData = connection.getMetaData();
+                rs = metaData.getTables(null, null, FIDO2AuthenticatorConstants.FIDO2_DEVICE_STORE, null);
+                if (rs.next()) {
+                    isFIDO2DTOPersistenceSupported = true;
+                }
+            } catch (SQLException e) {
+                log.error("Error in fetching metadata from FIDO2_DEVICE_STORE database", e);
+            } finally {
+                IdentityDatabaseUtil.closeResultSet(rs);
+            }
+            isFIDO2DTOPersistenceStatusChecked = true;
+        }
+        return isFIDO2DTOPersistenceSupported;
     }
 }

@@ -24,6 +24,9 @@ import lombok.Value;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Wrapper for successful authentication result.
+ */
 @Value
 public class SuccessfulAuthenticationResult {
 

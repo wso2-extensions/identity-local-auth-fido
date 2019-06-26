@@ -22,19 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
-import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
-import org.wso2.carbon.identity.application.authenticator.fido2.core.FIDO2Authenticator;
-import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
-import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.utils.CarbonUtils;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @scr.component name="identity.application.authenticator.fido2.component" immediate="true"
@@ -50,26 +39,6 @@ public class FIDO2AuthenticatorServiceComponent {
     protected void activate(ComponentContext context) {
 
         BundleContext bundleContext = context.getBundleContext();
-
-        try {
-            FIDO2Authenticator fido2Authenticator = FIDO2Authenticator.getInstance();
-            bundleContext.registerService(ApplicationAuthenticator.class.getName(), fido2Authenticator, null);
-            if (log.isDebugEnabled()) {
-                log.debug("FIDO2Authenticator service is registered");
-            }
-        } catch (Exception e) {
-            log.error("Error registering FIDO2Authenticator service", e);
-        }
-
-        try {
-            WebAuthnService webAuthnService = WebAuthnService.getInstance();
-            bundleContext.registerService(WebAuthnService.class, webAuthnService, null);
-            if (log.isDebugEnabled()) {
-                log.debug("WebAuthn service is registered");
-            }
-        } catch (Exception e) {
-            log.error("Error registering WebAuthn service", e);
-        }
 
         try {
             bundleContext.registerService(UserStoreConfigListener.class.getName(), new UserStoreConfigListenerImpl(), null);
@@ -99,9 +68,5 @@ public class FIDO2AuthenticatorServiceComponent {
             log.debug("UnSetting the Realm Service");
         }
         FIDO2AuthenticatorServiceComponent.realmService = null;
-    }
-
-    public static RealmService getRealmService() {
-        return realmService;
     }
 }

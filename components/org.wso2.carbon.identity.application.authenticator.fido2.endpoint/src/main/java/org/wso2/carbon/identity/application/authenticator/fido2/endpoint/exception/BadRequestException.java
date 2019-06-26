@@ -19,11 +19,12 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception;
 
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 
 public class BadRequestException extends WebApplicationException {
 
-    public BadRequestException(Throwable cause, int status){
+    public BadRequestException(Throwable cause){
 
-        super(cause, status);
+        super(cause, Response.Status.BAD_REQUEST.getStatusCode());
     }
 }

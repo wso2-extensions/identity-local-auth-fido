@@ -22,10 +22,6 @@ public class FIDO2AuthenticatorServerException extends FIDO2AuthenticatorExcepti
 
     private static final long serialVersionUID = -6711660244302661603L;
 
-    public FIDO2AuthenticatorServerException(String message){
-        super(message);
-    }
-
     public FIDO2AuthenticatorServerException(String message, Throwable cause){
         super(message, cause);
     }

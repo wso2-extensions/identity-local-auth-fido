@@ -22,6 +22,9 @@ import org.wso2.carbon.identity.application.common.cache.CacheEntry;
 
 import java.net.URL;
 
+/**
+ * FIDO2 cache entry.
+ */
 public class FIDO2CacheEntry extends CacheEntry {
 
     private String publicKeyCredentialCreationOptions;

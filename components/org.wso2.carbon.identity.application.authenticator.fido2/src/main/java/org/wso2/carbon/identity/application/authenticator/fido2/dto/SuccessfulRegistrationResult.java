@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.application.authenticator.fido2.dto;
 
 import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
 
+/**
+ * Wrapper for successful registration result.
+ */
 public class SuccessfulRegistrationResult {
 
     PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions;

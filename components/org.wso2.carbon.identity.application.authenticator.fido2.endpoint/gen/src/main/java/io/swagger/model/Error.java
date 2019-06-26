@@ -1,42 +1,35 @@
 package io.swagger.model;
 
-import javax.validation.constraints.*;
-import javax.validation.Valid;
-
-import io.swagger.annotations.ApiModelProperty;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlType;
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlEnumValue;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModelProperty;
 
+/**
+ * Wrapper for error response.
+ */
 public class Error  {
   
-  @ApiModelProperty(value = "")
-  private String code = null;
+  @ApiModelProperty()
+  private int code;
 
-  @ApiModelProperty(value = "")
+  @ApiModelProperty()
   private String message = null;
 
-  @ApiModelProperty(value = "")
+  @ApiModelProperty()
   private String description = null;
  /**
    * Get code
    * @return code
   **/
   @JsonProperty("code")
-  public String getCode() {
+  public int getCode() {
     return code;
   }
 
-  public void setCode(String code) {
+  public void setCode(int code) {
     this.code = code;
   }
 
-  public Error code(String code) {
+  public Error code(int code) {
     this.code = code;
     return this;
   }

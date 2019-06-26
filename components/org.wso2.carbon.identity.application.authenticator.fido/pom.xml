@@ -5,7 +5,7 @@
         <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
         <artifactId>identity-application-auth-fido</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.1.15-SNAPSHOT</version>
+        <version>5.1.14</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -44,6 +44,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
+            <artifactId>org.wso2.carbon.identity.application.authenticator.fido2</artifactId>
+            <version>5.1.15-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
@@ -84,6 +90,8 @@
                             org.wso2.carbon.user.core.service; version="${carbon.kernel.package.import.version.range}",
                             org.wso2.carbon.user.core.tenant; version="${carbon.kernel.package.import.version.range}",
                             org.xml.sax,
+                            org.wso2.carbon.identity.application.authenticator.fido2.*;
+                            version="${identity.application.auth.fido.package.export.version}"
                         </Import-Package>
                         <Embed-Dependency>
                             jackson-core|guava|u2flib-server-core|jackson-databind|jackson-annotations

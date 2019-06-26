@@ -41,6 +41,7 @@ public class FIDOAuthenticatorServiceComponent {
     private static RealmService realmService;
 
     protected void activate(ComponentContext context) {
+
         BundleContext bundleContext = context.getBundleContext();
         FIDOAuthenticator fidoAuthenticator = FIDOAuthenticator.getInstance();
 
