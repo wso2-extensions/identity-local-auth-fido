@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019 WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -15,10 +15,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.application.authenticator.fido2.internal;
 
-import org.wso2.carbon.identity.application.authenticator.fido.dao.DeviceStoreDAO;
-import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAuthenticatorServerException;
+import org.wso2.carbon.identity.application.authenticator.fido2.dao.FIDO2DeviceStoreDAO;
+import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.user.store.configuration.listener.AbstractUserStoreConfigListener;
 import org.wso2.carbon.user.api.UserStoreException;
 
@@ -28,9 +29,9 @@ public class UserStoreConfigListenerImpl extends AbstractUserStoreConfigListener
     public void onUserStoreNamePreUpdate(int tenantId, String currentUserStoreName,
                                          String newUserStoreName) throws UserStoreException {
         try {
-            DeviceStoreDAO.getInstance().updateDomainNameOfRegistration(tenantId, currentUserStoreName,
+            FIDO2DeviceStoreDAO.getInstance().updateDomainNameOfRegistration(tenantId, currentUserStoreName,
                                                                                    newUserStoreName);
-        } catch (FIDOAuthenticatorServerException e) {
+        } catch (FIDO2AuthenticatorServerException e) {
             throw new UserStoreException(e.getMessage(), e);
         }
     }
@@ -39,8 +40,8 @@ public class UserStoreConfigListenerImpl extends AbstractUserStoreConfigListener
     public void onUserStorePreDelete(int tenantId, String userStoreName) throws UserStoreException {
 
         try {
-            DeviceStoreDAO.getInstance().deleteRegistrationFromDomain(tenantId, userStoreName);
-        } catch (FIDOAuthenticatorServerException e) {
+            FIDO2DeviceStoreDAO.getInstance().deleteRegistrationFromDomain(tenantId, userStoreName);
+        } catch (FIDO2AuthenticatorServerException e) {
             throw new UserStoreException(e.getMessage(), e);
         }
     }
