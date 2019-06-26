@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <parent>
+        <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
+        <artifactId>identity-application-auth-fido</artifactId>
+        <relativePath>../../pom.xml</relativePath>
+        <version>5.1.15-SNAPSHOT</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>bundle</packaging>
+    <artifactId>org.wso2.carbon.identity.application.authenticator.fido2</artifactId>
+    <name>WSO2 Carbon - FIDO2 Identity Application Authenticator</name>
+    <dependencies>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.user.store.configuration</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon</groupId>
+            <artifactId>org.wso2.carbon.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-cbor</artifactId>
+            <version>${fasterxml.jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+            <version>${fasterxml.jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
+            <artifactId>org.wso2.carbon.identity.webauthn.provider</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-scr-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Name>${project.artifactId}</Bundle-Name>
+                        <Private-Package>
+                            org.wso2.carbon.identity.application.authenticator.fido2.internal
+                        </Private-Package>
+                        <Import-Package>
+                            !org.wso2.carbon.identity.webauthn.fido.core.*,
+                            com.fasterxml.jackson.datatype.jdk8.*; version="${fasterxml.jackson.version}",
+                            org.wso2.carbon.identity.user.store.configuration.*;
+                            version="${carbon.identity.package.import.version.range}",
+                            !org.wso2.carbon.identity.application.authenticator.fido.*,
+                            javax.servlet.http.*; version="${imp.pkg.version.javax.servlet}",
+                            org.apache.commons.logging.*; version="${commons-logging.osgi.version.range}",
+                            org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
+                            org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
+                            org.bouncycastle.*; version="${bcprov.version}",
+                            org.w3c.dom.*,
+                            org.slf4j.*; version="${slf4j.version.range}",
+                            org.wso2.carbon.context.*; version="${carbon.kernel.package.import.version.range}",
+                            org.wso2.carbon.identity.application.common.*;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.*;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.base.*; version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.core.*;version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.user.store.configuration.*;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.utils;version="${carbon.kernel.package.import.version.range}",
+                            org.wso2.carbon.user.api.*; version="${carbon.user.api.imp.pkg.version.range}",
+                            org.wso2.carbon.user.core.service.*; version="${carbon.kernel.package.import.version.range}",
+                            org.wso2.carbon.user.core.tenant.*; version="${carbon.kernel.package.import.version.range}",
+                            org.xml.sax,
+                            com.yubico.webauthn.*; version="${com.yubico.webauthn.version}",
+                            com.yubico.internal.*; version="${com.yubico.webauthn.version}",
+                            com.fasterxml.jackson.core.*; version="${fasterxml.jackson.version}",
+                            com.fasterxml.jackson.databind.*; version="${fasterxml.jackson.version}",
+                            com.fasterxml.jackson.annotation.*; version="${fasterxml.jackson.version}",
+                            com.fasterxml.jackson.datatype.jdk8.*; version="${fasterxml.jackson.version}",
+                            com.fasterxml.jackson.dataformat.cbor.*; version="${fasterxml.jackson.version}"
+                        </Import-Package>
+                        <Export-Package>
+                            org.wso2.carbon.identity.application.authenticator.fido2.*;
+                            version="${identity.application.auth.fido.package.export.version}"
+                        </Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
