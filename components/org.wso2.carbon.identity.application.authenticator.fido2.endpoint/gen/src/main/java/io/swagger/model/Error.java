@@ -3,6 +3,9 @@ package io.swagger.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
 
+/**
+ * Wrapper for error response.
+ */
 public class Error  {
   
   @ApiModelProperty()

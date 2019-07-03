@@ -24,6 +24,9 @@ import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
+/**
+ * Wrapper for FIDO2 registration request.
+ */
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class RegistrationRequest {

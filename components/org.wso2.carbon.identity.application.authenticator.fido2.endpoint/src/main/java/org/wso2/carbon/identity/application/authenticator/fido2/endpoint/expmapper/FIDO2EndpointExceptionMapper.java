@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.application.authenticator.fido2.endpoint.expmap
 
 import org.apache.cxf.jaxrs.impl.WebApplicationExceptionMapper;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.BadRequestException;
-import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.FIDORelyingPartyException;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.InternalServerErrorException;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
@@ -29,7 +29,7 @@ public class FIDO2EndpointExceptionMapper extends WebApplicationExceptionMapper 
 
     public Response toResponse(WebApplicationException ex) {
 
-        if (ex instanceof BadRequestException || ex instanceof FIDORelyingPartyException) {
+        if (ex instanceof BadRequestException || ex instanceof InternalServerErrorException) {
             this.setPrintStackTrace(false);
         }
 

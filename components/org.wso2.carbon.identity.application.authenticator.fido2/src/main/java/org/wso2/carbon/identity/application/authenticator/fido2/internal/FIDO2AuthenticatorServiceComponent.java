@@ -22,8 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
-import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
-import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -70,9 +68,5 @@ public class FIDO2AuthenticatorServiceComponent {
             log.debug("UnSetting the Realm Service");
         }
         FIDO2AuthenticatorServiceComponent.realmService = null;
-    }
-
-    public static RealmService getRealmService() {
-        return realmService;
     }
 }

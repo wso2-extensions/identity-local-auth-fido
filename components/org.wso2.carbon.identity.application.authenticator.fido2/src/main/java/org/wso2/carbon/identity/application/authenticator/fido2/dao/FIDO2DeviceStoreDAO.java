@@ -50,6 +50,9 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * FIDO2 DAO.
+ */
 public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
     private static Log log = LogFactory.getLog(FIDO2DeviceStoreDAO.class);

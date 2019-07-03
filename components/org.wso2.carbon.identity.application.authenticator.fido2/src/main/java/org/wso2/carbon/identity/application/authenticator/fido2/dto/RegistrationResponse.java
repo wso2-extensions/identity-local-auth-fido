@@ -26,6 +26,9 @@ import com.yubico.webauthn.data.ClientRegistrationExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import lombok.Value;
 
+/**
+ * Wrapper for FIDO2 registration response.
+ */
 @Value
 public class RegistrationResponse {
 

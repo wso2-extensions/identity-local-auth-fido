@@ -27,6 +27,9 @@ import lombok.Value;
 
 import java.util.Optional;
 
+/**
+ * Wrapper for FIDO2 finish registration request.
+ */
 @Value
 public class AssertionRequestWrapper {
 

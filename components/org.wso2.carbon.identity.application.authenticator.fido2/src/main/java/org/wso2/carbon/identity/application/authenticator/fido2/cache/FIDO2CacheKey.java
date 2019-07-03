@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.application.authenticator.fido2.cache;
 
 import org.wso2.carbon.identity.application.common.cache.CacheKey;
 
+/**
+ * FIDO2 cache key.
+ */
 public class FIDO2CacheKey extends CacheKey {
 
     private static final long serialVersionUID = -2846349295093760488L;

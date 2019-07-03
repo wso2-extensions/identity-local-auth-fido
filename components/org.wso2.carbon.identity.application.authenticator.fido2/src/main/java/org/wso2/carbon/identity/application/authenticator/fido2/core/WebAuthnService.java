@@ -77,6 +77,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Optional;
 
+/**
+ * FIDO2 core APIs.
+ */
 public class WebAuthnService {
 
     private static Log log = LogFactory.getLog(WebAuthnService.class);

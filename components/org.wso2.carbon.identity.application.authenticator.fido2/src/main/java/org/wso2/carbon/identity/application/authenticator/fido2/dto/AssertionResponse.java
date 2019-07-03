@@ -25,6 +25,9 @@ import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import lombok.Value;
 
+/**
+ * Wrapper for FIDO2 assertion .
+ */
 @Value
 public class AssertionResponse {
 

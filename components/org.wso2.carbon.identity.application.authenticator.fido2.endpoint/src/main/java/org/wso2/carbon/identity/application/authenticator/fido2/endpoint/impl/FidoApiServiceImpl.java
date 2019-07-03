@@ -25,7 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.RegistrationRequest;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.BadRequestException;
-import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.FIDORelyingPartyException;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.exception.InternalServerErrorException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
@@ -43,8 +43,6 @@ public class FidoApiServiceImpl implements FidoApi {
     private static Log log = LogFactory.getLog(FidoApiServiceImpl.class);
 
     private static final String EQUAL_OPERATOR = "=";
-    private static final int BAD_REQUEST_CODE = 400;
-    private static final int SERVER_ERROR_CODE = 500;
 
     private WebAuthnService service = new WebAuthnService();
 
@@ -62,7 +60,7 @@ public class FidoApiServiceImpl implements FidoApi {
                 throw new FIDO2AuthenticatorException(result.left().get());
             }
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
     }
 
@@ -75,9 +73,9 @@ public class FidoApiServiceImpl implements FidoApi {
         try {
             service.finishRegistration(response);
         } catch (FIDO2AuthenticatorServerException ex) {
-            throw new FIDORelyingPartyException(ex, SERVER_ERROR_CODE);
+            throw new InternalServerErrorException(ex);
         } catch (FIDO2AuthenticatorException | IOException e) {
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
         return response;
     }
@@ -91,7 +89,7 @@ public class FidoApiServiceImpl implements FidoApi {
             if(log.isDebugEnabled()) {
                 log.debug("Failed to write response as JSON", e);
             }
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
     }
 
@@ -107,7 +105,7 @@ public class FidoApiServiceImpl implements FidoApi {
             }
             return FIDOUtil.writeJson(service.getDeviceMetaData(username));
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            throw new BadRequestException(e, BAD_REQUEST_CODE);
+            throw new BadRequestException(e);
         }
     }
 }

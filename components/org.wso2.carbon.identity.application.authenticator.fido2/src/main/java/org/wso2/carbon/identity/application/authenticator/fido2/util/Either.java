@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.application.authenticator.fido2.util;
 
 import java.util.Optional;
 
+/**
+ * Tree like structure to store relevant data or an error message.
+ */
 public final class Either<L, R> {
 
     private final boolean isRight;

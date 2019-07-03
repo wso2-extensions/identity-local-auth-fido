@@ -22,6 +22,9 @@ import org.wso2.carbon.identity.application.authentication.framework.store.Sessi
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.utils.CarbonUtils;
 
+/**
+ * FIDO2 cache to store interim data.
+ */
 public class FIDO2Cache extends BaseCache<FIDO2CacheKey, FIDO2CacheEntry> {
 
     private static final String FIDO2_CACHE_NAME = "FIDO2Cache";

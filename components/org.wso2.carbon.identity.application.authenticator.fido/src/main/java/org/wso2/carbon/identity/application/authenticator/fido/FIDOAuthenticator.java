@@ -58,8 +58,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
     private static FIDOAuthenticator instance = new FIDOAuthenticator();
 
-    private static boolean webAuthnEnabled = false;
-
     @Override
     public AuthenticatorFlowStatus process(HttpServletRequest request, HttpServletResponse response,
                                            AuthenticationContext context)
@@ -73,18 +71,13 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                  AuthenticationContext context)
             throws AuthenticationFailedException {
 
-        if (StringUtils.isNotBlank(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))) {
-            webAuthnEnabled = Boolean.parseBoolean(IdentityUtil.getProperty(FIDOAuthenticatorConstants
-                    .WEBAUTHN_ENABLED));
-        }
-
         AuthenticatedUser user;
         String tokenResponse = request.getParameter("tokenResponse");
         if (tokenResponse != null && !tokenResponse.contains("errorCode")) {
             String appID = FIDOUtil.getOrigin(request);
             user = getUsername(context);
 
-            if (webAuthnEnabled) {
+            if (isWebAuthnEnabled()) {
                 processFido2AuthenticationResponse(user, tokenResponse);
             } else {
                 processFidoAuthenticationResponse(user, appID, tokenResponse);
@@ -133,50 +126,13 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                  AuthenticationContext context)
             throws AuthenticationFailedException {
 
-        if (StringUtils.isNotBlank(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))) {
-            webAuthnEnabled = Boolean.parseBoolean(IdentityUtil.getProperty(FIDOAuthenticatorConstants
-                    .WEBAUTHN_ENABLED));
-        }
-
         AuthenticatedUser user = getUsername(context);
         // Retrieving AppID
         // Origin as appID eg: https://example.com:8080
-        String appID = FIDOUtil.getOrigin(request);
-        if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
-                .get(FIDOAuthenticatorConstants.APP_ID))) {
-            appID = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.APP_ID);
-        }
+        String appID = resolveAppId(request);
 
         try {
-            // Authentication page's URL.
-            String loginPage;
-            if (webAuthnEnabled && StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
-                    .get(FIDOAuthenticatorConstants.FIDO2_AUTH))) {
-                loginPage = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO2_AUTH);
-            } else if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
-                    .get(FIDOAuthenticatorConstants.FIDO_AUTH))) {
-                loginPage = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO_AUTH);
-            } else {
-                loginPage = ConfigurationFacade.getInstance().getAuthenticationEndpointURL()
-                        .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO_LOGIN);
-            }
-
-            String redirectUrl;
-            if (webAuthnEnabled) {
-                String data = initiateFido2AuthenticationRequest(user,appID);
-                boolean isDataNull = StringUtils.isBlank(data);
-                redirectUrl = getRedirectUrl(isDataNull, loginPage, URLEncoder.encode(data,
-                        IdentityCoreConstants.UTF_8), request, response, user);
-            } else {
-                AuthenticateRequestData data = initiateFidoAuthenticationRequest(user,appID);
-                boolean isDataNull = false;
-                if (data == null) {
-                    isDataNull = true;
-                }
-                redirectUrl = getRedirectUrl(isDataNull, loginPage, URLEncoder.encode(data.toJson(),
-                        IdentityCoreConstants.UTF_8), request, response, user);
-            }
-            //redirect to FIDO login page
+            String redirectUrl = getRedirectUrl(request, response, user, appID, getLoginPage());
             response.sendRedirect(redirectUrl);
 
         } catch (IOException e) {
@@ -188,32 +144,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     protected boolean retryAuthenticationEnabled() {
 
         return false;
-    }
-
-    private AuthenticatedUser getUsername(AuthenticationContext context) throws AuthenticationFailedException {
-
-        //username from authentication context.
-        AuthenticatedUser authenticatedUser = null;
-        for (int i = 1; i <= context.getSequenceConfig().getStepMap().size(); i++) {
-            StepConfig stepConfig = context.getSequenceConfig().getStepMap().get(i);
-            if (stepConfig.getAuthenticatedUser() != null && stepConfig.getAuthenticatedAutenticator()
-                    .getApplicationAuthenticator() instanceof LocalApplicationAuthenticator) {
-                authenticatedUser = stepConfig.getAuthenticatedUser();
-                if (authenticatedUser.getUserStoreDomain() == null) {
-                    authenticatedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
-                }
-
-                if (log.isDebugEnabled()) {
-                    log.debug("username :" + authenticatedUser.toString());
-                }
-                break;
-            }
-        }
-        if (authenticatedUser == null) {
-            throw new AuthenticationFailedException("Could not locate an authenticated username from previous steps " +
-                    "of the sequence. Hence cannot continue with FIDO authentication.");
-        }
-        return authenticatedUser;
     }
 
     /**
@@ -281,6 +211,92 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     .AUTHENTICATION_STATUS, IdentityCoreConstants.UTF_8);
         }
 
-        return  redirectURL;
+        return redirectURL;
     }
+
+    private boolean isWebAuthnEnabled() {
+
+        boolean webAuthnEnabled = false;
+        String webAuthnStatus = IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED);
+        if (StringUtils.isNotBlank(webAuthnStatus)) {
+            webAuthnEnabled = Boolean.parseBoolean(webAuthnStatus);
+        }
+
+        return webAuthnEnabled;
+    }
+
+    private String getRedirectUrl(HttpServletRequest request, HttpServletResponse response, AuthenticatedUser user,
+                                  String appID, String loginPage) throws AuthenticationFailedException,
+            UnsupportedEncodingException {
+
+        String redirectUrl;
+        if (isWebAuthnEnabled()) {
+            String data = initiateFido2AuthenticationRequest(user, appID);
+            boolean isDataNull = StringUtils.isBlank(data);
+            redirectUrl = getRedirectUrl(isDataNull, loginPage, URLEncoder.encode(data,
+                    IdentityCoreConstants.UTF_8), request, response, user);
+        } else {
+            AuthenticateRequestData data = initiateFidoAuthenticationRequest(user, appID);
+            boolean isDataNull = (data == null);
+            String encodedData = null;
+            if (!isDataNull) {
+                encodedData = URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
+            }
+            redirectUrl = getRedirectUrl(isDataNull, loginPage, encodedData, request, response, user);
+        }
+        return redirectUrl;
+    }
+
+    private String resolveAppId(HttpServletRequest request) {
+
+        String appID = FIDOUtil.getOrigin(request);
+        if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
+                .get(FIDOAuthenticatorConstants.APP_ID))) {
+            appID = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.APP_ID);
+        }
+        return appID;
+    }
+
+    private AuthenticatedUser getUsername(AuthenticationContext context) throws AuthenticationFailedException {
+
+        //username from authentication context.
+        AuthenticatedUser authenticatedUser = null;
+        for (int i = 1; i <= context.getSequenceConfig().getStepMap().size(); i++) {
+            StepConfig stepConfig = context.getSequenceConfig().getStepMap().get(i);
+            if (stepConfig.getAuthenticatedUser() != null && stepConfig.getAuthenticatedAutenticator()
+                    .getApplicationAuthenticator() instanceof LocalApplicationAuthenticator) {
+                authenticatedUser = stepConfig.getAuthenticatedUser();
+                if (authenticatedUser.getUserStoreDomain() == null) {
+                    authenticatedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+                }
+
+                if (log.isDebugEnabled()) {
+                    log.debug("username :" + authenticatedUser.toString());
+                }
+                break;
+            }
+        }
+        if (authenticatedUser == null) {
+            throw new AuthenticationFailedException("Could not locate an authenticated username from previous steps " +
+                    "of the sequence. Hence cannot continue with FIDO authentication.");
+        }
+        return authenticatedUser;
+    }
+
+    private String getLoginPage() {
+
+        String loginPage;
+        if (isWebAuthnEnabled() && StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
+                .get(FIDOAuthenticatorConstants.FIDO2_AUTH))) {
+            loginPage = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO2_AUTH);
+        } else if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
+                .get(FIDOAuthenticatorConstants.FIDO_AUTH))) {
+            loginPage = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO_AUTH);
+        } else {
+            loginPage = ConfigurationFacade.getInstance().getAuthenticationEndpointURL()
+                    .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO_LOGIN);
+        }
+        return loginPage;
+    }
+
 }

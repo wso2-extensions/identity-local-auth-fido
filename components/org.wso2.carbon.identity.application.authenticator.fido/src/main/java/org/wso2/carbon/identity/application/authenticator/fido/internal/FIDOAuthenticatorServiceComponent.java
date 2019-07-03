@@ -90,8 +90,4 @@ public class FIDOAuthenticatorServiceComponent {
         }
         FIDOAuthenticatorServiceComponent.realmService = null;
     }
-
-    public static RealmService getRealmService() {
-        return realmService;
-    }
 }
