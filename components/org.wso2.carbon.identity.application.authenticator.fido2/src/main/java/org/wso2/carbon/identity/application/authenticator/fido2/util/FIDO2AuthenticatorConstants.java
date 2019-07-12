@@ -23,10 +23,6 @@ package org.wso2.carbon.identity.application.authenticator.fido2.util;
  */
 public class FIDO2AuthenticatorConstants {
 
-    public static final String INVALID_ORIGIN_MESSAGE = "FIDO device registration initialisation " +
-            "failed due to invalid origin.";
-    public static final String DECODING_FAILED_MESSAGE = "Registration failed! Failed to decode response object.";
-
     private FIDO2AuthenticatorConstants() {
     }
 
@@ -43,6 +39,11 @@ public class FIDO2AuthenticatorConstants {
     public static final String TRUSTED_ORIGINS = "FIDO.FIDO2TrustedOrigins.Origin";
 
     public static final String APPLICATION_NAME = "WSO2 Identity Server";
+    public static final String FIDO2_DEVICE_STORE = "FIDO2_DEVICE_STORE";
+
+    public static final String INVALID_ORIGIN_MESSAGE = "FIDO device registration initialisation " +
+            "failed due to invalid origin.";
+    public static final String DECODING_FAILED_MESSAGE = "Registration failed! Failed to decode response object.";
 
     public static class SQLQueries {
 

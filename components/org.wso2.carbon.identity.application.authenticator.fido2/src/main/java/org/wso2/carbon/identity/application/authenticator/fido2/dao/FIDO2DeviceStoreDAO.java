@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -57,6 +58,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
     private static Log log = LogFactory.getLog(FIDO2DeviceStoreDAO.class);
 
+    private static boolean isFIDO2DTOPersistenceStatusChecked = false;
+    private  static boolean isFIDO2DTOPersistenceSupported = false;
     private final ObjectMapper jsonMapper = WebAuthnCodecs.json();
 
     public static FIDO2DeviceStoreDAO getInstance() {
@@ -475,5 +478,26 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, preparedStatement);
         }
+    }
+
+    public static boolean isFido2DTOPersistenceSupported() {
+
+        if (!isFIDO2DTOPersistenceStatusChecked) {
+            ResultSet rs = null;
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+
+                DatabaseMetaData metaData = connection.getMetaData();
+                rs = metaData.getTables(null, null, FIDO2AuthenticatorConstants.FIDO2_DEVICE_STORE, null);
+                if (rs.next()) {
+                    isFIDO2DTOPersistenceSupported = true;
+                }
+            } catch (SQLException e) {
+                log.error("Error in fetching metadata from FIDO2_DEVICE_STORE database", e);
+            } finally {
+                IdentityDatabaseUtil.closeResultSet(rs);
+            }
+            isFIDO2DTOPersistenceStatusChecked = true;
+        }
+        return isFIDO2DTOPersistenceSupported;
     }
 }

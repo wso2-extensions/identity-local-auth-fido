@@ -91,22 +91,12 @@ public class WebAuthnService {
     private final ObjectMapper jsonMapper = WebAuthnCodecs.json();
     private static final FIDO2DeviceStoreDAO userStorage = FIDO2DeviceStoreDAO.getInstance();
 
-    private static ArrayList origins;
-
-    static {
-        Object value = IdentityConfigParser.getInstance().getConfiguration()
-                .get(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS);
-        if (value instanceof ArrayList) {
-            origins = (ArrayList)value;
-        } else {
-            origins = new ArrayList<>(Arrays.asList((String) value));
-        }
-        origins.replaceAll(i -> IdentityUtil.fillURLPlaceholders((String)i));
-    }
+    private static ArrayList origins = null;
 
     public Either<String, RegistrationRequest> startRegistration(@NonNull String origin)
             throws JsonProcessingException, FIDO2AuthenticatorException {
 
+        readTrustedOrigins();
         if (!origins.contains(origin.trim())) {
             throw new FIDO2AuthenticatorException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE);
         }
@@ -384,5 +374,21 @@ public class WebAuthnService {
         User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
         return user;
+    }
+
+    private void readTrustedOrigins() {
+
+        if (origins == null) {
+            Object value = IdentityConfigParser.getInstance().getConfiguration()
+                    .get(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS);
+            if (value == null) {
+                origins = new ArrayList<>();
+            } else if (value instanceof ArrayList) {
+                origins = (ArrayList)value;
+            } else {
+                origins = new ArrayList<>(Arrays.asList((String) value));
+            }
+            origins.replaceAll(i -> IdentityUtil.fillURLPlaceholders((String)i));
+        }
     }
 }

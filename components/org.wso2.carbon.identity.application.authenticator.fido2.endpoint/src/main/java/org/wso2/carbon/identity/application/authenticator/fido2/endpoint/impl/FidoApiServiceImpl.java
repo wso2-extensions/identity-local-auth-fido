@@ -44,12 +44,11 @@ public class FidoApiServiceImpl implements FidoApi {
 
     private static final String EQUAL_OPERATOR = "=";
 
-    private WebAuthnService service = new WebAuthnService();
-
     @Override
     public String meWebauthnStartRegistrationPost(String username) throws FIDO2AuthenticatorException {
 
         try {
+            WebAuthnService service = new WebAuthnService();
             if(username.contains(EQUAL_OPERATOR)) {
                 username = URLDecoder.decode(username.split(EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
             }
@@ -71,6 +70,10 @@ public class FidoApiServiceImpl implements FidoApi {
             log.debug(MessageFormat.format("Received finish registration response: {0}", response));
         }
         try {
+            // WebAuthnService has been initiated multiple times instead of having a single instance to prevent
+            // SecurityPrivilegeException at the time of bean instantiation. This can be reverted once duplicated
+            // jackson dependencies are removed from CXF runtime
+            WebAuthnService service = new WebAuthnService();
             service.finishRegistration(response);
         } catch (FIDO2AuthenticatorServerException ex) {
             throw new InternalServerErrorException(ex);
@@ -84,6 +87,7 @@ public class FidoApiServiceImpl implements FidoApi {
     public void meWebauthnCredentialIdDelete(String credentialId) {
 
         try {
+            WebAuthnService service = new WebAuthnService();
             service.deregisterCredential(credentialId);
         } catch (IOException e) {
             if(log.isDebugEnabled()) {
@@ -100,6 +104,7 @@ public class FidoApiServiceImpl implements FidoApi {
             log.debug(MessageFormat.format("fetching device metadata for the username: {0}", username));
         }
         try {
+            WebAuthnService service = new WebAuthnService();
             if(username.contains(EQUAL_OPERATOR)) {
                 username = URLDecoder.decode(username.split(EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
             }

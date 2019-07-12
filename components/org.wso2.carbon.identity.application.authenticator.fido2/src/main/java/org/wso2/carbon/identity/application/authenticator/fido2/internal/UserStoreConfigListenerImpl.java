@@ -28,21 +28,26 @@ public class UserStoreConfigListenerImpl extends AbstractUserStoreConfigListener
     @Override
     public void onUserStoreNamePreUpdate(int tenantId, String currentUserStoreName,
                                          String newUserStoreName) throws UserStoreException {
-        try {
-            FIDO2DeviceStoreDAO.getInstance().updateDomainNameOfRegistration(tenantId, currentUserStoreName,
-                                                                                   newUserStoreName);
-        } catch (FIDO2AuthenticatorServerException e) {
-            throw new UserStoreException(e.getMessage(), e);
+
+        if (FIDO2DeviceStoreDAO.isFido2DTOPersistenceSupported()) {
+            try {
+                FIDO2DeviceStoreDAO.getInstance().updateDomainNameOfRegistration(tenantId, currentUserStoreName,
+                        newUserStoreName);
+            } catch (FIDO2AuthenticatorServerException e) {
+                throw new UserStoreException(e.getMessage(), e);
+            }
         }
     }
 
     @Override
     public void onUserStorePreDelete(int tenantId, String userStoreName) throws UserStoreException {
 
-        try {
-            FIDO2DeviceStoreDAO.getInstance().deleteRegistrationFromDomain(tenantId, userStoreName);
-        } catch (FIDO2AuthenticatorServerException e) {
-            throw new UserStoreException(e.getMessage(), e);
+        if (FIDO2DeviceStoreDAO.isFido2DTOPersistenceSupported()) {
+            try {
+                FIDO2DeviceStoreDAO.getInstance().deleteRegistrationFromDomain(tenantId, userStoreName);
+            } catch (FIDO2AuthenticatorServerException e) {
+                throw new UserStoreException(e.getMessage(), e);
+            }
         }
     }
 }
