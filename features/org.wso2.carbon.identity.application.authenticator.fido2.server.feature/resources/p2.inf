@@ -1,5 +1,0 @@
-instructions.configure = \
-org.eclipse.equinox.p2.touchpoint.natives.mkdir(path:${installFolder}/../../deployment/);\
-org.eclipse.equinox.p2.touchpoint.natives.mkdir(path:${installFolder}/../../deployment/server/);\
-org.eclipse.equinox.p2.touchpoint.natives.mkdir(path:${installFolder}/../../deployment/server/webapps/);\
-org.eclipse.equinox.p2.touchpoint.natives.copy(source:${installFolder}/../features/org.wso2.carbon.identity.application.authenticator.fido2.server_${feature.version}/api#users#v1.war,target:${installFolder}/../../deployment/server/webapps/api#users#v1.war,overwrite:true);\

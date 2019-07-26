@@ -82,7 +82,7 @@ import java.util.Optional;
  */
 public class WebAuthnService {
 
-    private static Log log = LogFactory.getLog(WebAuthnService.class);
+    private static final Log log = LogFactory.getLog(WebAuthnService.class);
 
     private static final int USER_HANDLE_LENGTH = 32;
 
@@ -314,6 +314,7 @@ public class WebAuthnService {
 
     private RelyingParty buildRelyingParty(URL originUrl) {
 
+        readTrustedOrigins();
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
                 .id(originUrl.getHost())
                 .name(FIDO2AuthenticatorConstants.APPLICATION_NAME)

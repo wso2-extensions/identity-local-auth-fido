@@ -22,6 +22,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.internal.util.WebAuthnCodecs;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * FIDOUtil class for FIDO authentication component.
  */
@@ -35,5 +37,11 @@ public class FIDOUtil {
     public static String writeJson(Object o) throws JsonProcessingException {
 
         return jsonMapper.writeValueAsString(o);
+    }
+
+    public static String getOrigin(HttpServletRequest request) {
+
+        return request.getScheme() + "://" + request.getServerName() + ":" +
+                request.getServerPort();
     }
 }

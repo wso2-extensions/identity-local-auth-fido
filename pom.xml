@@ -324,7 +324,6 @@
     <modules>
         <module>components/org.wso2.carbon.identity.application.authenticator.fido</module>
         <module>components/org.wso2.carbon.identity.application.authenticator.fido2</module>
-        <module>components/org.wso2.carbon.identity.application.authenticator.fido2.endpoint</module>
         <module>components/org.wso2.carbon.identity.authenticator.fido.stub</module>
         <module>features/org.wso2.carbon.identity.application.authenticator.fido.server.feature</module>
         <module>features/org.wso2.carbon.identity.application.authenticator.fido2.server.feature</module>

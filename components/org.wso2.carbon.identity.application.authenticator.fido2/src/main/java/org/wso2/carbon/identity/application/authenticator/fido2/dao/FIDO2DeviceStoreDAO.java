@@ -56,7 +56,7 @@ import java.util.Set;
  */
 public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
-    private static Log log = LogFactory.getLog(FIDO2DeviceStoreDAO.class);
+    private static final Log log = LogFactory.getLog(FIDO2DeviceStoreDAO.class);
 
     private static boolean isFIDO2DTOPersistenceStatusChecked = false;
     private  static boolean isFIDO2DTOPersistenceSupported = false;
