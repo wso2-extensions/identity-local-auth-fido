@@ -49,7 +49,7 @@ import java.net.URLEncoder;
  */
 public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         implements LocalApplicationAuthenticator {
-    private static Log log = LogFactory.getLog(FIDOAuthenticator.class);
+    private static  final Log log = LogFactory.getLog(FIDOAuthenticator.class);
     private static FIDOAuthenticator instance = new FIDOAuthenticator();
 
     @Override

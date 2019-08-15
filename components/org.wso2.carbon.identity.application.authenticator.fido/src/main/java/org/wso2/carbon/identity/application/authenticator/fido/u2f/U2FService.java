@@ -41,7 +41,7 @@ import java.util.Map;
 
 public class U2FService {
 
-    private static Log log = LogFactory.getLog(U2FService.class);
+    private static final Log log = LogFactory.getLog(U2FService.class);
 
     private static volatile U2FService u2FService;
     private final U2F u2f = new U2F();
