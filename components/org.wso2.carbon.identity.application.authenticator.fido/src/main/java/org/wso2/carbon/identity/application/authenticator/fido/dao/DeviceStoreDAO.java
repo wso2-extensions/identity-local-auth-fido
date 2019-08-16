@@ -44,7 +44,7 @@ import java.util.TimeZone;
  */
 public class DeviceStoreDAO {
 
-    private static Log log = LogFactory.getLog(DeviceStoreDAO.class);
+    private static final Log log = LogFactory.getLog(DeviceStoreDAO.class);
 
     private DeviceStoreDAO(){
 

@@ -38,7 +38,7 @@ import java.util.ArrayList;
 public class FIDOAdminService {
 
     private U2FService u2FService = U2FService.getInstance();
-    private static Log log = LogFactory.getLog(U2FService.class);
+    private static final Log log = LogFactory.getLog(U2FService.class);
 
     /**
      * Initiate FIDO registration.

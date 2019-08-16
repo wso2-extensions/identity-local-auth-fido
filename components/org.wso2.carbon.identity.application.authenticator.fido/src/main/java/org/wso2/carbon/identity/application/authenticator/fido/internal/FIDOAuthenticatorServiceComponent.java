@@ -36,7 +36,7 @@ import org.wso2.carbon.user.core.service.RealmService;
  */
 public class FIDOAuthenticatorServiceComponent {
 
-    private static Log log = LogFactory.getLog(FIDOAuthenticatorServiceComponent.class);
+    private static final Log log = LogFactory.getLog(FIDOAuthenticatorServiceComponent.class);
 
     private static RealmService realmService;
 
