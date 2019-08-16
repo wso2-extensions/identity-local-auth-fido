@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,10 +16,8 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.application.authenticator.fido;
+package org.wso2.carbon.identity.application.authenticator.fido2;
 
-import com.yubico.u2f.data.messages.AuthenticateRequestData;
-import com.yubico.u2f.data.messages.AuthenticateResponse;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,30 +31,43 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.A
 import org.wso2.carbon.identity.application.authentication.framework.exception.InvalidCredentialsException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
-import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
-import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
-import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
+import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceComponent;
+import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.text.MessageFormat;
 
 /**
- * FIDO U2F Specification based authenticator.
+ * FIDO UAF Specification based authenticator.
  */
-public class FIDOAuthenticator extends AbstractApplicationAuthenticator
+public class FIDO2Authenticator extends AbstractApplicationAuthenticator
         implements LocalApplicationAuthenticator {
 
-    private static final Log log = LogFactory.getLog(FIDOAuthenticator.class);
+    private static final Log log = LogFactory.getLog(FIDO2Authenticator.class);
 
-    private static FIDOAuthenticator instance = new FIDOAuthenticator();
+    private static FIDO2Authenticator instance = new FIDO2Authenticator();
+    private static final String AUTHENTICATOR_NAME = "FIDO2Authenticator";
+    private static final String AUTHENTICATOR_FRIENDLY_NAME = "fido-uaf";
+    private static final String AUTHENTICATION_STATUS = "Authentication Failed !";
+    private static final String AUTHENTICATION_ERROR_MESSAGE = "No registered device found, Please register your " +
+            "device before sign in.";
+
+    private static final String FIDO2_AUTH = "Fido2Auth";
+    private static final String APP_ID = "AppID";
+
+    private static final String URI_LOGIN = "login.do";
+    private static final String URI_FIDO_LOGIN = "fido2-auth.jsp";
 
     @Override
     public AuthenticatorFlowStatus process(HttpServletRequest request, HttpServletResponse response,
@@ -77,15 +88,13 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             String appID = FIDOUtil.getOrigin(request);
             user = getUsername(context);
 
-            if (isWebAuthnEnabled()) {
-                processFido2AuthenticationResponse(user, tokenResponse);
-            } else {
-                processFidoAuthenticationResponse(user, appID, tokenResponse);
-            }
+            WebAuthnService webAuthnService = new WebAuthnService();
+            webAuthnService.finishAuthentication(user.getUserName(), user.getTenantDomain(), user.getUserStoreDomain(),
+                    tokenResponse);
             context.setSubject(user);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("FIDO authentication failed : " + tokenResponse);
+                log.debug("FIDO UAF authentication failed : " + tokenResponse);
             }
             user = getUsername(context);
             throw new InvalidCredentialsException("FIDO device authentication failed ", user);
@@ -94,7 +103,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     }
 
     @Override
-    public boolean canHandle(javax.servlet.http.HttpServletRequest httpServletRequest) {
+    public boolean canHandle(HttpServletRequest httpServletRequest) {
 
         String tokenResponse = httpServletRequest.getParameter("tokenResponse");
         return null != tokenResponse;
@@ -103,7 +112,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
     @Override
     public String getContextIdentifier(
-            javax.servlet.http.HttpServletRequest httpServletRequest) {
+            HttpServletRequest httpServletRequest) {
 
         return httpServletRequest.getParameter("sessionDataKey");
     }
@@ -111,13 +120,13 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     @Override
     public String getName() {
 
-        return FIDOAuthenticatorConstants.AUTHENTICATOR_NAME;
+        return AUTHENTICATOR_NAME;
     }
 
     @Override
     public String getFriendlyName() {
 
-        return FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME;
+        return AUTHENTICATOR_FRIENDLY_NAME;
     }
 
     @Override
@@ -126,17 +135,37 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                  AuthenticationContext context)
             throws AuthenticationFailedException {
 
-        AuthenticatedUser user = getUsername(context);
-        // Retrieving AppID
-        // Origin as appID eg: https://example.com:8080
-        String appID = resolveAppId(request);
+        AuthenticatedUser user = new AuthenticatedUser();
+        String username = request.getParameter("username");
+        String tenantDomain = MultitenantUtils.getTenantDomain(username);
+        UserStoreManager userStoreManager;
+        try {
+            int tenantId = IdentityTenantUtil.getTenantIdOfUser(username);
+            UserRealm userRealm = FIDO2AuthenticatorServiceComponent.getRealmService().getTenantUserRealm(tenantId);
+            if (userRealm != null) {
+                userStoreManager = ((UserStoreManager) userRealm.getUserStoreManager());
+            } else {
+                throw new AuthenticationFailedException("Cannot find the user realm for the given tenant: " + tenantId);
+            }
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            if(log.isDebugEnabled()){
+                log.debug("FIDO UAF authentication failed while trying to authenticate", e);
+            }
+            throw new AuthenticationFailedException(e.getMessage(), e);
+        }
 
+
+        String appID = resolveAppId(request);
+        user.setTenantDomain(tenantDomain);
+        user.setUserName(MultitenantUtils.getTenantAwareUsername(username));
+        user.setUserStoreDomain("PRIMARY");
         try {
             String redirectUrl = getRedirectUrl(request, response, user, appID, getLoginPage());
             response.sendRedirect(redirectUrl);
 
         } catch (IOException e) {
-            throw new AuthenticationFailedException("Could not initiate FIDO authentication request", user, e);
+            throw new AuthenticationFailedException(MessageFormat.format("Could not initiate FIDO UAF " +
+                    "authentication request for user : {0}", user), e);
         }
     }
 
@@ -151,45 +180,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      *
      * @return a FIDOAuthenticator.
      */
-    public static FIDOAuthenticator getInstance() {
+    public static FIDO2Authenticator getInstance() {
 
         return instance;
-    }
-
-    private void processFido2AuthenticationResponse(AuthenticatedUser user, String tokenResponse)
-            throws AuthenticationFailedException {
-
-        WebAuthnService webAuthnService = new WebAuthnService();
-        webAuthnService.finishAuthentication(user.getUserName(), user.getTenantDomain(), user.getUserStoreDomain(),
-                tokenResponse);
-    }
-
-    private void processFidoAuthenticationResponse(AuthenticatedUser user, String appID, String tokenResponse)
-            throws AuthenticationFailedException {
-
-        U2FService u2FService = U2FService.getInstance();
-        FIDOUser fidoUser = new FIDOUser(user.getUserName(), user.getTenantDomain(),
-                user.getUserStoreDomain(), AuthenticateResponse.fromJson(tokenResponse));
-        fidoUser.setAppID(appID);
-        u2FService.finishAuthentication(fidoUser);
-    }
-
-    private AuthenticateRequestData initiateFidoAuthenticationRequest(AuthenticatedUser user, String appID)
-            throws AuthenticationFailedException {
-
-        U2FService u2FService = U2FService.getInstance();
-        FIDOUser fidoUser = new FIDOUser(user.getUserName(), user.getTenantDomain(), user.getUserStoreDomain(), appID);
-
-        return u2FService.startAuthentication(fidoUser);
-    }
-
-    private String initiateFido2AuthenticationRequest(AuthenticatedUser user, String appID)
-            throws AuthenticationFailedException {
-
-        WebAuthnService webAuthnService = new WebAuthnService();
-
-        return webAuthnService.startAuthentication(user.getUserName(),
-                user.getTenantDomain(), user.getUserStoreDomain(), appID);
     }
 
     private String getRedirectUrl(boolean isDataNull, String loginPage, String urlEncodedData, HttpServletRequest request,
@@ -206,23 +199,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             redirectURL = ConfigurationFacade.getInstance().getAuthenticationEndpointRetryURL();
             redirectURL = response.encodeRedirectURL(redirectURL + ("?")) + "&failedUsername=" +
                     URLEncoder.encode(user.getUserName(), IdentityCoreConstants.UTF_8) +
-                    "&statusMsg=" + URLEncoder.encode(FIDOAuthenticatorConstants.AUTHENTICATION_ERROR_MESSAGE,
-                    IdentityCoreConstants.UTF_8) + "&status=" + URLEncoder.encode(FIDOAuthenticatorConstants
-                    .AUTHENTICATION_STATUS, IdentityCoreConstants.UTF_8);
+                    "&statusMsg=" + URLEncoder.encode(AUTHENTICATION_ERROR_MESSAGE, IdentityCoreConstants.UTF_8)
+                    + "&status=" + URLEncoder.encode(AUTHENTICATION_STATUS, IdentityCoreConstants.UTF_8);
         }
 
         return redirectURL;
-    }
-
-    private boolean isWebAuthnEnabled() {
-
-        boolean webAuthnEnabled = false;
-        String webAuthnStatus = IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED);
-        if (StringUtils.isNotBlank(webAuthnStatus)) {
-            webAuthnEnabled = Boolean.parseBoolean(webAuthnStatus);
-        }
-
-        return webAuthnEnabled;
     }
 
     private String getRedirectUrl(HttpServletRequest request, HttpServletResponse response, AuthenticatedUser user,
@@ -230,20 +211,14 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             UnsupportedEncodingException {
 
         String redirectUrl;
-        if (isWebAuthnEnabled()) {
-            String data = initiateFido2AuthenticationRequest(user, appID);
+            WebAuthnService webAuthnService = new WebAuthnService();
+
+            String data = webAuthnService.startAuthentication(user.getUserName(),
+                    user.getTenantDomain(), user.getUserStoreDomain(), appID);
             boolean isDataNull = StringUtils.isBlank(data);
             redirectUrl = getRedirectUrl(isDataNull, loginPage, URLEncoder.encode(data,
                     IdentityCoreConstants.UTF_8), request, response, user);
-        } else {
-            AuthenticateRequestData data = initiateFidoAuthenticationRequest(user, appID);
-            boolean isDataNull = (data == null);
-            String encodedData = null;
-            if (!isDataNull) {
-                encodedData = URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
-            }
-            redirectUrl = getRedirectUrl(isDataNull, loginPage, encodedData, request, response, user);
-        }
+
         return redirectUrl;
     }
 
@@ -251,15 +226,14 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         String appID = FIDOUtil.getOrigin(request);
         if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
-                .get(FIDOAuthenticatorConstants.APP_ID))) {
-            appID = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.APP_ID);
+                .get(APP_ID))) {
+            appID = getAuthenticatorConfig().getParameterMap().get(APP_ID);
         }
         return appID;
     }
 
     private AuthenticatedUser getUsername(AuthenticationContext context) throws AuthenticationFailedException {
 
-        //username from authentication context.
         AuthenticatedUser authenticatedUser = null;
         for (int i = 1; i <= context.getSequenceConfig().getStepMap().size(); i++) {
             StepConfig stepConfig = context.getSequenceConfig().getStepMap().get(i);
@@ -268,10 +242,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 authenticatedUser = stepConfig.getAuthenticatedUser();
                 if (authenticatedUser.getUserStoreDomain() == null) {
                     authenticatedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
-                }
-
-                if (log.isDebugEnabled()) {
-                    log.debug("username :" + authenticatedUser.toString());
                 }
                 break;
             }
@@ -286,15 +256,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private String getLoginPage() {
 
         String loginPage;
-        if (isWebAuthnEnabled() && StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
-                .get(FIDOAuthenticatorConstants.FIDO2_AUTH))) {
-            loginPage = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO2_AUTH);
-        } else if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
-                .get(FIDOAuthenticatorConstants.FIDO_AUTH))) {
-            loginPage = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO_AUTH);
+        if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap().get(FIDO2_AUTH))) {
+            loginPage = getAuthenticatorConfig().getParameterMap().get(FIDO2_AUTH);
         } else {
             loginPage = ConfigurationFacade.getInstance().getAuthenticationEndpointURL()
-                    .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO_LOGIN);
+                    .replace(URI_LOGIN, URI_FIDO_LOGIN);
         }
         return loginPage;
     }
