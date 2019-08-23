@@ -468,7 +468,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement = connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries
                     .DELETE_REGISTRATION_BY_DOMAIN_AND_TENANT_ID);
             preparedStatement.setInt(1, tenantId);
-            preparedStatement.setString(1, userStoreName);
+            preparedStatement.setString(2, userStoreName);
 
             preparedStatement.execute();
 
