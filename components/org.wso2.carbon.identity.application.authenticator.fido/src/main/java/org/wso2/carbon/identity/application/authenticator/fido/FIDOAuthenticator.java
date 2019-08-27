@@ -263,8 +263,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         AuthenticatedUser authenticatedUser = null;
         for (int i = 1; i <= context.getSequenceConfig().getStepMap().size(); i++) {
             StepConfig stepConfig = context.getSequenceConfig().getStepMap().get(i);
-            if (stepConfig.getAuthenticatedUser() != null && stepConfig.getAuthenticatedAutenticator()
-                    .getApplicationAuthenticator() instanceof LocalApplicationAuthenticator) {
+            if (stepConfig.getAuthenticatedUser() != null) {
                 authenticatedUser = stepConfig.getAuthenticatedUser();
                 if (authenticatedUser.getUserStoreDomain() == null) {
                     authenticatedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
