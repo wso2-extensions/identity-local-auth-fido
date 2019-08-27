@@ -22,8 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
-import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
-import org.wso2.carbon.identity.application.authenticator.fido2.FIDO2Authenticator;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -41,16 +39,6 @@ public class FIDO2AuthenticatorServiceComponent {
     protected void activate(ComponentContext context) {
 
         BundleContext bundleContext = context.getBundleContext();
-        FIDO2Authenticator fidoAuthenticator = FIDO2Authenticator.getInstance();
-
-        try {
-            bundleContext.registerService(ApplicationAuthenticator.class.getName(), fidoAuthenticator, null);
-            if (log.isDebugEnabled()) {
-                log.debug("FIDOAuthenticator service is registered");
-            }
-        } catch (Exception e) {
-            log.error("Error registering FIDOAuthenticator service", e);
-        }
 
         try {
             bundleContext.registerService(UserStoreConfigListener.class.getName(), new UserStoreConfigListenerImpl(), null);
