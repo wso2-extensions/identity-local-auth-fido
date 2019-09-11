@@ -238,7 +238,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${fasterxml.jackson.version}</version>
+                <version>${jackson-databind.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.axis2.wso2</groupId>
@@ -295,6 +295,7 @@
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>18.0</google.guava.version>
         <fasterxml.jackson.version>2.9.9</fasterxml.jackson.version>
+        <jackson-databind.version>2.9.9.3</jackson-databind.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
         <imp.pkg.version.javax.servlet>[2.6.0, 3.0.0)</imp.pkg.version.javax.servlet>
