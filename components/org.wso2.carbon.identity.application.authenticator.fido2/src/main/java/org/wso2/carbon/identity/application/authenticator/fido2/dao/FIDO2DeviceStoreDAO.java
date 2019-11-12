@@ -273,6 +273,9 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(9, jsonMapper.writeValueAsString(reg.getUserIdentity()));
 
             preparedStatement.execute();
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
         } catch (SQLException e) {
             log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
                     .SQLQueries.ADD_DEVICE_REGISTRATION_QUERY, e);
@@ -412,6 +415,9 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(4, registration.getCredential().getCredentialId().getBase64());
 
             preparedStatement.execute();
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
 
         } catch (SQLException e) {
             log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
@@ -450,6 +456,9 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setInt(3, tenantId);
 
             preparedStatement.executeUpdate();
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
 
         } catch (SQLException e) {
             throw new FIDO2AuthenticatorServerException("Could not update the userstore domain : " + currentUserStoreName, e);
@@ -471,6 +480,9 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(2, userStoreName);
 
             preparedStatement.execute();
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
 
         } catch (SQLException e) {
             throw new FIDO2AuthenticatorServerException(MessageFormat.format("Could not delete registrations" +
