@@ -55,7 +55,4 @@ public class CredentialRegistration {
         return registrationTime.toString();
     }
 
-    public String getUsername() {
-        return userIdentity.getName();
-    }
 }

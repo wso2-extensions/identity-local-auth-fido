@@ -31,9 +31,6 @@ import lombok.Value;
 @EqualsAndHashCode(callSuper = false)
 public class RegistrationRequest {
 
-    @JsonProperty("username")
-    String username;
-
     @JsonProperty("requestId")
     ByteArray requestId;
 

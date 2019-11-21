@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.application.authenticator.fido2.core;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.internal.util.WebAuthnCodecs;
 import com.yubico.webauthn.AssertionRequest;
@@ -56,7 +58,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.dto.Registration
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.RegistrationResponse;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.SuccessfulAuthenticationResult;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.SuccessfulRegistrationResult;
-import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorException;
+import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
@@ -94,18 +96,22 @@ public class WebAuthnService {
     private static ArrayList origins = null;
 
     public Either<String, RegistrationRequest> startRegistration(@NonNull String origin)
-            throws JsonProcessingException, FIDO2AuthenticatorException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException {
 
         readTrustedOrigins();
         if (!origins.contains(origin.trim())) {
-            throw new FIDO2AuthenticatorException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE);
+            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
+                            .getErrorCode());
         }
 
         URL originUrl;
         try {
             originUrl = new URL(origin);
         } catch (MalformedURLException e) {
-            throw new FIDO2AuthenticatorException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE);
+            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
+                            .getErrorCode());
         }
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
@@ -115,8 +121,7 @@ public class WebAuthnService {
         PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
                 .startRegistration(buildStartRegistrationOptions(user));
 
-        RegistrationRequest request = new RegistrationRequest(user.toString(), generateRandom(),
-                credentialCreationOptions);
+        RegistrationRequest request = new RegistrationRequest(generateRandom(), credentialCreationOptions);
 
         FIDO2Cache.getInstance().addToCacheByRequestId(new FIDO2CacheKey(request.getRequestId().getBase64()),
                 new FIDO2CacheEntry(jsonMapper.writeValueAsString(request.getPublicKeyCredentialCreationOptions()),
@@ -124,22 +129,26 @@ public class WebAuthnService {
         return Either.right(request);
     }
 
-    public void finishRegistration(String challengeResponse) throws FIDO2AuthenticatorException, IOException {
+    public void finishRegistration(String challengeResponse) throws FIDO2AuthenticatorServerException,
+            FIDO2AuthenticatorClientException {
 
         RegistrationResponse response;
         try {
             response = jsonMapper.readValue(challengeResponse, RegistrationResponse.class);
+        } catch (JsonParseException | JsonMappingException e) {
+            throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST
+                            .getErrorCode());
         } catch (IOException e) {
-            if (log.isDebugEnabled()) {
-                log.debug(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
-            }
-            throw new FIDO2AuthenticatorException(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
+            throw new FIDO2AuthenticatorServerException(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
         }
 
         User user = getPrivilegedUser();
         if(FIDO2DeviceStoreDAO.getInstance().getRegistrationByUsernameAndCredentialId(user.toString(),
                 response.getCredential().getId()).isPresent()) {
-            throw new FIDO2AuthenticatorException("The username \"" + user + "\" is already registered.");
+            throw new FIDO2AuthenticatorClientException("The username \"" + user + "\" is already registered.",
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                            .ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS.getErrorCode());
         }
 
         String requestId = response.getRequestId().getBase64();
@@ -148,8 +157,16 @@ public class WebAuthnService {
         PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions = null;
         RelyingParty relyingParty = null;
         if (cacheEntry != null) {
-            publicKeyCredentialCreationOptions = jsonMapper.readValue(cacheEntry.getPublicKeyCredentialCreationOptions(),
-                    PublicKeyCredentialCreationOptions.class);
+            try {
+                publicKeyCredentialCreationOptions = jsonMapper.readValue(cacheEntry.getPublicKeyCredentialCreationOptions(),
+                        PublicKeyCredentialCreationOptions.class);
+            } catch (JsonParseException | JsonMappingException e) {
+                throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
+                        FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                                .ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode());
+            } catch (IOException e) {
+                throw new FIDO2AuthenticatorServerException(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
+            }
             relyingParty = buildRelyingParty(cacheEntry.getOrigin());
             FIDO2Cache.getInstance().clearCacheEntryByRequestId(new FIDO2CacheKey(requestId));
 
@@ -159,7 +176,8 @@ public class WebAuthnService {
             if (log.isDebugEnabled()) {
                 log.debug(MessageFormat.format("Fail finishRegistration challengeResponse: {0}", challengeResponse));
             }
-            throw new FIDO2AuthenticatorException(message);
+            throw new FIDO2AuthenticatorClientException(message, FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.
+                    ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode());
         } else {
             try {
                 RegistrationResult registration = relyingParty.finishRegistration(FinishRegistrationOptions.builder()
@@ -173,9 +191,7 @@ public class WebAuthnService {
                         new SuccessfulRegistrationResult(publicKeyCredentialCreationOptions, response, registration
                                 .isAttestationTrusted()));
             } catch (RegistrationFailedException e) {
-                throw new FIDO2AuthenticatorException("Registration failed!", e);
-            } catch (IOException e) {
-                throw new FIDO2AuthenticatorServerException("Registration failed unexpectedly; this is likely a bug.",e);
+                throw new FIDO2AuthenticatorServerException("Registration failed!", e);
             }
         }
     }
@@ -203,7 +219,7 @@ public class WebAuthnService {
                                 .getRequest()), originUrl));
                 return FIDOUtil.writeJson(request);
             }
-        } catch (MalformedURLException | JsonProcessingException e) {
+        } catch (MalformedURLException | JsonProcessingException | FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException(e.getMessage());
         }
     }
@@ -282,22 +298,28 @@ public class WebAuthnService {
         }
     }
 
-    public Collection<CredentialRegistration> getDeviceMetaData(String username) {
+    public Collection<CredentialRegistration> getDeviceMetaData(String username) throws
+            FIDO2AuthenticatorServerException {
 
         return userStorage.getRegistrationsByUsername(User.getUserFromUserName(username).toString());
     }
 
-    public void deregisterCredential(String credentialId) throws IOException {
+    public void deregisterCredential(String credentialId) throws FIDO2AuthenticatorServerException,
+            FIDO2AuthenticatorClientException {
 
         if (credentialId == null || credentialId.getBytes().length == 0) {
-            throw new IOException("Credential ID must not be empty.");
+            throw new FIDO2AuthenticatorClientException("Credential ID must not be empty.",
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL
+                            .getErrorCode());
         }
 
         final ByteArray identifier;
         try {
             identifier = ByteArray.fromBase64Url(credentialId);
         } catch (Base64UrlException e) {
-            throw new IOException("Credential ID is not valid Base64Url data: " + credentialId);
+            throw new FIDO2AuthenticatorClientException("Credential ID is not valid Base64Url data: " + credentialId,
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL
+                            .getErrorCode());
         }
 
         User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
@@ -308,7 +330,9 @@ public class WebAuthnService {
         if (credReg.isPresent()) {
             userStorage.removeRegistrationByUsername(user.toString(), credReg.get());
         } else {
-            throw new IOException("Credential ID not registered:" + credentialId);
+            throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE
+                            .getErrorCode());
         }
     }
 
@@ -329,7 +353,7 @@ public class WebAuthnService {
 
     private void addRegistration(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions,
                                  RegistrationResponse response,
-                                 RegistrationResult registration) throws IOException {
+                                 RegistrationResult registration) throws FIDO2AuthenticatorServerException {
 
         UserIdentity userIdentity = publicKeyCredentialCreationOptions.getUser();
         RegisteredCredential credential = RegisteredCredential.builder()

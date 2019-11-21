@@ -180,7 +180,6 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
     @Override
     public Optional<RegisteredCredential> lookup(ByteArray credentialId, ByteArray userHandle) {
 
-
         Optional<RegisteredCredential> registeredCredential = Optional.empty();
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement preparedStatement = null;
@@ -250,7 +249,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         return registeredCredentials;
     }
 
-    public void addRegistrationByUsername(String username, CredentialRegistration reg) throws IOException {
+    public void addRegistrationByUsername(String username, CredentialRegistration reg) throws
+            FIDO2AuthenticatorServerException {
 
         if (log.isDebugEnabled()) {
             log.debug("addRegistrationByUsername inputs {username: " + username +  "}");
@@ -276,15 +276,16 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             if (!connection.getAutoCommit()) {
                 connection.commit();
             }
-        } catch (SQLException e) {
-            log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
-                    .SQLQueries.ADD_DEVICE_REGISTRATION_QUERY, e);
+        } catch (SQLException | IOException e) {
+            throw new FIDO2AuthenticatorServerException("Server error occurred while adding FIDO2 device " +
+                    "registration for username: " + username, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, preparedStatement);
         }
     }
 
-    public Collection<CredentialRegistration> getRegistrationsByUsername(String username) {
+    public Collection<CredentialRegistration> getRegistrationsByUsername(String username) throws
+            FIDO2AuthenticatorServerException {
 
         User user = User.getUserFromUserName(username);
         List<CredentialRegistration> credentialRegistrations = new ArrayList<>();
@@ -330,8 +331,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                 credentialRegistrations.add(registration);
             }
         } catch (SQLException | IOException e) {
-            log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
-                    .SQLQueries.GET_DEVICE_REGISTRATION_BY_USERNAME, e);
+            throw new FIDO2AuthenticatorServerException("Server error occurred while retrieving FIDO2 device " +
+                    "registration for username: " + username, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
@@ -339,8 +340,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         return credentialRegistrations;
     }
 
-    public Optional<CredentialRegistration> getRegistrationByUsernameAndCredentialId(String username,
-                                                                                     ByteArray credentialId) {
+    public Optional<CredentialRegistration> getRegistrationByUsernameAndCredentialId
+            (String username, ByteArray credentialId) throws FIDO2AuthenticatorServerException {
 
         User user = User.getUserFromUserName(username);
         Optional<CredentialRegistration> credentialRegistration = Optional.empty();
@@ -386,8 +387,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             }
 
         } catch (SQLException | IOException e) {
-            log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
-                    .SQLQueries.GET_DEVICE_REGISTRATION_BY_USERNAME_AND_ID, e);
+            throw new FIDO2AuthenticatorServerException("Server error occurred while retrieving FIDO2 device " +
+                    "registration for username: " + username, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
@@ -395,7 +396,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         return credentialRegistration;
     }
 
-    public void removeRegistrationByUsername(String username, CredentialRegistration registration) {
+    public void removeRegistrationByUsername(String username, CredentialRegistration registration) throws
+            FIDO2AuthenticatorServerException {
 
         User user = User.getUserFromUserName(username);
 
@@ -420,14 +422,13 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             }
 
         } catch (SQLException e) {
-            log.error("Error when executing FIDO2 get credential by username SQL : " + FIDO2AuthenticatorConstants
-                    .SQLQueries.DELETE_DEVICE_REGISTRATION_BY_USERNAME_AND_ID, e);
+            throw new FIDO2AuthenticatorServerException("Server error occurred while de-registering fido device.", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
     }
 
-    public void updateSignatureCount(AssertionResult result) {
+    public void updateSignatureCount(AssertionResult result) throws FIDO2AuthenticatorServerException {
 
         CredentialRegistration registration = getRegistrationByUsernameAndCredentialId(result.getUsername(), result
                 .getCredentialId()).orElseThrow(() -> new NoSuchElementException(String.format(
@@ -436,11 +437,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                 )));
         removeRegistrationByUsername(result.getUsername(), registration);
         registration.withSignatureCount(result.getSignatureCount());
-        try {
-            addRegistrationByUsername(result.getUsername(), registration);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        addRegistrationByUsername(result.getUsername(), registration);
     }
 
     public void updateDomainNameOfRegistration(int tenantId, String currentUserStoreName, String newUserStoreName)
