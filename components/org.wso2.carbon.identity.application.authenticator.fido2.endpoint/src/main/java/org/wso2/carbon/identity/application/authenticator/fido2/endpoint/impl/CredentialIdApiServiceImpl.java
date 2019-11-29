@@ -20,16 +20,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.CredentialIdApiService;
-import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Constants;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Util;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 
 import javax.ws.rs.core.Response;
 
-import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Util.getErrorDTO;
-
 /**
- * CredentialIdApiServiceImpl class is used to deregister FIDO2 devices.
+ * Provides service implementation for FIDO2 device de-registering.
  */
 public class CredentialIdApiServiceImpl extends CredentialIdApiService {
 
@@ -40,23 +39,23 @@ public class CredentialIdApiServiceImpl extends CredentialIdApiService {
 
         try {
             WebAuthnService webAuthnService = new WebAuthnService();
-            webAuthnService.deregisterCredential(credentialId);
+            webAuthnService.deregisterFIDO2Credential(credentialId);
+            return Response.ok().build();
         } catch (FIDO2AuthenticatorClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while deleting FIDO2 credentialId: " + credentialId, e);
             }
-            if (e.getErrorCode().equals("50010")) {
-                return Response.status(Response.Status.NOT_FOUND).entity(getErrorDTO(Constants.ErrorMessages
+            if (FIDO2Constants.ErrorMessages.ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getCode()
+                    .equals(e.getErrorCode())) {
+                return Response.status(Response.Status.NOT_FOUND).entity(Util.getErrorDTO(FIDO2Constants.ErrorMessages
                         .ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE, credentialId)).build();
-            } else if (e.getErrorCode().equals("50009")) {
-                return Response.status(Response.Status.BAD_REQUEST).entity(getErrorDTO(Constants.ErrorMessages
-                        .ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL, credentialId)).build();
             }
+            return Response.status(Response.Status.BAD_REQUEST).entity(Util.getErrorDTO(FIDO2Constants.ErrorMessages
+                    .ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL, credentialId)).build();
         } catch (FIDO2AuthenticatorServerException e) {
-            LOG.error(e.getMessage());
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(getErrorDTO(Constants.ErrorMessages
-                    .ERROR_CODE_DELETE_CREDENTIALS, credentialId)).build();
+            LOG.error("Unexpected server exception while deleting FIDO2 credentialId: " + credentialId, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(Util.getErrorDTO
+                    (FIDO2Constants.ErrorMessages.ERROR_CODE_DELETE_CREDENTIALS, credentialId)).build();
         }
-        return Response.ok().build();
     }
 }

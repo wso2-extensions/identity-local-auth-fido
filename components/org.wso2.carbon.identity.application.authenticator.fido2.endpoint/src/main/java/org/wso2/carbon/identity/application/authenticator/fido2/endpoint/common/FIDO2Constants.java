@@ -19,7 +19,7 @@ package org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common
 /**
  * Common constants for FIDO2 API.
  */
-public class Constants {
+public class FIDO2Constants {
 
     public static final String EQUAL_OPERATOR = "=";
     private static final String FIDO2_ERROR_CODE_PREFIX = "FID-";
@@ -30,28 +30,27 @@ public class Constants {
     public enum ErrorMessages {
 
         ERROR_CODE_START_REGISTRATION("50001", "Error starting the FIDO2 device registration flow.",
-                "A system error occurred while serializing start registration response for the appid : %s"),
+                "A system error occurred while serializing start registration response for the appId : %s"),
         ERROR_CODE_FINISH_REGISTRATION("50002", "Error finishing FIDO2 device registration process.",
                 "A system error occurred while finishing device registration."),
         ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN("50003", "Error starting the FIDO2 device " +
                 "registration flow.", "FIDO2 trusted origin: %s sent in the request is invalid."),
         ERROR_CODE_FETCH_CREDENTIALS("50004", "Error while retrieving user credentials.",
-                "A system error occurred while retrieving user credentials " +
-                        "for the user : %s"),
+                "A system error occurred while retrieving user credentials for the user : %s"),
         ERROR_CODE_DELETE_CREDENTIALS("50005", "Error while deleting user credentials.",
                 "A system error occurred while deleting fido credential with credentialId : %s "),
         ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST("50006", "Error finishing" +
-                " FIDO2 device registration process.", "Challenge response request sent for finish device" +
-                " registration is invalid."),
+                " FIDO2 device registration process.",
+                "Challenge response request sent for finish device registration is invalid."),
         ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS("50007", "Error finishing" +
-                " FIDO2 device registration process.", "FIDO2 device registration already exists for the" +
-                " username and credentialId."),
-        ERROR_CODE_START_REGISTRATION_EMPTY_APP_ID("50008", "Error starting the FIDOO2 device " +
+                " FIDO2 device registration process.",
+                "FIDO2 device registration already exists for the username and credentialId."),
+        ERROR_CODE_START_REGISTRATION_EMPTY_APP_ID("50008", "Error starting the FIDO2 device " +
                 "registration flow.", "App ID not available in the request."),
         ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL("50009", "Error while deleting user " +
                 "credentials.", "Invalid credentialId : %s "),
         ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50010", "Error while deleting user " +
-                "credentials.", "No FIDO2 device registration available with credentialId : %s ");
+                "credentials.", "FIDO2 device registration is not available with credentialId : %s ");
 
         private final String code;
         private final String message;

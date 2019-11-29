@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.exception;
 
 /**
- * Custom exception to be thrown when there is an invalid parameter in the request.
+ * Exception to be thrown when there is an invalid parameter in the request.
  */
 public class FIDO2AuthenticatorClientException extends FIDO2AuthenticatorException {
 
@@ -31,6 +31,12 @@ public class FIDO2AuthenticatorClientException extends FIDO2AuthenticatorExcepti
     public FIDO2AuthenticatorClientException(String message, String errorCode) {
 
         super(message);
+        this.setErrorCode(errorCode);
+    }
+
+    public FIDO2AuthenticatorClientException(String message, String errorCode, Throwable cause) {
+
+        super(message, cause);
         this.setErrorCode(errorCode);
     }
 

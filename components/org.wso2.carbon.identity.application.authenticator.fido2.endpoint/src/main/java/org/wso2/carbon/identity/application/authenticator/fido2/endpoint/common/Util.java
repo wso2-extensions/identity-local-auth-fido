@@ -32,7 +32,7 @@ public class Util {
      * @param data  Variable arguments to be passed with the error description.
      * @return A generic errorDTO with the specified details.
      */
-    public static ErrorDTO getErrorDTO(Constants.ErrorMessages error, String... data) {
+    public static ErrorDTO getErrorDTO(FIDO2Constants.ErrorMessages error, String... data) {
 
         ErrorDTO errorDTO = new ErrorDTO();
         errorDTO.setCode(error.getCode());

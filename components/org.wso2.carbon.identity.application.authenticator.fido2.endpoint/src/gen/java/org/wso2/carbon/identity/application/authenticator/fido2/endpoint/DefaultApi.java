@@ -27,7 +27,7 @@ public class DefaultApi  {
 
     @GET
     
-    @Consumes({ "application/x-www-form-urlencoded" })
+    @Consumes({ "application/json" })
     @Produces({ "application/json" })
     @io.swagger.annotations.ApiOperation(value = "Device Metadata\n", notes = "This API is used to get fido metadata by username.\n\n<b>Permission required:</b>\n * /permission/admin/login\n", response = Object.class, responseContainer = "List")
     @io.swagger.annotations.ApiResponses(value = { 

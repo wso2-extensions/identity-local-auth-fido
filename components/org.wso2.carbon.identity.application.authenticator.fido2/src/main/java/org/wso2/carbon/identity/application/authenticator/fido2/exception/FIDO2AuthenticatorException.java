@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.application.authenticator.fido2.exception;
 import org.wso2.carbon.identity.base.IdentityException;
 
 /**
- * custom exception for FIDO2.
+ * Exception for FIDO2.
  */
 public class FIDO2AuthenticatorException extends IdentityException {
 

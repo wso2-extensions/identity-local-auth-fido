@@ -161,6 +161,17 @@
                         <doUpdate>false</doUpdate>
                     </configuration>
                 </plugin>
+                <!--maven war plugin-->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>${maven.war.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>${maven.build.helper.plugin.version}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -286,6 +297,11 @@
                 <version>${orbit.yubico.webauthn.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-web</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.fasterxml.jackson.jaxrs</groupId>
                 <artifactId>jackson-jaxrs-json-provider</artifactId>
                 <version>${jackson-jaxrs-json-provider.version}</version>
@@ -294,6 +310,16 @@
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-xml</artifactId>
                 <version>${jackson-dataformat-xml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-rt-frontend-jaxrs</artifactId>
+                <version>${org.apache.cxf.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-rt-rs-service-description</artifactId>
+                <version>${org.apache.cxf.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -329,7 +355,7 @@
         <springframework.version>4.1.6.RELEASE</springframework.version>
         <org.apache.cxf.version>3.3.1</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
-        <build.helper.plugin.version>3.0.0</build.helper.plugin.version>
+        <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>1.3.0.wso2v1</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>1.3.0</yubico.webauthn.version>
     </properties>

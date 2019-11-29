@@ -21,9 +21,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
-import org.wso2.carbon.identity.application.authenticator.fido2.dto.RegistrationRequest;
+import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2RegistrationRequest;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.StartRegistrationApiService;
-import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Constants;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Util;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
@@ -32,8 +33,6 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import javax.ws.rs.core.Response;
-
-import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Util.getErrorDTO;
 
 /**
  * StartRegistrationApiServiceImpl class is used to trigger FIDO2 device registration.
@@ -46,33 +45,32 @@ public class StartRegistrationApiServiceImpl extends StartRegistrationApiService
     public Response startRegistrationPost(String appId) {
 
         if (StringUtils.isBlank(appId)) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(getErrorDTO
-                    (Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION_EMPTY_APP_ID)).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(Util.getErrorDTO
+                    (FIDO2Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION_EMPTY_APP_ID)).build();
         }
 
         try {
-            if(appId.contains(Constants.EQUAL_OPERATOR)) {
-                appId = URLDecoder.decode(appId.split(Constants.EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
+            if (appId.contains(FIDO2Constants.EQUAL_OPERATOR)) {
+                appId = URLDecoder.decode(appId.split(FIDO2Constants.EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
             }
             WebAuthnService webAuthnService = new WebAuthnService();
-            Either<String, RegistrationRequest> result = webAuthnService.startRegistration(appId);
+            Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2Registration(appId);
             if (result.isRight()) {
                 return Response.ok().entity(FIDOUtil.writeJson(result.right().get())).build();
             } else {
-                return Response.serverError().entity(getErrorDTO(Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION,
-                        appId)).build();
+                return Response.serverError().entity(Util.getErrorDTO(FIDO2Constants.ErrorMessages
+                        .ERROR_CODE_START_REGISTRATION, appId)).build();
             }
-        } catch (JsonProcessingException e) {
-            LOG.error(e);
-            return Response.serverError().entity(getErrorDTO(Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION,
-                    appId)).build();
         } catch (FIDO2AuthenticatorClientException | UnsupportedEncodingException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while starting FIDO2 device registration with appId: " + appId, e);
             }
-            return Response.status(Response.Status.BAD_REQUEST).entity(getErrorDTO
-                    (Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN, appId)).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(Util.getErrorDTO
+                    (FIDO2Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN, appId)).build();
+        } catch (JsonProcessingException e) {
+            LOG.error("JsonProcessingException while starting FIDO2 device registration with appId: " + appId, e);
+            return Response.serverError().entity(Util.getErrorDTO(FIDO2Constants.ErrorMessages
+                            .ERROR_CODE_START_REGISTRATION, appId)).build();
         }
-
     }
 }

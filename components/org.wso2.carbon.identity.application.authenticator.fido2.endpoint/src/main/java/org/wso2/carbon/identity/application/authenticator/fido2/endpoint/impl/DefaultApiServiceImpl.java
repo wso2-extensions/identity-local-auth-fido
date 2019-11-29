@@ -22,15 +22,14 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.DefaultApiService;
-import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Constants;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Util;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.text.MessageFormat;
 import javax.ws.rs.core.Response;
-
-import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.Util.getErrorDTO;
 
 /**
  * DefaultApiServiceImpl class is used to obtain FIDO2 metadata.
@@ -42,19 +41,23 @@ public class DefaultApiServiceImpl extends DefaultApiService {
     @Override
     public Response rootGet() {
 
+        String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantAwareUsername = UserCoreUtil.addTenantDomainToEntry(username, tenantDomain);
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(MessageFormat.format("Fetching FIDO2 device metadata for the username: {0}",
+                    tenantAwareUsername));
+        }
+
         try {
-            String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            String tenantAwareUsername = UserCoreUtil.addTenantDomainToEntry(username, tenantDomain);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(MessageFormat.format("Fetching device metadata for the username: {0}",
-                        tenantAwareUsername));
-            }
             WebAuthnService service = new WebAuthnService();
-            return Response.ok().entity(FIDOUtil.writeJson(service.getDeviceMetaData(tenantAwareUsername))).build();
+            return Response.ok().entity(FIDOUtil.writeJson(service.getFIDO2DeviceMetaData(tenantAwareUsername)))
+                    .build();
         } catch (JsonProcessingException | FIDO2AuthenticatorServerException e) {
-            LOG.error(e.getMessage());
-            return Response.serverError().entity(getErrorDTO(Constants.ErrorMessages
+            LOG.error(MessageFormat.format("Unexpected error occurred while fetching FIDO2 device metadata" +
+                    " for the username: {0}", tenantAwareUsername), e);
+            return Response.serverError().entity(Util.getErrorDTO(FIDO2Constants.ErrorMessages
                     .ERROR_CODE_FETCH_CREDENTIALS)).build();
         }
     }

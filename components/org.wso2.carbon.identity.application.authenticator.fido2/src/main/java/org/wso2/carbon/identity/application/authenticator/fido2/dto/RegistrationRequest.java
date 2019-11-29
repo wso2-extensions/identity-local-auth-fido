@@ -26,10 +26,16 @@ import lombok.Value;
 
 /**
  * Wrapper for FIDO2 registration request.
+ *
+ * @deprecated Please use {@link FIDO2RegistrationRequest} class instead.
  */
+@Deprecated
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class RegistrationRequest {
+
+    @JsonProperty("username")
+    String username;
 
     @JsonProperty("requestId")
     ByteArray requestId;

@@ -16,18 +16,25 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.application.authenticator.fido2.exception;
+package org.wso2.carbon.identity.application.authenticator.fido2.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 
 /**
- * Exception to be thrown when there is a server issue.
+ * Wrapper for FIDO2 registration request.
  */
-public class FIDO2AuthenticatorServerException extends FIDO2AuthenticatorException {
+@Value
+@EqualsAndHashCode(callSuper = false)
+public class FIDO2RegistrationRequest {
 
-    private static final long serialVersionUID = -6711660244302661603L;
+    @JsonProperty("requestId")
+    private ByteArray requestId;
 
-    public FIDO2AuthenticatorServerException(String message, Throwable cause) {
-
-        super(message, cause);
-    }
+    @JsonProperty("publicKeyCredentialCreationOptions")
+    private PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions;
 
 }
