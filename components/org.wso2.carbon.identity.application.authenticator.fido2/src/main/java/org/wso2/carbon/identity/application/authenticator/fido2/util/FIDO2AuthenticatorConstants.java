@@ -41,7 +41,7 @@ public class FIDO2AuthenticatorConstants {
     public static final String APPLICATION_NAME = "WSO2 Identity Server";
     public static final String FIDO2_DEVICE_STORE = "FIDO2_DEVICE_STORE";
 
-    public static final String INVALID_ORIGIN_MESSAGE = "FIDO device registration initialisation " +
+    public static final String INVALID_ORIGIN_MESSAGE = "FIDO2 device registration initialisation " +
             "failed due to invalid origin.";
     public static final String DECODING_FAILED_MESSAGE = "Registration failed! Failed to decode response object.";
 
@@ -83,6 +83,37 @@ public class FIDO2AuthenticatorConstants {
 
         public static final String DELETE_REGISTRATION_BY_DOMAIN_AND_TENANT_ID = "DELETE FROM FIDO2_DEVICE_STORE " +
                 "WHERE TENANT_ID = ? AND DOMAIN_NAME = ?";
+    }
+
+    /**
+     * This enum contains the client exception error codes to identify the relevant http status code to construct the
+     * response at API level.
+     */
+    public enum ClientExceptionErrorCodes {
+
+        ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN("50003"),
+        ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST("50006"),
+        ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS("50007"),
+        ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL("50009"),
+        ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50010");
+
+        private String errorCode;
+
+        public String getErrorCode() {
+
+            return errorCode;
+        }
+
+        ClientExceptionErrorCodes(String errorCode) {
+
+            this.errorCode = errorCode;
+        }
+
+        @Override
+        public String toString() {
+
+            return errorCode;
+        }
     }
 }
 

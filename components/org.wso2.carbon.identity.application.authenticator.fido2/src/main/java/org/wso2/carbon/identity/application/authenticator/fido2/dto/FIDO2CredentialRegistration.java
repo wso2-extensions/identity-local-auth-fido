@@ -27,38 +27,31 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.Wither;
 
-import java.io.Serializable;
 import java.time.Instant;
 import java.util.Optional;
 
 /**
  * Wrapper for FIDO2 credentials.
- *
- * @deprecated Please use {@link FIDO2CredentialRegistration} class instead.
  */
-@Deprecated
 @Value
 @Builder
 @Wither
-public class CredentialRegistration {
+public class FIDO2CredentialRegistration {
 
-    long signatureCount;
+    private long signatureCount;
 
-    UserIdentity userIdentity;
-    Optional<String> credentialNickname;
+    private UserIdentity userIdentity;
+    private Optional<String> credentialNickname;
 
     @JsonIgnore
-    Instant registrationTime;
-    RegisteredCredential credential;
+    private Instant registrationTime;
+    private RegisteredCredential credential;
 
-    Optional<Attestation> attestationMetadata;
+    private Optional<Attestation> attestationMetadata;
 
     @JsonProperty("registrationTime")
     public String getRegistrationTimestamp() {
         return registrationTime.toString();
     }
 
-    public String getUsername() {
-        return userIdentity.getName();
-    }
 }
