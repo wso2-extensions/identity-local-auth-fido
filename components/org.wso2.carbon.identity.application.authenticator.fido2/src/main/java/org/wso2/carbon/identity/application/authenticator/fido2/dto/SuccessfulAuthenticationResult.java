@@ -33,6 +33,6 @@ public class SuccessfulAuthenticationResult {
     final boolean success = true;
     AssertionRequest request;
     AssertionResponse response;
-    Collection<FIDO2CredentialRegistration> registrations;
+    Collection<CredentialRegistration> registrations;
     List<String> warnings;
 }
