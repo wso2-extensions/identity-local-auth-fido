@@ -18,19 +18,33 @@
 
 package org.wso2.carbon.identity.application.authenticator.fido2.exception;
 
-
 import org.wso2.carbon.identity.base.IdentityException;
 
+/**
+ * Exception for FIDO2.
+ */
 public class FIDO2AuthenticatorException extends IdentityException {
 
     private static final long serialVersionUID = 5686467765568631319L;
+    private String errorCode;
 
-    public FIDO2AuthenticatorException(String message){
-       super(message);
+    public FIDO2AuthenticatorException(String message) {
+
+        super(message);
     }
 
-    public FIDO2AuthenticatorException(String message, Throwable cause){
+    public FIDO2AuthenticatorException(String message, Throwable cause) {
+
         super(message, cause);
     }
 
+    public String getErrorCode() {
+
+        return errorCode;
+    }
+
+    public void setErrorCode(String errorCode) {
+
+        this.errorCode = errorCode;
+    }
 }
