@@ -19,15 +19,25 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.exception;
 
 /**
- * Exception to be thrown when there is a server issue.
+ * Exception to be thrown when there is an invalid parameter in the request.
  */
-public class FIDO2AuthenticatorServerException extends FIDO2AuthenticatorException {
+public class FIDO2AuthenticatorClientException extends FIDO2AuthenticatorException {
 
-    private static final long serialVersionUID = -6711660244302661603L;
-
-    public FIDO2AuthenticatorServerException(String message, Throwable cause) {
+    public FIDO2AuthenticatorClientException(String message, Throwable cause) {
 
         super(message, cause);
+    }
+
+    public FIDO2AuthenticatorClientException(String message, String errorCode) {
+
+        super(message);
+        this.setErrorCode(errorCode);
+    }
+
+    public FIDO2AuthenticatorClientException(String message, String errorCode, Throwable cause) {
+
+        super(message, cause);
+        this.setErrorCode(errorCode);
     }
 
 }
