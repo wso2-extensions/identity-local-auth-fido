@@ -664,7 +664,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         try {
             addRegistrationByUsername(result.getUsername(), registration);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("IOException while updating signature count.", e);
         }
     }
 
