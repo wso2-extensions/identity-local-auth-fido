@@ -33,10 +33,7 @@ import java.util.Optional;
 
 /**
  * Wrapper for FIDO2 credentials.
- *
- * @deprecated Please use {@link FIDO2CredentialRegistration} class instead.
  */
-@Deprecated
 @Value
 @Builder
 @Wither
