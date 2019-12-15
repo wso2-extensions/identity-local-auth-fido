@@ -10,6 +10,7 @@
             <bean class="org.wso2.carbon.identity.application.authenticator.fido2.endpoint.DefaultApi"/>
             <bean class="org.wso2.carbon.identity.application.authenticator.fido2.endpoint.FinishRegistrationApi"/>
             <bean class="org.wso2.carbon.identity.application.authenticator.fido2.endpoint.StartRegistrationApi"/>
+            <bean class="org.wso2.carbon.identity.application.authenticator.fido2.endpoint.StartUsernamelessRegistrationApi"/>
             <bean class="org.wso2.carbon.identity.application.authenticator.fido2.endpoint.CredentialIdApi"/>
             
         </jaxrs:serviceBeans>
