@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.ErrorDTO;
 
 /**
@@ -44,4 +47,25 @@ public class Util {
         errorDTO.setMessage(error.getMessage());
         return errorDTO;
     }
+
+    /**
+     * Validate whether a given string is a valid JSON or not.
+     *
+     * @param jsonString JSON string.
+     * @return Returns true if the given value is a valid JSON string.
+     */
+    public static boolean isValidJson(String jsonString) {
+
+        try {
+            new JSONObject(jsonString);
+        } catch (JSONException e) {
+            try {
+                new JSONArray(jsonString);
+            } catch (JSONException e1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }

@@ -54,9 +54,13 @@ public class StartRegistrationApiServiceImpl extends StartRegistrationApiService
         try {
             if (appId.contains(FIDO2Constants.EQUAL_OPERATOR)) {
                 appId = URLDecoder.decode(appId.split(FIDO2Constants.EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
-            } else if (appId.startsWith("{")) {
+            } else if (Util.isValidJson(appId)) {
                 JsonObject jsonObject = new JsonParser().parse(appId).getAsJsonObject();
                 appId = jsonObject.get(FIDO2Constants.APP_ID).getAsString();
+                if (StringUtils.isBlank(appId)) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity(Util.getErrorDTO
+                            (FIDO2Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION_EMPTY_APP_ID)).build();
+                }
             }
             WebAuthnService webAuthnService = new WebAuthnService();
             Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2Registration(appId);

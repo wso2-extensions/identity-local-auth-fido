@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.wso2.carbon.identity.application.authenticator.fido2.endpoint.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,6 +38,9 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 
 import javax.ws.rs.core.Response;
 
+/**
+ * StartUsernamelessRegistrationApiServiceImpl class is used to trigger FIDO2 usernameless device registration.
+ */
 public class StartUsernamelessRegistrationApiServiceImpl extends StartUsernamelessRegistrationApiService {
 
     private static final Log LOG = LogFactory.getLog(StartUsernamelessRegistrationApiServiceImpl.class);
@@ -37,9 +56,13 @@ public class StartUsernamelessRegistrationApiServiceImpl extends StartUsernamele
         try {
             if (appId.contains(FIDO2Constants.EQUAL_OPERATOR)) {
                 appId = URLDecoder.decode(appId.split(FIDO2Constants.EQUAL_OPERATOR)[1], IdentityCoreConstants.UTF_8);
-            } else if (appId.startsWith("{")) {
+            } else if (Util.isValidJson(appId)) {
                 JsonObject jsonObject = new JsonParser().parse(appId).getAsJsonObject();
                 appId = jsonObject.get(FIDO2Constants.APP_ID).getAsString();
+                if (StringUtils.isBlank(appId)) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity(Util.getErrorDTO
+                            (FIDO2Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION_EMPTY_APP_ID)).build();
+                }
             }
             WebAuthnService webAuthnService = new WebAuthnService();
             Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2UsernamelessRegistration(appId);
