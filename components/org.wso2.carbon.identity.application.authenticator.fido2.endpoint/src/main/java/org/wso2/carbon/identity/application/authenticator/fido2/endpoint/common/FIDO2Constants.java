@@ -23,6 +23,7 @@ public class FIDO2Constants {
 
     public static final String EQUAL_OPERATOR = "=";
     private static final String FIDO2_ERROR_CODE_PREFIX = "FID-";
+    public static final String APP_ID = "appId";
 
     /**
      * Enum for error messages.

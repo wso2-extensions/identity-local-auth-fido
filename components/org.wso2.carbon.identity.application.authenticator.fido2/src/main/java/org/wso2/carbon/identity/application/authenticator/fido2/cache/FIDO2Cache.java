@@ -33,7 +33,7 @@ public class FIDO2Cache extends BaseCache<FIDO2CacheKey, FIDO2CacheEntry> {
 
     private FIDO2Cache() {
 
-        super(FIDO2_CACHE_NAME);
+        super(FIDO2_CACHE_NAME, true);
     }
 
     public static FIDO2Cache getInstance() {

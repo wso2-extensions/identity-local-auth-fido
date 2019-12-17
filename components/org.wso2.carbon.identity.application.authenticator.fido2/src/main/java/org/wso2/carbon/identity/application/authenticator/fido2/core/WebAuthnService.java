@@ -33,6 +33,7 @@ import com.yubico.webauthn.RelyingParty;
 import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.StartRegistrationOptions;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
@@ -48,6 +49,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authenticator.fido2.cache.FIDO2Cache;
 import org.wso2.carbon.identity.application.authenticator.fido2.cache.FIDO2CacheEntry;
 import org.wso2.carbon.identity.application.authenticator.fido2.cache.FIDO2CacheKey;
@@ -143,26 +145,12 @@ public class WebAuthnService {
     public Either<String, FIDO2RegistrationRequest> startFIDO2Registration(@NonNull String origin)
             throws JsonProcessingException, FIDO2AuthenticatorClientException {
 
-        readTrustedOrigins();
-        if (!origins.contains(origin.trim())) {
-            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
-                            .getErrorCode());
-        }
-
-        URL originUrl;
-        try {
-            originUrl = new URL(origin);
-        } catch (MalformedURLException e) {
-            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
-                            .getErrorCode(), e);
-        }
+        validateFIDO2TrustedOrigin(origin);
+        URL originUrl = getOriginUrl(origin);
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
         User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-
         PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
                 .startRegistration(buildStartRegistrationOptions(user));
 
@@ -171,6 +159,38 @@ public class WebAuthnService {
         FIDO2Cache.getInstance().addToCacheByRequestId(new FIDO2CacheKey(request.getRequestId().getBase64()),
                 new FIDO2CacheEntry(jsonMapper.writeValueAsString(request.getPublicKeyCredentialCreationOptions()),
                         null, originUrl));
+        return Either.right(request);
+    }
+
+    /**
+     * Triggers FIDO2 start usernameless registration flow.
+     *
+     * @param origin FIDO2 trusted origin.
+     * @return FIDO2 registration request.
+     * @throws JsonProcessingException
+     * @throws FIDO2AuthenticatorClientException
+     */
+    public Either<String, FIDO2RegistrationRequest> startFIDO2UsernamelessRegistration(@NonNull String origin)
+            throws JsonProcessingException, FIDO2AuthenticatorClientException {
+
+        validateFIDO2TrustedOrigin(origin);
+        URL originUrl = getOriginUrl(origin);
+        RelyingParty relyingParty = buildRelyingParty(originUrl);
+
+        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
+        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+
+        PublicKeyCredentialCreationOptions credentialCreationOptions =
+                relyingParty.startRegistration(StartRegistrationOptions.builder().user(UserIdentity.builder()
+                        .name(user.toString()).displayName(user.getUserName()).id(generateRandom()).build())
+                        .authenticatorSelection(AuthenticatorSelectionCriteria.builder()
+                                .requireResidentKey(true).build()).build());
+
+        FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
+        FIDO2Cache.getInstance().addToCacheByRequestId(new FIDO2CacheKey(request.getRequestId().getBase64()),
+                new FIDO2CacheEntry(jsonMapper.writeValueAsString(request.getPublicKeyCredentialCreationOptions()),
+                        null, originUrl));
+
         return Either.right(request);
     }
 
@@ -334,6 +354,31 @@ public class WebAuthnService {
         }
     }
 
+    /**
+     * Initiate usernameless authentication flow.
+     *
+     * @param appId Application Id resolved from the FIDO2 trusted origin.
+     * @return Assertion request.
+     * @throws AuthenticationFailedException
+     */
+    public String startUsernamelessAuthentication(String appId) throws AuthenticationFailedException {
+
+        URL originUrl;
+        try {
+            originUrl = new URL(appId);
+            RelyingParty relyingParty = buildRelyingParty(originUrl);
+            AssertionRequestWrapper request = new AssertionRequestWrapper(generateRandom(),
+                    relyingParty.startAssertion(StartAssertionOptions.builder().build()));
+            FIDO2Cache.getInstance().addToCacheByRequestWrapperId(new FIDO2CacheKey(request.getRequestId().getBase64()),
+                    new FIDO2CacheEntry(null, jsonMapper.writeValueAsString(request
+                            .getRequest()), originUrl));
+            return FIDOUtil.writeJson(request);
+        } catch (MalformedURLException | JsonProcessingException e) {
+            throw new AuthenticationFailedException("Usernameless authentication initialization failed for the " +
+                    "application with app id: " + appId, e);
+        }
+    }
+
     public void finishAuthentication(String username, String tenantDomain, String storeDomain, String responseJson)
             throws AuthenticationFailedException {
 
@@ -362,27 +407,8 @@ public class WebAuthnService {
             throw new AuthenticationFailedException("Assertion failed! No such assertion in progress.");
         } else {
             try {
-                // Fixing Yubico issue
                 PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential
-                        = response.getCredential();
-                if (response.getCredential().getResponse().getUserHandle().isPresent() &&
-                        response.getCredential().getResponse().getUserHandle().get().getBase64().equals("")) {
-
-                    AuthenticatorAssertionResponse authResponse = credential.getResponse().toBuilder()
-                            .authenticatorData(credential.getResponse().getAuthenticatorData())
-                            .clientDataJSON(credential.getResponse().getClientDataJSON())
-                            .signature(credential.getResponse().getSignature())
-                            .userHandle(Optional.empty())
-                            .build();
-
-                    credential = response.getCredential().toBuilder()
-                            .id(credential.getId())
-                            .clientExtensionResults(credential.getClientExtensionResults())
-                            .response(authResponse)
-                            .type(credential.getType())
-                            .build();
-                }
-
+                        = getPublicKeyCredential(response);
                 AssertionResult result = relyingParty.finishAssertion(FinishAssertionOptions.builder()
                         .request(request).response(credential).build());
 
@@ -406,6 +432,50 @@ public class WebAuthnService {
                 throw new AuthenticationFailedException("Assertion failed unexpectedly; this is likely a bug.", e);
             }
         }
+    }
+
+    /**
+     * Complete usernameless authentication flow.
+     *
+     * @param responseJson JSON response received from the client.
+     * @return Authenticated user.
+     * @throws AuthenticationFailedException
+     */
+    public AuthenticatedUser finishUsernamelessAuthentication(String responseJson)
+            throws AuthenticationFailedException {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        final AssertionResponse response = getAssertionResponse(responseJson);
+        String requestId = response.getRequestId().getBase64();
+        FIDO2CacheEntry cacheEntry =
+                FIDO2Cache.getInstance().getValueFromCacheByRequestId(new FIDO2CacheKey(requestId));
+        if (cacheEntry == null) {
+            throw new AuthenticationFailedException("Assertion failed! No cache entry can be found for request id: " +
+                    requestId);
+        }
+        AssertionRequest request = getAssertionRequest(cacheEntry);
+        RelyingParty relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+        FIDO2Cache.getInstance().clearCacheEntryByRequestId(new FIDO2CacheKey(requestId));
+
+        AssertionResult result = getAssertionResult(request, response, relyingParty);
+        if (result.isSuccess()) {
+            try {
+                User user = User.getUserFromUserName(result.getUsername());
+                authenticatedUser.setUserName(user.getUserName());
+                authenticatedUser.setTenantDomain(user.getTenantDomain());
+                authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
+                userStorage.updateFIDO2SignatureCount(result);
+
+                new SuccessfulAuthenticationResult(request, response,
+                        userStorage.getFIDO2RegistrationsByUsername(result.getUsername()), result.getWarnings());
+            } catch (FIDO2AuthenticatorServerException e) {
+                throw new AuthenticationFailedException("Error in usernameless authentication flow.", e);
+            }
+        } else {
+            throw new AuthenticationFailedException("Assertion failed: Invalid assertion.");
+        }
+
+        return authenticatedUser;
     }
 
     @Deprecated
@@ -602,4 +672,99 @@ public class WebAuthnService {
             origins.replaceAll(i -> IdentityUtil.fillURLPlaceholders((String)i));
         }
     }
+
+    private AssertionResult getAssertionResult(AssertionRequest request, AssertionResponse response,
+                                               RelyingParty relyingParty) throws AuthenticationFailedException {
+
+        try {
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential =
+                    getPublicKeyCredential(response);
+
+            return relyingParty.finishAssertion(FinishAssertionOptions.builder()
+                    .request(request).response(credential).build());
+        } catch (AssertionFailedException e) {
+            throw new AuthenticationFailedException("Assertion failed while finishing the assertion to retrieve the " +
+                    "assertion result.", e);
+        } catch (Exception e) {
+            throw new AuthenticationFailedException("Assertion failed unexpectedly; this is likely a bug.", e);
+        }
+    }
+
+    private PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> getPublicKeyCredential
+            (AssertionResponse response) throws IOException, Base64UrlException {
+
+        // Fixing Yubico issue.
+        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential =
+                response.getCredential();
+        if (response.getCredential().getResponse().getUserHandle().isPresent() &&
+                response.getCredential().getResponse().getUserHandle().get().getBase64().equals("")) {
+
+            AuthenticatorAssertionResponse authResponse = credential.getResponse().toBuilder()
+                    .authenticatorData(credential.getResponse().getAuthenticatorData())
+                    .clientDataJSON(credential.getResponse().getClientDataJSON())
+                    .signature(credential.getResponse().getSignature())
+                    .userHandle(Optional.empty())
+                    .build();
+
+            credential = response.getCredential().toBuilder()
+                    .id(credential.getId())
+                    .clientExtensionResults(credential.getClientExtensionResults())
+                    .response(authResponse)
+                    .type(credential.getType())
+                    .build();
+        }
+
+        return credential;
+    }
+
+    private AssertionResponse getAssertionResponse(String responseJson) throws AuthenticationFailedException {
+
+        final AssertionResponse response;
+        try {
+            response = jsonMapper.readValue(responseJson, AssertionResponse.class);
+        } catch (IOException e) {
+            throw new AuthenticationFailedException("Assertion for finish authentication flow failed due to failure " +
+                    "in decoding json response: " + responseJson, e);
+        }
+
+        return response;
+    }
+
+    private AssertionRequest getAssertionRequest(FIDO2CacheEntry cacheEntry) throws AuthenticationFailedException {
+
+        AssertionRequest request;
+        try {
+            request = jsonMapper.readValue(cacheEntry.getAssertionRequest(), AssertionRequest.class);
+        } catch (IOException e) {
+            throw new AuthenticationFailedException("Assertion for finish authentication flow failed due to failure " +
+                    "in decoding assertion request object.", e);
+        }
+
+        return request;
+    }
+
+    private void validateFIDO2TrustedOrigin(String origin) throws FIDO2AuthenticatorClientException {
+
+        readTrustedOrigins();
+        if (!origins.contains(origin.trim())) {
+            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
+                            .getErrorCode());
+        }
+    }
+
+    private URL getOriginUrl(String origin) throws FIDO2AuthenticatorClientException {
+
+        URL originUrl;
+        try {
+            originUrl = new URL(origin);
+        } catch (MalformedURLException e) {
+            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
+                            .getErrorCode(), e);
+        }
+
+        return originUrl;
+    }
+
 }

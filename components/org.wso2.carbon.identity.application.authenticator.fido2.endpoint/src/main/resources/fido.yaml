@@ -125,6 +125,69 @@ paths:
       tags:
         - me
 
+  # Endpoint used to start usernameless registration
+  /start-usernameless-registration:
+    post:
+      description: |
+        This API is used to trigger FIDO2 usernameless device registration flow.
+
+         <b>Permission required:</b>
+         * /permission/admin/login
+      summary: |
+        Trigger FIDO2 usernameless device registration.
+      consumes:
+        - application/x-www-form-urlencoded
+      # post parameters:
+      parameters:
+        -
+          name: appId
+          in: formData
+          description:  Represents the host name of FIDO request initiator.
+          required: true
+          type: string
+      responses:
+        201:
+          description: Successful response
+          schema:
+            type: object
+            example:
+              requestId: veiLaU2yg0-pAhn1sRlXZBbxS5KaidyAyfWt-sQUajU
+              publicKeyCredentialCreationOptions:
+                rp:
+                  name: WSO2 Identity Server
+                  id: localhost
+                user:
+                  name: admin@carbon.super
+                  displayName: admin
+                  id: iAgKlKucOIjxUoUq510BXTI9_p3NENmQo2ZM5gQMcoA
+                challenge: tvyJuz16drO390L5VPheOG5zpY9zEcSVbc1QNeFv0Fs
+                pubKeyCredParams:
+                  - alg: -7
+                    type: public-key
+                  - alg: -257
+                    type: public-key
+                excludeCredentials: []
+                attestation: none
+                extensions: {}
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/Error'
+        401:
+          description: Unauthorized
+        403:
+          description: Resource Forbidden
+        409:
+          description: Conflict
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - me
+
   /finish-registration:
     post:
       description: |

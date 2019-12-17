@@ -71,14 +71,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                  AuthenticationContext context)
             throws AuthenticationFailedException {
 
-        AuthenticatedUser user;
+        AuthenticatedUser user = getUsername(context);
         String tokenResponse = request.getParameter("tokenResponse");
         if (tokenResponse != null && !tokenResponse.contains("errorCode")) {
             String appID = FIDOUtil.getOrigin(request);
-            user = getUsername(context);
-
             if (isWebAuthnEnabled()) {
-                processFido2AuthenticationResponse(user, tokenResponse);
+                if (user == null) {
+                    user = processFido2UsernamelessAuthenticationResponse(tokenResponse);
+                } else {
+                    processFido2AuthenticationResponse(user, tokenResponse);
+                }
             } else {
                 processFidoAuthenticationResponse(user, appID, tokenResponse);
             }
@@ -87,7 +89,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             if (log.isDebugEnabled()) {
                 log.debug("FIDO authentication failed : " + tokenResponse);
             }
-            user = getUsername(context);
             throw new InvalidCredentialsException("FIDO device authentication failed ", user);
         }
 
@@ -132,9 +133,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         String appID = resolveAppId(request);
 
         try {
-            String redirectUrl = getRedirectUrl(request, response, user, appID, getLoginPage());
+            String redirectUrl = getRedirectUrl(response, user, appID, getLoginPage(), context);
             response.sendRedirect(redirectUrl);
-
         } catch (IOException e) {
             throw new AuthenticationFailedException("Could not initiate FIDO authentication request", user, e);
         }
@@ -164,6 +164,13 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 tokenResponse);
     }
 
+    private AuthenticatedUser processFido2UsernamelessAuthenticationResponse(String tokenResponse)
+            throws AuthenticationFailedException {
+
+        WebAuthnService webAuthnService = new WebAuthnService();
+        return webAuthnService.finishUsernamelessAuthentication(tokenResponse);
+    }
+
     private void processFidoAuthenticationResponse(AuthenticatedUser user, String appID, String tokenResponse)
             throws AuthenticationFailedException {
 
@@ -188,20 +195,23 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         WebAuthnService webAuthnService = new WebAuthnService();
 
+        if (user == null) {
+            return webAuthnService.startUsernamelessAuthentication(appID);
+        }
+
         return webAuthnService.startAuthentication(user.getUserName(),
                 user.getTenantDomain(), user.getUserStoreDomain(), appID);
     }
 
-    private String getRedirectUrl(boolean isDataNull, String loginPage, String urlEncodedData, HttpServletRequest request,
-                                  HttpServletResponse response, AuthenticatedUser user)
-            throws UnsupportedEncodingException {
+    private String getRedirectUrl(boolean isDataNull, String loginPage, String urlEncodedData,
+                                  HttpServletResponse response, AuthenticatedUser user,
+                                  AuthenticationContext context) throws UnsupportedEncodingException {
 
         String redirectURL;
         if (!isDataNull) {
             redirectURL = loginPage + ("?")
                     + "&authenticators=" + getName() + ":" + "LOCAL" + "&type=fido&sessionDataKey=" +
-                    request.getParameter("sessionDataKey") +
-                    "&data=" + urlEncodedData;
+                    context.getContextIdentifier() + "&data=" + urlEncodedData;
         } else {
             redirectURL = ConfigurationFacade.getInstance().getAuthenticationEndpointRetryURL();
             redirectURL = response.encodeRedirectURL(redirectURL + ("?")) + "&failedUsername=" +
@@ -225,16 +235,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return webAuthnEnabled;
     }
 
-    private String getRedirectUrl(HttpServletRequest request, HttpServletResponse response, AuthenticatedUser user,
-                                  String appID, String loginPage) throws AuthenticationFailedException,
-            UnsupportedEncodingException {
+    private String getRedirectUrl(HttpServletResponse response, AuthenticatedUser user, String appID,
+                                  String loginPage, AuthenticationContext context)
+            throws AuthenticationFailedException, UnsupportedEncodingException {
 
         String redirectUrl;
         if (isWebAuthnEnabled()) {
             String data = initiateFido2AuthenticationRequest(user, appID);
             boolean isDataNull = StringUtils.isBlank(data);
-            redirectUrl = getRedirectUrl(isDataNull, loginPage, URLEncoder.encode(data,
-                    IdentityCoreConstants.UTF_8), request, response, user);
+            redirectUrl = getRedirectUrl(isDataNull, loginPage, URLEncoder.encode(data, IdentityCoreConstants.UTF_8),
+                    response, user, context);
         } else {
             AuthenticateRequestData data = initiateFidoAuthenticationRequest(user, appID);
             boolean isDataNull = (data == null);
@@ -242,7 +252,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             if (!isDataNull) {
                 encodedData = URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
             }
-            redirectUrl = getRedirectUrl(isDataNull, loginPage, encodedData, request, response, user);
+            redirectUrl = getRedirectUrl(isDataNull, loginPage, encodedData, response, user, context);
         }
         return redirectUrl;
     }
@@ -257,7 +267,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return appID;
     }
 
-    private AuthenticatedUser getUsername(AuthenticationContext context) throws AuthenticationFailedException {
+    private AuthenticatedUser getUsername(AuthenticationContext context) {
 
         //username from authentication context.
         AuthenticatedUser authenticatedUser = null;
@@ -275,10 +285,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 break;
             }
         }
-        if (authenticatedUser == null) {
-            throw new AuthenticationFailedException("Could not locate an authenticated username from previous steps " +
-                    "of the sequence. Hence cannot continue with FIDO authentication.");
-        }
+
         return authenticatedUser;
     }
 
