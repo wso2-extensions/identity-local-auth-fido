@@ -338,7 +338,10 @@ public class WebAuthnService {
             user.setTenantDomain(tenantDomain);
             user.setUserStoreDomain(storeDomain);
             if (userStorage.getFIDO2RegistrationsByUsername(user.toString()).isEmpty()) {
-                throw new AuthenticationFailedException("The username \"" + user.toString() + "\" is not registered.");
+                if (log.isDebugEnabled()) {
+                    log.debug("No registered device found for user :" + user.toString());
+                }
+                return null;
             } else {
                 RelyingParty relyingParty = buildRelyingParty(originUrl);
                 AssertionRequestWrapper request = new AssertionRequestWrapper(

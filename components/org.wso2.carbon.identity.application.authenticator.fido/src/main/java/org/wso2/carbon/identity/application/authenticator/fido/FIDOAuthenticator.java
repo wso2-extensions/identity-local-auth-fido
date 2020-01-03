@@ -243,8 +243,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if (isWebAuthnEnabled()) {
             String data = initiateFido2AuthenticationRequest(user, appID);
             boolean isDataNull = StringUtils.isBlank(data);
-            redirectUrl = getRedirectUrl(isDataNull, loginPage, URLEncoder.encode(data, IdentityCoreConstants.UTF_8),
-                    response, user, context);
+            String urlEncodedData = null;
+            if (!isDataNull) {
+                urlEncodedData = URLEncoder.encode(data, IdentityCoreConstants.UTF_8);
+            }
+            redirectUrl = getRedirectUrl(isDataNull, loginPage, urlEncodedData, response, user, context);
         } else {
             AuthenticateRequestData data = initiateFidoAuthenticationRequest(user, appID);
             boolean isDataNull = (data == null);
