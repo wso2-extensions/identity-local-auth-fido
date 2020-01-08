@@ -36,7 +36,10 @@ public class FIDO2AuthenticatorConstants {
 
     public static final String TIME_REGISTERED = "TIME_REGISTERED";
     public static final String USER_IDENTITY = "USER_IDENTITY";
+    public static final String DISPLAY_NAME = "DISPLAY_NAME";
+    public static final String IS_USERNAMELESS_SUPPORTED = "IS_USERNAMELESS_SUPPORTED";
     public static final String TRUSTED_ORIGINS = "FIDO.FIDO2TrustedOrigins.Origin";
+    public static final String USERNAMELESS_SUPPORTED = "1";
 
     public static final String APPLICATION_NAME = "WSO2 Identity Server";
     public static final String FIDO2_DEVICE_STORE = "FIDO2_DEVICE_STORE";
@@ -75,7 +78,15 @@ public class FIDO2AuthenticatorConstants {
                 "(TENANT_ID, DOMAIN_NAME, USER_NAME, TIME_REGISTERED, USER_HANDLE, CREDENTIAL_ID, PUBLIC_KEY_COSE, " +
                 "SIGNATURE_COUNT, USER_IDENTITY ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+        public static final String ADD_FIDO2_DEVICE_REGISTRATION_QUERY = "INSERT INTO FIDO2_DEVICE_STORE " +
+                "(TENANT_ID, DOMAIN_NAME, USER_NAME, TIME_REGISTERED, USER_HANDLE, CREDENTIAL_ID, PUBLIC_KEY_COSE, " +
+                "SIGNATURE_COUNT, USER_IDENTITY, DISPLAY_NAME, IS_USERNAMELESS_SUPPORTED) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         public static final String DELETE_DEVICE_REGISTRATION_BY_USERNAME_AND_ID = "DELETE FROM FIDO2_DEVICE_STORE " +
+                "WHERE TENANT_ID = ? AND DOMAIN_NAME = ? AND USER_NAME = ? AND CREDENTIAL_ID = ?";
+
+        public static final String UPDATE_DEVICE_DISPLAY_NAME = "UPDATE FIDO2_DEVICE_STORE SET DISPLAY_NAME = ? " +
                 "WHERE TENANT_ID = ? AND DOMAIN_NAME = ? AND USER_NAME = ? AND CREDENTIAL_ID = ?";
 
         public static final String UPDATE_DOMAIN_QUERY = "UPDATE FIDO2_DEVICE_STORE SET DOMAIN_NAME = ? " +
@@ -95,7 +106,9 @@ public class FIDO2AuthenticatorConstants {
         ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST("50006"),
         ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS("50007"),
         ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL("50009"),
-        ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50010");
+        ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50010"),
+        ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL("50011"),
+        ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50012");
 
         private String errorCode;
 
