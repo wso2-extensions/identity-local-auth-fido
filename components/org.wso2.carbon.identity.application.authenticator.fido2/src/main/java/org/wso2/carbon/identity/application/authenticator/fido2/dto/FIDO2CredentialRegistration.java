@@ -49,9 +49,21 @@ public class FIDO2CredentialRegistration {
 
     private Optional<Attestation> attestationMetadata;
 
+    private String displayName;
+    private boolean isUsernamelessSupported;
+
     @JsonProperty("registrationTime")
     public String getRegistrationTimestamp() {
         return registrationTime.toString();
     }
 
+    public String getDisplayName() {
+
+        return displayName;
+    }
+
+    public boolean getIsUsernamelessSupported() {
+
+        return isUsernamelessSupported;
+    }
 }

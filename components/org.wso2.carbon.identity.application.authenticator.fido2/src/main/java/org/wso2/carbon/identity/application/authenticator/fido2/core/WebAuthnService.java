@@ -567,6 +567,45 @@ public class WebAuthnService {
         }
     }
 
+    /**
+     * Update the display name of a registered device.
+     *
+     * @param credentialId   Credential ID.
+     * @param newDisplayName New display name to be updated.
+     * @throws FIDO2AuthenticatorClientException
+     * @throws FIDO2AuthenticatorServerException
+     */
+    public void updateFIDO2DeviceDisplayName(String credentialId, String newDisplayName)
+            throws FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
+
+        if (StringUtils.isBlank(credentialId)) {
+            throw new FIDO2AuthenticatorClientException("Credential ID must not be empty.",
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                            .ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
+        }
+
+        final ByteArray identifier;
+        try {
+            identifier = ByteArray.fromBase64Url(credentialId);
+        } catch (Base64UrlException e) {
+            throw new FIDO2AuthenticatorClientException("The Credential ID: " + credentialId + " is not a valid " +
+                    "Base64Url data.", FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                    .ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
+        }
+
+        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
+        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        Optional<FIDO2CredentialRegistration> credentialRegistration =
+                userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user.toString(), identifier);
+
+        if (!credentialRegistration.isPresent()) {
+            throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                            .ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
+        }
+        userStorage.updateFIDO2DeviceDisplayName(user, credentialRegistration.get(), newDisplayName);
+    }
+
     private RelyingParty buildRelyingParty(URL originUrl) {
 
         readTrustedOrigins();
@@ -623,6 +662,12 @@ public class WebAuthnService {
                         .getSignatureCounter())
                 .build();
 
+        boolean requireResidentKey = false;
+        if (publicKeyCredentialCreationOptions.getAuthenticatorSelection().isPresent()) {
+            requireResidentKey =
+                    publicKeyCredentialCreationOptions.getAuthenticatorSelection().get().isRequireResidentKey();
+        }
+
         FIDO2CredentialRegistration reg = FIDO2CredentialRegistration.builder()
                 .userIdentity(userIdentity)
                 .registrationTime(clock.instant())
@@ -630,6 +675,8 @@ public class WebAuthnService {
                 .signatureCount(response.getCredential().getResponse().getParsedAuthenticatorData()
                         .getSignatureCounter())
                 .attestationMetadata(registration.getAttestationMetadata())
+                .displayName(null)
+                .isUsernamelessSupported(requireResidentKey)
                 .build();
         userStorage.addFIDO2RegistrationByUsername(userIdentity.getName(), reg);
     }

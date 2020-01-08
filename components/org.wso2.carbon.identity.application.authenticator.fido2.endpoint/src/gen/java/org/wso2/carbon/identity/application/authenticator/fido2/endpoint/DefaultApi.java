@@ -7,6 +7,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.factori
 import io.swagger.annotations.ApiParam;
 
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.ErrorDTO;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.RegistrationObjectDTO;
 
 import java.util.List;
 
@@ -29,7 +30,7 @@ public class DefaultApi  {
     
     @Consumes({ "application/json" })
     @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Device Metadata\n", notes = "This API is used to get fido metadata by username.\n\n<b>Permission required:</b>\n * /permission/admin/login\n", response = Object.class, responseContainer = "List")
+    @io.swagger.annotations.ApiOperation(value = "Device Metadata\n", notes = "This API is used to get fido metadata by username.\n\n<b>Permission required:</b>\n * /permission/admin/login\n", response = RegistrationObjectDTO.class)
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "All available fido metadata for a user."),
         

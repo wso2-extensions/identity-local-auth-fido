@@ -24,6 +24,7 @@ public class FIDO2Constants {
     public static final String EQUAL_OPERATOR = "=";
     private static final String FIDO2_ERROR_CODE_PREFIX = "FID-";
     public static final String APP_ID = "appId";
+    public static final String DISPLAY_NAME_PATH = "/displayName";
 
     /**
      * Enum for error messages.
@@ -51,7 +52,14 @@ public class FIDO2Constants {
         ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL("50009", "Error while deleting user " +
                 "credentials.", "Invalid credentialId : %s "),
         ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50010", "Error while deleting user " +
-                "credentials.", "FIDO2 device registration is not available with credentialId : %s ");
+                "credentials.", "FIDO2 device registration is not available with credentialId : %s "),
+        ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL("50011", "Error while updating display name" +
+                " of device.", "Invalid credentialId : %s "),
+        ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50012", "Error while updating display " +
+                "name of device.", "FIDO2 device registration is not available with credentialId : %s "),
+        ERROR_CODE_UPDATE_DISPLAY_NAME("50013", "Error while updating display name of device.",
+                "A system error occurred while updating display name of device with credentialId : %s "),
+        ERROR_CODE_INVALID_INPUT("50014", "Invalid input.", "One of the given inputs is invalid.");
 
         private final String code;
         private final String message;

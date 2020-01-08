@@ -303,9 +303,14 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement preparedStatement = null;
 
+        String isUsernamelessSupported = "0";
+        if (reg.getIsUsernamelessSupported()) {
+            isUsernamelessSupported = "1";
+        }
+
         try {
-            preparedStatement = connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries
-                    .ADD_DEVICE_REGISTRATION_QUERY);
+            preparedStatement = connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries.
+                    ADD_FIDO2_DEVICE_REGISTRATION_QUERY);
             preparedStatement.setInt(1, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
             preparedStatement.setString(2, user.getUserStoreDomain());
             preparedStatement.setString(3, user.getUserName());
@@ -315,6 +320,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(7, reg.getCredential().getPublicKeyCose().getBase64());
             preparedStatement.setLong(8, reg.getCredential().getSignatureCount());
             preparedStatement.setString(9, jsonMapper.writeValueAsString(reg.getUserIdentity()));
+            preparedStatement.setString(10, reg.getDisplayName());
+            preparedStatement.setString(11, isUsernamelessSupported);
 
             preparedStatement.execute();
             if (!connection.getAutoCommit()) {
@@ -424,6 +431,9 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                         .PUBLIC_KEY_COSE));
                 Long signatureCount = resultSet.getLong(FIDO2AuthenticatorConstants.SIGNATURE_COUNT);
                 Timestamp timestamp = resultSet.getTimestamp(FIDO2AuthenticatorConstants.TIME_REGISTERED);
+                String deviceDisplayName = resultSet.getString(FIDO2AuthenticatorConstants.DISPLAY_NAME);
+                boolean isUsernamelessSupported = FIDO2AuthenticatorConstants.USERNAMELESS_SUPPORTED.equals
+                                (resultSet.getString(FIDO2AuthenticatorConstants.IS_USERNAMELESS_SUPPORTED));
 
                 RegisteredCredential credential = RegisteredCredential.builder()
                         .credentialId(credentialId)
@@ -438,6 +448,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                         .credential(credential)
                         .credentialNickname(Optional.empty())
                         .registrationTime(timestamp.toInstant())
+                        .displayName(deviceDisplayName)
+                        .isUsernamelessSupported(isUsernamelessSupported)
                         .build();
 
                 credentialRegistrations.add(registration);
@@ -549,6 +561,9 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                         .PUBLIC_KEY_COSE));
                 Long signatureCount = resultSet.getLong(FIDO2AuthenticatorConstants.SIGNATURE_COUNT);
                 Timestamp timestamp = resultSet.getTimestamp(FIDO2AuthenticatorConstants.TIME_REGISTERED);
+                boolean isUsernamelessSupported = FIDO2AuthenticatorConstants.USERNAMELESS_SUPPORTED.equals
+                        (resultSet.getString(FIDO2AuthenticatorConstants.IS_USERNAMELESS_SUPPORTED));
+                String deviceDisplayName = resultSet.getString(FIDO2AuthenticatorConstants.DISPLAY_NAME);
 
                 RegisteredCredential credential = RegisteredCredential.builder()
                         .credentialId(credentialId)
@@ -563,6 +578,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                         .credential(credential)
                         .credentialNickname(Optional.empty())
                         .registrationTime(timestamp.toInstant())
+                        .isUsernamelessSupported(isUsernamelessSupported)
+                        .displayName(deviceDisplayName)
                         .build();
                 credentialRegistration = Optional.of(registration);
             }
@@ -648,6 +665,38 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
+    }
+
+    /**
+     * Update display name of a registered device.
+     *
+     * @param user           User
+     * @param registration   FIDO2 Credential Registration.
+     * @param newDisplayName New display name to be updated.
+     * @throws FIDO2AuthenticatorServerException
+     */
+    public void updateFIDO2DeviceDisplayName(User user, FIDO2CredentialRegistration registration,
+                                             String newDisplayName) throws FIDO2AuthenticatorServerException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Updating device display name of user: " + user.getUserName());
+        }
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(); PreparedStatement preparedStatement =
+                connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries.UPDATE_DEVICE_DISPLAY_NAME)) {
+            preparedStatement.setString(1, newDisplayName);
+            preparedStatement.setInt(2, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
+            preparedStatement.setString(3, user.getUserStoreDomain());
+            preparedStatement.setString(4, user.getUserName());
+            preparedStatement.setString(5, registration.getCredential().getCredentialId().getBase64());
+
+            preparedStatement.executeUpdate();
+            connection.commit();
+        } catch (SQLException e) {
+            throw new FIDO2AuthenticatorServerException("Could not update the FIDO2 device display name of user: " +
+                    user.getUserName(), e);
+        }
+
     }
 
     @Deprecated

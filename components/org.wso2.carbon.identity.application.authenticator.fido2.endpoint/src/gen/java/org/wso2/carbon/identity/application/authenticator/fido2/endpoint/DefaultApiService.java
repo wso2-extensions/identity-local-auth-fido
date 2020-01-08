@@ -4,6 +4,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.*;
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.*;
 
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.ErrorDTO;
+import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.RegistrationObjectDTO;
 
 import java.util.List;
 
