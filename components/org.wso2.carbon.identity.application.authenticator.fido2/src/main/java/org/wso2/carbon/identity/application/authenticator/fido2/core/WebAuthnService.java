@@ -209,7 +209,7 @@ public class WebAuthnService {
         }
 
         User user = getPrivilegedUser();
-        if(FIDO2DeviceStoreDAO.getInstance().getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
+        if (FIDO2DeviceStoreDAO.getInstance().getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
                 response.getCredential().getId()).isPresent()) {
             throw new FIDO2AuthenticatorException("The username \"" + user + "\" is already registered.");
         }
@@ -247,7 +247,7 @@ public class WebAuthnService {
             } catch (RegistrationFailedException e) {
                 throw new FIDO2AuthenticatorException("Registration failed!", e);
             } catch (IOException e) {
-                throw new FIDO2AuthenticatorServerException("Registration failed unexpectedly; this is likely a bug.",e);
+                throw new FIDO2AuthenticatorServerException("Registration failed unexpectedly; this is likely a bug.", e);
             }
         }
     }
@@ -540,8 +540,8 @@ public class WebAuthnService {
 
         if (StringUtils.isBlank(credentialId)) {
             throw new FIDO2AuthenticatorClientException("Credential ID must not be empty.",
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL
-                            .getErrorCode());
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                            .ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
         }
 
         final ByteArray identifier;
@@ -549,21 +549,21 @@ public class WebAuthnService {
             identifier = ByteArray.fromBase64Url(credentialId);
         } catch (Base64UrlException e) {
             throw new FIDO2AuthenticatorClientException("Credential ID is not valid Base64Url data: " + credentialId,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL
-                            .getErrorCode(), e);
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                            .ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
         }
 
         User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-        Optional<FIDO2CredentialRegistration> credReg = userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
-                identifier);
+        Optional<FIDO2CredentialRegistration> credReg = userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user
+                .toString(), identifier);
 
         if (credReg.isPresent()) {
             userStorage.removeFIDO2RegistrationByUsername(user.toString(), credReg.get());
         } else {
             throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE
-                            .getErrorCode());
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                            .ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
         }
     }
 
