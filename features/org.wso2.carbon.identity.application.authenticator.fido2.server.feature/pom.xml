@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
         <artifactId>identity-application-auth-fido</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.2.3</version>
+        <version>5.2.4-SNAPSHOT</version>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.application.authenticator.fido2.server.feature</artifactId>
