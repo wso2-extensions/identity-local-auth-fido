@@ -352,7 +352,7 @@
         <jackson-jaxrs-json-provider.version>2.10.5</jackson-jaxrs-json-provider.version>
         <jackson-dataformat-xml.version>2.10.5</jackson-dataformat-xml.version>
         <guava.osgi.version.range>[18.0.0,30.0.0]</guava.osgi.version.range>
-        <springframework.version>4.1.6.RELEASE</springframework.version>
+        <springframework.version>4.3.29.RELEASE</springframework.version>
         <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
@@ -370,8 +370,3 @@
     </modules>
 
 </project>
-
-
-
-
-
