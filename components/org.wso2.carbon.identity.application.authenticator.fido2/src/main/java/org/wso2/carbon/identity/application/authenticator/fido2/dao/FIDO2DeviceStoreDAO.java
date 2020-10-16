@@ -784,6 +784,35 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         }
     }
 
+    /**
+     * Delete all device registrations associated to a user.
+     *
+     * @param username      Username.
+     * @param userStoreName Userstore domain.
+     * @param tenantId      Tenant Id.
+     * @throws FIDO2AuthenticatorServerException Error in deleting devices associated to a user.
+     */
+    public void deleteRegistrationsForUser(String username, String userStoreName, int tenantId)
+            throws FIDO2AuthenticatorServerException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(); PreparedStatement preparedStatement =
+                connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries.
+                        DELETE_REGISTRATIONS_BY_USERNAME_AND_DOMAIN)) {
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, userStoreName);
+            preparedStatement.setInt(3, tenantId);
+
+            preparedStatement.execute();
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
+        } catch (SQLException e) {
+            throw new FIDO2AuthenticatorServerException(MessageFormat.format("Could not delete registrations" +
+                    " that is associated to user : {0} in userstore domain : {1} and tenant id : {2}.", username,
+                    userStoreName, tenantId), e);
+        }
+    }
+
     public static boolean isFido2DTOPersistenceSupported() {
 
         if (!isFIDO2DTOPersistenceStatusChecked) {

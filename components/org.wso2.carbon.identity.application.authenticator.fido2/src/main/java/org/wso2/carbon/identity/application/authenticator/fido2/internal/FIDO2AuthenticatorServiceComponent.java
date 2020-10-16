@@ -22,7 +22,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
+import org.wso2.carbon.identity.application.authenticator.fido2.listener.FIDO2DeviceAssociatedUserOperationsListener;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
+import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
 
 /**
@@ -42,6 +44,8 @@ public class FIDO2AuthenticatorServiceComponent {
 
         try {
             bundleContext.registerService(UserStoreConfigListener.class.getName(), new UserStoreConfigListenerImpl(), null);
+            bundleContext.registerService(UserOperationEventListener.class.getName(),
+                    new FIDO2DeviceAssociatedUserOperationsListener(), null);
         } catch (Exception e){
             log.error("Error registering UserStoreConfigListener ", e);
         }

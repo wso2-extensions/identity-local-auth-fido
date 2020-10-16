@@ -94,6 +94,9 @@ public class FIDO2AuthenticatorConstants {
 
         public static final String DELETE_REGISTRATION_BY_DOMAIN_AND_TENANT_ID = "DELETE FROM FIDO2_DEVICE_STORE " +
                 "WHERE TENANT_ID = ? AND DOMAIN_NAME = ?";
+
+        public static final String DELETE_REGISTRATIONS_BY_USERNAME_AND_DOMAIN = "DELETE FROM FIDO2_DEVICE_STORE " +
+                "WHERE USER_NAME = ? AND DOMAIN_NAME = ? AND TENANT_ID = ?";
     }
 
     /**
