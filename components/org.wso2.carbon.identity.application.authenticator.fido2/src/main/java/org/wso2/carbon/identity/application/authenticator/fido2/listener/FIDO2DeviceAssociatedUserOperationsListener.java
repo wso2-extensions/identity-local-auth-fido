@@ -43,7 +43,6 @@ public class FIDO2DeviceAssociatedUserOperationsListener extends AbstractIdentit
         if (orderId != IdentityCoreConstants.EVENT_LISTENER_ORDER_ID) {
             return orderId;
         }
-
         return 101;
     }
 
@@ -59,8 +58,6 @@ public class FIDO2DeviceAssociatedUserOperationsListener extends AbstractIdentit
                 throw new UserStoreException("Error in deleting device registration for user " + userName, e);
             }
         }
-
         return true;
     }
-
 }
