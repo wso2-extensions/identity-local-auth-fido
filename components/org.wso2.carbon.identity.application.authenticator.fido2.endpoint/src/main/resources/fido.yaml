@@ -6,7 +6,7 @@ info:
   version: "v2"
   title: "WSO2 Identity Server FIDO2 Rest API "
   description: |
-    This document specifies a **FIDO 2 RESTfulAPI** for WSO2 **Identity Server** .
+    This document specifies a **FIDO 2 RESTfulAPI** for WSO2 **Identity Server**. This API can be used to register and deregister FIDO2 devices, and get device metadata by username.
 
     It is written with [swagger 2](http://swagger.io/).
 
@@ -67,9 +67,10 @@ paths:
     post:
       description: |
         This API is used to trigger FIDO2 device registration flow.
-
-         <b>Permission required:</b>
-         * /permission/admin/login
+        <b>Permission required:</b>
+          * None
+        <b>Scope required:</b>
+          * internal_login
       summary: |
         Trigger FIDO2 device registration.
       consumes:
@@ -130,9 +131,10 @@ paths:
     post:
       description: |
         This API is used to trigger FIDO2 usernameless device registration flow.
-
-         <b>Permission required:</b>
-         * /permission/admin/login
+        <b>Permission required:</b>
+            * None
+        <b>Scope required:</b>
+            * internal_login
       summary: |
         Trigger FIDO2 usernameless device registration.
       consumes:
@@ -167,6 +169,9 @@ paths:
                   - alg: -257
                     type: public-key
                 excludeCredentials: []
+                authenticatorSelection:
+                    requireResidentKey: true 
+                    userVerification: preferred
                 attestation: none
                 extensions: {}
         400:
@@ -192,9 +197,10 @@ paths:
     post:
       description: |
         This API is used to complete FIDO2 device registration flow.
-
         <b>Permission required:</b>
-         * /permission/admin/login
+            * None
+        <b>Scope required:</b>
+            * internal_login
       summary: |
         Complete FIDO2 device registration.
       # post parameters:
@@ -245,9 +251,10 @@ paths:
     delete:
       description: |
         This API is used to deregister devices by username and credentialId.
-
         <b>Permission required:</b>
-         * /permission/admin/login
+            * None
+        <b>Scope required:</b>
+            * internal_login
       summary: |
         Deregister devices by username and credentialId.
       parameters:
@@ -281,9 +288,11 @@ paths:
     patch:
       description: |
         This API is used to update display name of a device by username and credentialId.
-
+        
         <b>Permission required:</b>
-         * /permission/admin/login
+            * None
+        <b>Scope required:</b>
+            * internal_login
       summary: |
         Update display name of device by username and credentialId.
       parameters:
@@ -328,7 +337,9 @@ paths:
         This API is used to get fido metadata by username.
 
         <b>Permission required:</b>
-         * /permission/admin/login
+            * None
+        <b>Scope required:</b>
+            * internal_login
       summary: |
         Device Metadata
       responses:
