@@ -32,7 +32,16 @@ import com.yubico.webauthn.RegistrationResult;
 import com.yubico.webauthn.RelyingParty;
 import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.StartRegistrationOptions;
-import com.yubico.webauthn.data.*;
+import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
+import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
+import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.RelyingPartyIdentity;
+import com.yubico.webauthn.data.UserIdentity;
+import com.yubico.webauthn.data.AttestationConveyancePreference;
+import com.yubico.webauthn.data.RegistrationExtensionInputs;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import com.yubico.webauthn.exception.RegistrationFailedException;
@@ -74,10 +83,12 @@ import java.net.URL;
 import java.security.SecureRandom;
 import java.text.MessageFormat;
 import java.time.Clock;
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Optional;
 import static com.yubico.webauthn.data.UserVerificationRequirement.PREFERRED;
-
 
 /**
  * FIDO2 core APIs.
@@ -95,7 +106,7 @@ public class WebAuthnService {
 
     private static ArrayList origins = null;
 
-    private static final String timeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
+    private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
 
     @Deprecated
     /** @deprecated Please use {@link #startFIDO2Registration(String)} instead. */
@@ -139,7 +150,7 @@ public class WebAuthnService {
      * @throws FIDO2AuthenticatorClientException
      */
     public Either<String, FIDO2RegistrationRequest> startFIDO2Registration(@NonNull String origin)
-            throws JsonProcessingException, FIDO2AuthenticatorClientException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
 
         validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
@@ -167,7 +178,7 @@ public class WebAuthnService {
      * @throws FIDO2AuthenticatorClientException
      */
     public Either<String, FIDO2RegistrationRequest> startFIDO2UsernamelessRegistration(@NonNull String origin)
-            throws JsonProcessingException, FIDO2AuthenticatorClientException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
 
         validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
@@ -682,17 +693,18 @@ public class WebAuthnService {
         return new ByteArray(bytes);
     }
 
-    private StartRegistrationOptions buildStartRegistrationOptions(User user, Boolean requireResidentKey) {
+    private StartRegistrationOptions buildStartRegistrationOptions(User user, boolean requireResidentKey)
+            throws FIDO2AuthenticatorServerException {
 
         return StartRegistrationOptions.builder()
                 .user(buildUserIdentity(user))
-                .timeout(Integer.parseInt(timeout))
+                .timeout(Integer.parseInt(userResponseTimeout))
                 .authenticatorSelection(buildAuthenticatorSelection(requireResidentKey))
                 .extensions(RegistrationExtensionInputs.builder().build())
                 .build();
     }
 
-    private AuthenticatorSelectionCriteria buildAuthenticatorSelection(Boolean requireResidentKey) {
+    private AuthenticatorSelectionCriteria buildAuthenticatorSelection(boolean requireResidentKey) {
 
         return AuthenticatorSelectionCriteria.builder()
                 .requireResidentKey(requireResidentKey)
@@ -700,22 +712,20 @@ public class WebAuthnService {
                 .build();
     }
 
-    private String getUserDisplayName(User user) {
+    private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
 
-        Map<String, String> userClaims = null;
-        String[] claimsArray = {"http://wso2.org/claims/lastname","http://wso2.org/claims/givenname"};
+        String displayName = null;
+        String formattedNameClaimURL = "http://wso2.org/claims/formattedName";
         try {
-            userClaims = FIDO2AuthenticatorServiceComponent.getRealmService().getBootstrapRealm().getUserStoreManager()
-                    .getUserClaimValues(user.getUserName(),claimsArray, "null");
+            displayName = FIDO2AuthenticatorServiceComponent.getRealmService().getBootstrapRealm().getUserStoreManager()
+                    .getUserClaimValue(user.getUserName(),formattedNameClaimURL, "null");
         } catch (UserStoreException e) {
-            e.printStackTrace();
+            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim",e);
         }
-
-        String displayName = userClaims.get(claimsArray[1]) + " " + userClaims.get(claimsArray[0]);
         return displayName;
     }
 
-    private UserIdentity buildUserIdentity(User user) {
+    private UserIdentity buildUserIdentity(User user) throws FIDO2AuthenticatorServerException {
 
         return UserIdentity.builder().name(user.getUserName()).displayName(getUserDisplayName(user))
                 .id(generateRandom()).build();
