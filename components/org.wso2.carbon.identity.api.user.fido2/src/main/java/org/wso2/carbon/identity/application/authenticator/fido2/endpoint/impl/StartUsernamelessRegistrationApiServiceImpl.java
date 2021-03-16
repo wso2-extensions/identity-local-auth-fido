@@ -34,6 +34,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
+import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -74,7 +75,7 @@ public class StartUsernamelessRegistrationApiServiceImpl extends StartUsernamele
                 return Response.serverError().entity(Util.getErrorDTO
                         (FIDO2Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION, appId)).build();
             }
-        } catch (FIDO2AuthenticatorClientException | UnsupportedEncodingException e) {
+        } catch (FIDO2AuthenticatorClientException | UnsupportedEncodingException | FIDO2AuthenticatorServerException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while starting FIDO2 usernameless device registration with appId: " +
                         appId, e);

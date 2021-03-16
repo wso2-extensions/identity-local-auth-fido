@@ -130,7 +130,7 @@ public class WebAuthnService {
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
 
         PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
-                .startRegistration(buildStartRegistrationOptions(user,false));
+                .startRegistration(buildStartRegistrationOptions(user, false));
 
         RegistrationRequest request = new RegistrationRequest(user.toString(), generateRandom(),
                 credentialCreationOptions);
@@ -718,7 +718,7 @@ public class WebAuthnService {
         String formattedNameClaimURL = "http://wso2.org/claims/formattedName";
         try {
             displayName = FIDO2AuthenticatorServiceComponent.getRealmService().getBootstrapRealm().getUserStoreManager()
-                    .getUserClaimValue(user.getUserName(),formattedNameClaimURL, "null");
+                    .getUserClaimValue(user.getUserName(),formattedNameClaimURL, null);
         } catch (UserStoreException e) {
             throw new FIDO2AuthenticatorServerException("Failed retrieving user claim",e);
         }
