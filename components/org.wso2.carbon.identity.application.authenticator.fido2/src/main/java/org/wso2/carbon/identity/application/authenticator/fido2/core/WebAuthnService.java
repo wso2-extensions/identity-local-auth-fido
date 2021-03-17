@@ -722,6 +722,10 @@ public class WebAuthnService {
         } catch (UserStoreException e) {
             throw new FIDO2AuthenticatorServerException("Failed retrieving user claim",e);
         }
+        if (StringUtils.isEmpty(displayName)) {
+            displayName = user.toString();
+        }
+
         return displayName;
     }
 
