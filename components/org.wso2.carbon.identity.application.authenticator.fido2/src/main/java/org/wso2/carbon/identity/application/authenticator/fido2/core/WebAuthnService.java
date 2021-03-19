@@ -144,6 +144,10 @@ public class WebAuthnService {
     /**
      * Triggers FIDO2 start registration flow.
      *
+     * Fido2AuthentcationServerException is newly introduced to this method,
+     * but the method without that exception was not made deprecated since it is not possible to have two
+     * methods with same method signature and different exception handling.
+     *
      * @param origin FIDO2 trusted origin.
      * @return FIDO2 registration request.
      * @throws JsonProcessingException
@@ -171,6 +175,10 @@ public class WebAuthnService {
 
     /**
      * Triggers FIDO2 start usernameless registration flow.
+     *
+     * Fido2AuthentcationServerException is newly introduced to this method,
+     * but the method without that exception was not made deprecated since it is not possible to have two
+     * methods with same method signature and different exception handling.
      *
      * @param origin FIDO2 trusted origin.
      * @return FIDO2 registration request.
