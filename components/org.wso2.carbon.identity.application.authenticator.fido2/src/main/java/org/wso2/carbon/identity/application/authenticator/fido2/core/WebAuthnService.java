@@ -728,7 +728,8 @@ public class WebAuthnService {
             displayName = FIDO2AuthenticatorServiceComponent.getRealmService().getBootstrapRealm().getUserStoreManager()
                     .getUserClaimValue(user.getUserName(),formattedNameClaimURL, null);
         } catch (UserStoreException e) {
-            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim",e);
+            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: formattedName for the user:" +
+                    user.toString(), e);
         }
         if (StringUtils.isEmpty(displayName)) {
             displayName = user.toString();
