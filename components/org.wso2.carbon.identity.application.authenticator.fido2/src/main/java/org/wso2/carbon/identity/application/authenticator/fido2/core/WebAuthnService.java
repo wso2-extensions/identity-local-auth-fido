@@ -107,6 +107,7 @@ public class WebAuthnService {
     private static ArrayList origins = null;
 
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
+    private static final String formattedNameClaimURL = "http://wso2.org/claims/formattedName";
 
     @Deprecated
     /** @deprecated Please use {@link #startFIDO2Registration(String)} instead. */
@@ -723,13 +724,12 @@ public class WebAuthnService {
     private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
 
         String displayName = null;
-        String formattedNameClaimURL = "http://wso2.org/claims/formattedName";
         try {
             displayName = FIDO2AuthenticatorServiceComponent.getRealmService().getBootstrapRealm().getUserStoreManager()
-                    .getUserClaimValue(user.getUserName(),formattedNameClaimURL, null);
+                    .getUserClaimValue(user.getUserName(), formattedNameClaimURL, null);
         } catch (UserStoreException e) {
-            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: formattedName for the user:" +
-                    user.toString(), e);
+            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: " + formattedNameClaimURL +
+                    " for the user: " + user.toString(), e);
         }
         if (StringUtils.isEmpty(displayName)) {
             displayName = user.toString();
