@@ -27,7 +27,7 @@
         <version>5.3.1-SNAPSHOT</version>
     </parent>
 
-    <packaging>jar</packaging>
+    <packaging>war</packaging>
     <artifactId>org.wso2.carbon.identity.application.authenticator.fido2.endpoint</artifactId>
     <name>WSO2 Carbon - FIDO2 Identity Application Endpoint</name>
 
@@ -62,6 +62,20 @@
                 </executions>
             </plugin>
 
+            <!--maven war plugin-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <webResources>
+                        <resource>
+                            <!-- this is relative to the pom.xml directory -->
+                            <directory>src/main/webapp</directory>
+                        </resource>
+                    </webResources>
+                    <warName>api#users#v2#me#webauthn</warName>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
