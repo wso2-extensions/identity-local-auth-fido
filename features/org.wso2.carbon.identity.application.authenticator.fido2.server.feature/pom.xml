@@ -72,7 +72,7 @@
             <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
             <artifactId>org.wso2.carbon.identity.application.authenticator.fido2.endpoint</artifactId>
             <version>${project.version}</version>
-            <type>jar</type>
+            <type>war</type>
         </dependency>
     </dependencies>
 
@@ -94,9 +94,10 @@
                                     <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
                                     <artifactId>org.wso2.carbon.identity.application.authenticator.fido2.endpoint</artifactId>
                                     <version>${project.version}</version>
-                                    <type>jar</type>
+                                    <type>war</type>
                                     <overWrite>true</overWrite>
-                                    <outputDirectory>${basedir}/src/main/resources/api_resources</outputDirectory>
+                                    <outputDirectory>${basedir}/src/main/resources/</outputDirectory>
+                                    <destFileName>api#users#v2#me#webauthn.war</destFileName>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
