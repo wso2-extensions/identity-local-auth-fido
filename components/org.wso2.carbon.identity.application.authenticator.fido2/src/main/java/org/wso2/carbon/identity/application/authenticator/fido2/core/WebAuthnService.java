@@ -155,7 +155,7 @@ public class WebAuthnService {
      * @throws FIDO2AuthenticatorClientException
      */
     public Either<String, FIDO2RegistrationRequest> startFIDO2Registration(@NonNull String origin)
-            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException {
 
         validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
@@ -187,7 +187,7 @@ public class WebAuthnService {
      * @throws FIDO2AuthenticatorClientException
      */
     public Either<String, FIDO2RegistrationRequest> startFIDO2UsernamelessRegistration(@NonNull String origin)
-            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException {
 
         validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
@@ -702,15 +702,19 @@ public class WebAuthnService {
         return new ByteArray(bytes);
     }
 
-    private StartRegistrationOptions buildStartRegistrationOptions(User user, boolean requireResidentKey)
-            throws FIDO2AuthenticatorServerException {
+    private StartRegistrationOptions buildStartRegistrationOptions(User user, boolean requireResidentKey) throws FIDO2AuthenticatorClientException {
 
-        return StartRegistrationOptions.builder()
-                .user(buildUserIdentity(user))
-                .timeout(Integer.parseInt(userResponseTimeout))
-                .authenticatorSelection(buildAuthenticatorSelection(requireResidentKey))
-                .extensions(RegistrationExtensionInputs.builder().build())
-                .build();
+        try {
+            return StartRegistrationOptions.builder()
+                    .user(buildUserIdentity(user))
+                    .timeout(Integer.parseInt(userResponseTimeout))
+                    .authenticatorSelection(buildAuthenticatorSelection(requireResidentKey))
+                    .extensions(RegistrationExtensionInputs.builder().build())
+                    .build();
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new FIDO2AuthenticatorClientException("Unable to build StartRegistrationOptions", e);
+        }
+
     }
 
     private AuthenticatorSelectionCriteria buildAuthenticatorSelection(boolean requireResidentKey) {
