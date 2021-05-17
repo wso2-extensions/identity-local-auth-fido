@@ -34,6 +34,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
+import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;

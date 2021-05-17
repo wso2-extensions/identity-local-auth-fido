@@ -32,14 +32,16 @@ import com.yubico.webauthn.RegistrationResult;
 import com.yubico.webauthn.RelyingParty;
 import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.StartRegistrationOptions;
+import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
-import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
-import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
-import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
+import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
+import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.RelyingPartyIdentity;
 import com.yubico.webauthn.data.UserIdentity;
+import com.yubico.webauthn.data.AttestationConveyancePreference;
+import com.yubico.webauthn.data.RegistrationExtensionInputs;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import com.yubico.webauthn.exception.RegistrationFailedException;
@@ -66,12 +68,14 @@ import org.wso2.carbon.identity.application.authenticator.fido2.dto.SuccessfulRe
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
+import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceComponent;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.user.core.UserStoreException;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -80,10 +84,11 @@ import java.security.SecureRandom;
 import java.text.MessageFormat;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
+import static com.yubico.webauthn.data.UserVerificationRequirement.PREFERRED;
 
 /**
  * FIDO2 core APIs.
@@ -100,6 +105,9 @@ public class WebAuthnService {
     private static final FIDO2DeviceStoreDAO userStorage = FIDO2DeviceStoreDAO.getInstance();
 
     private static ArrayList origins = null;
+
+    private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
+    private static final String formattedNameClaimURL = "http://wso2.org/claims/formattedName";
 
     @Deprecated
     /** @deprecated Please use {@link #startFIDO2Registration(String)} instead. */
@@ -123,7 +131,7 @@ public class WebAuthnService {
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
 
         PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
-                .startRegistration(buildStartRegistrationOptions(user));
+                .startRegistration(buildStartRegistrationOptions(user, false));
 
         RegistrationRequest request = new RegistrationRequest(user.toString(), generateRandom(),
                 credentialCreationOptions);
@@ -152,7 +160,7 @@ public class WebAuthnService {
         User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
         PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
-                .startRegistration(buildStartRegistrationOptions(user));
+                .startRegistration(buildStartRegistrationOptions(user, false));
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
 
@@ -181,10 +189,7 @@ public class WebAuthnService {
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
 
         PublicKeyCredentialCreationOptions credentialCreationOptions =
-                relyingParty.startRegistration(StartRegistrationOptions.builder().user(UserIdentity.builder()
-                        .name(user.toString()).displayName(user.getUserName()).id(generateRandom()).build())
-                        .authenticatorSelection(AuthenticatorSelectionCriteria.builder()
-                                .requireResidentKey(true).build()).build());
+                relyingParty.startRegistration(buildStartRegistrationOptions(user, true));
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
         FIDO2Cache.getInstance().addToCacheByRequestId(new FIDO2CacheKey(request.getRequestId().getBase64()),
@@ -618,6 +623,7 @@ public class WebAuthnService {
                 .identity(rpIdentity)
                 .credentialRepository(userStorage)
                 .origins(new HashSet<String>(origins))
+                .attestationConveyancePreference(AttestationConveyancePreference.DIRECT)
                 .build();
     }
 
@@ -688,15 +694,49 @@ public class WebAuthnService {
         return new ByteArray(bytes);
     }
 
-    private StartRegistrationOptions buildStartRegistrationOptions(User user) {
+    private StartRegistrationOptions buildStartRegistrationOptions(User user, boolean requireResidentKey) throws FIDO2AuthenticatorClientException {
 
-        return StartRegistrationOptions.builder()
-                .user(buildUserIdentity(user)).build();
+        try {
+            return StartRegistrationOptions.builder()
+                    .user(buildUserIdentity(user))
+                    .timeout(Integer.parseInt(userResponseTimeout))
+                    .authenticatorSelection(buildAuthenticatorSelection(requireResidentKey))
+                    .extensions(RegistrationExtensionInputs.builder().build())
+                    .build();
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new FIDO2AuthenticatorClientException("Unable to create registration options", e);
+        }
+
     }
 
-    private UserIdentity buildUserIdentity(User user) {
+    private AuthenticatorSelectionCriteria buildAuthenticatorSelection(boolean requireResidentKey) {
 
-        return UserIdentity.builder().name(user.toString()).displayName(user.getUserName())
+        return AuthenticatorSelectionCriteria.builder()
+                .requireResidentKey(requireResidentKey)
+                .userVerification(PREFERRED)
+                .build();
+    }
+
+    private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
+
+        String displayName = null;
+        try {
+            displayName = FIDO2AuthenticatorServiceComponent.getRealmService().getBootstrapRealm().getUserStoreManager()
+                    .getUserClaimValue(user.getUserName(), formattedNameClaimURL, null);
+        } catch (UserStoreException e) {
+            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: " + formattedNameClaimURL +
+                    " for the user: " + user.toString(), e);
+        }
+        if (StringUtils.isEmpty(displayName)) {
+            displayName = user.toString();
+        }
+
+        return displayName;
+    }
+
+    private UserIdentity buildUserIdentity(User user) throws FIDO2AuthenticatorServerException {
+
+        return UserIdentity.builder().name(user.getUserName()).displayName(getUserDisplayName(user))
                 .id(generateRandom()).build();
     }
 
