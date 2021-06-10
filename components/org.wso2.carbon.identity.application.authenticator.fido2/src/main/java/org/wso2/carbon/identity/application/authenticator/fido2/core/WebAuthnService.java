@@ -74,6 +74,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2Authen
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserStoreException;
 
@@ -719,13 +720,17 @@ public class WebAuthnService {
 
     private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
 
-        String displayName = null;
+        String displayName;
         try {
-            displayName = FIDO2AuthenticatorServiceComponent.getRealmService().getBootstrapRealm().getUserStoreManager()
+
+            displayName =
+                    FIDO2AuthenticatorServiceComponent.getRealmService()
+                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(user.getTenantDomain()))
+                            .getUserStoreManager()
                     .getUserClaimValue(user.getUserName(), formattedNameClaimURL, null);
-        } catch (UserStoreException e) {
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: " + formattedNameClaimURL +
-                    " for the user: " + user.toString(), e);
+                    " for the user: " + user, e);
         }
         if (StringUtils.isEmpty(displayName)) {
             displayName = user.toString();
@@ -736,7 +741,7 @@ public class WebAuthnService {
 
     private UserIdentity buildUserIdentity(User user) throws FIDO2AuthenticatorServerException {
 
-        return UserIdentity.builder().name(user.getUserName()).displayName(getUserDisplayName(user))
+        return UserIdentity.builder().name(user.toString()).displayName(getUserDisplayName(user))
                 .id(generateRandom()).build();
     }
 
