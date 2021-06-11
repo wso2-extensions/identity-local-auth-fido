@@ -19,13 +19,13 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.cache;
 
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.utils.CarbonUtils;
 
 /**
  * FIDO2 cache to store interim data.
  */
-public class FIDO2Cache extends BaseCache<FIDO2CacheKey, FIDO2CacheEntry> {
+public class FIDO2Cache extends AuthenticationBaseCache<FIDO2CacheKey, FIDO2CacheEntry> {
 
     private static final String FIDO2_CACHE_NAME = "FIDO2Cache";
 
@@ -63,7 +63,12 @@ public class FIDO2Cache extends BaseCache<FIDO2CacheKey, FIDO2CacheEntry> {
 
     public FIDO2CacheEntry getValueFromCacheByRequestId(FIDO2CacheKey key) {
 
-        return getFromSessionStore(key.getRequestId());
+        FIDO2CacheEntry fido2CacheEntry = super.getValueFromCache(key);
+        if (fido2CacheEntry != null) {
+            return fido2CacheEntry;
+        } else {
+            return getFromSessionStore(key.getRequestId());
+        }
     }
 
     public void clearCacheEntryByRequestId(FIDO2CacheKey key) {
