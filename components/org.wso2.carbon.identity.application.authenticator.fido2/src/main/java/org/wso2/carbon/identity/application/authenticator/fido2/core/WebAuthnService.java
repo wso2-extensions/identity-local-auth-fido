@@ -625,6 +625,7 @@ public class WebAuthnService {
                 .credentialRepository(userStorage)
                 .origins(new HashSet<String>(origins))
                 .attestationConveyancePreference(AttestationConveyancePreference.DIRECT)
+                .allowUnrequestedExtensions(true)
                 .build();
     }
 
