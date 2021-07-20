@@ -618,6 +618,7 @@ public class WebAuthnService {
                 .identity(rpIdentity)
                 .credentialRepository(userStorage)
                 .origins(new HashSet<String>(origins))
+                .allowUnrequestedExtensions(true)
                 .build();
     }
 
