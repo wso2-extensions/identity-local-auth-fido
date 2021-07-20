@@ -61,7 +61,9 @@ public class FIDO2Constants {
                 "name of device.", "FIDO2 device registration is not available with credentialId : %s "),
         ERROR_CODE_UPDATE_DISPLAY_NAME("50013", "Error while updating display name of device.",
                 "A system error occurred while updating display name of device with credentialId : %s "),
-        ERROR_CODE_INVALID_INPUT("50014", "Invalid input.", "One of the given inputs is invalid.");
+        ERROR_CODE_INVALID_INPUT("50014", "Invalid input.", "One of the given inputs is invalid."),
+        ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH("50015", "Access denied.", "This method is "
+                + "blocked for the requests with basic authentication.");
 
         private final String code;
         private final String message;

@@ -30,9 +30,11 @@ import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.Pat
 import org.wso2.carbon.identity.application.authenticator.fido2.endpoint.dto.PatchRequestDTO;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH;
 import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_DELETE_CREDENTIALS;
 import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE;
 import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL;
@@ -44,8 +46,15 @@ public class CredentialIdApiServiceImpl extends CredentialIdApiService {
 
     private static final Log LOG = LogFactory.getLog(CredentialIdApiServiceImpl.class);
 
+    public static final String AUTHENTICATED_WITH_BASIC_AUTH = "AuthenticatedWithBasicAuth";
+
     @Override
     public Response credentialIdDelete(String credentialId) {
+
+        if (!Util.isValidAuthenticationType()) {
+            return Response.status(Response.Status.FORBIDDEN).entity(Util.getErrorDTO
+                    (ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH, credentialId)).build();
+        }
 
         try {
             WebAuthnService webAuthnService = new WebAuthnService();
@@ -71,6 +80,11 @@ public class CredentialIdApiServiceImpl extends CredentialIdApiService {
 
     @Override
     public Response credentialIdPatch(String credentialId, PatchRequestDTO body) {
+
+        if (!Util.isValidAuthenticationType()) {
+            return Response.status(Response.Status.FORBIDDEN).entity(Util.getErrorDTO
+                    (ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH)).build();
+        }
 
         WebAuthnService webAuthnService = new WebAuthnService();
         try {
