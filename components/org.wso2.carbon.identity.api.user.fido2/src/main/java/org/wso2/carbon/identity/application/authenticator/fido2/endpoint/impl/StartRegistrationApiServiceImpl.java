@@ -39,6 +39,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH;
+
 /**
  * StartRegistrationApiServiceImpl class is used to trigger FIDO2 device registration.
  */
@@ -48,6 +50,11 @@ public class StartRegistrationApiServiceImpl extends StartRegistrationApiService
 
     @Override
     public Response startRegistrationPost(String appId) {
+
+        if (!Util.isValidAuthenticationType()) {
+            return Response.status(Response.Status.FORBIDDEN).entity(Util.getErrorDTO
+                    (ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH)).build();
+        }
 
         if (StringUtils.isBlank(appId)) {
             return Response.status(Response.Status.BAD_REQUEST).entity(Util.getErrorDTO

@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2A
 import java.text.MessageFormat;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH;
 import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_FINISH_REGISTRATION;
 import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST;
 import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS;
@@ -42,6 +43,11 @@ public class FinishRegistrationApiServiceImpl extends FinishRegistrationApiServi
 
     @Override
     public Response finishRegistrationPost(String challengeResponse) {
+
+        if (!Util.isValidAuthenticationType()) {
+            return Response.status(Response.Status.FORBIDDEN).entity(Util.getErrorDTO
+                    (ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH)).build();
+        }
 
         if (LOG.isDebugEnabled()) {
             LOG.debug(MessageFormat.format("Received finish registration  challenge response: {0}",

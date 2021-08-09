@@ -43,6 +43,11 @@ public class DefaultApiServiceImpl extends DefaultApiService {
     @Override
     public Response rootGet() {
 
+        if (!Util.isValidAuthenticationType()) {
+            return Response.status(Response.Status.FORBIDDEN).entity(Util.getErrorDTO
+                    (FIDO2Constants.ErrorMessages.ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH)).build();
+        }
+
         String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String tenantAwareUsername = UserCoreUtil.addTenantDomainToEntry(username, tenantDomain);
