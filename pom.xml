@@ -281,7 +281,7 @@
         <identity.framework.version>5.20.66</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
-        <google.guava.version>18.0</google.guava.version>
+        <google.guava.version>31.0.1-jre</google.guava.version>
         <fasterxml.jackson.version>2.10.5</fasterxml.jackson.version>
         <jackson-databind.version>2.10.5.1</jackson-databind.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
@@ -303,12 +303,12 @@
         <swagger.jaxrs.version>1.6.2</swagger.jaxrs.version>
         <jackson-jaxrs-json-provider.version>2.10.5</jackson-jaxrs-json-provider.version>
         <jackson-dataformat-xml.version>2.10.5</jackson-dataformat-xml.version>
-        <guava.osgi.version.range>[18.0.0,30.0.0]</guava.osgi.version.range>
+        <guava.osgi.version.range>[18.0.0,32.0.0]</guava.osgi.version.range>
         <springframework.version>4.3.29.RELEASE</springframework.version>
         <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
-        <orbit.yubico.webauthn.version>1.3.0.wso2v3</orbit.yubico.webauthn.version>
+        <orbit.yubico.webauthn.version>1.3.0.wso2v5</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>1.3.0</yubico.webauthn.version>
     </properties>
 
