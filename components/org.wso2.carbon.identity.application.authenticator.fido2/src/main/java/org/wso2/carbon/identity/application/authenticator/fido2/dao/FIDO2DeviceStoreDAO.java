@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.dao;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yubico.internal.util.WebAuthnCodecs;
+import com.yubico.internal.util.JacksonCodecs;
 import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.CredentialRepository;
 import com.yubico.webauthn.RegisteredCredential;
@@ -61,7 +61,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
     private static boolean isFIDO2DTOPersistenceStatusChecked = false;
     private  static boolean isFIDO2DTOPersistenceSupported = false;
-    private final ObjectMapper jsonMapper = WebAuthnCodecs.json();
+    private final ObjectMapper jsonMapper = JacksonCodecs.json();
 
     public static FIDO2DeviceStoreDAO getInstance() {
         return new FIDO2DeviceStoreDAO();
