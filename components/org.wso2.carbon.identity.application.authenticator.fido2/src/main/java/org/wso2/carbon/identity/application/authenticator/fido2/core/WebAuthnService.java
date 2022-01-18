@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.net.InternetDomainName;
 import com.yubico.internal.util.JacksonCodecs;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
@@ -615,8 +616,13 @@ public class WebAuthnService {
     private RelyingParty buildRelyingParty(URL originUrl) {
 
         readTrustedOrigins();
+
+        InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
+        String rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
+                : originUrl.getHost();
+
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
-                .id(originUrl.getHost())
+                .id(rpId)
                 .name(FIDO2AuthenticatorConstants.APPLICATION_NAME)
                 .build();
 
