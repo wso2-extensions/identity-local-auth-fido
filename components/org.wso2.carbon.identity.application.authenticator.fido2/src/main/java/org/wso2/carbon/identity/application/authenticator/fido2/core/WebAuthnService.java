@@ -77,7 +77,9 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.api.UserStoreManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -109,7 +111,7 @@ public class WebAuthnService {
     private static ArrayList origins = null;
 
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
-    private static final String formattedNameClaimURL = "http://wso2.org/claims/formattedName";
+    private static final String displayNameClaimURL = "http://wso2.org/claims/displayName";
 
     @Deprecated
     /** @deprecated Please use {@link #startFIDO2Registration(String)} instead. */
@@ -129,9 +131,7 @@ public class WebAuthnService {
         }
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
-        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
-        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-
+        User user = User.getUserFromUserName(getTenantQualifiedUsername());
         PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
                 .startRegistration(buildStartRegistrationOptions(user, false));
 
@@ -159,8 +159,7 @@ public class WebAuthnService {
         URL originUrl = getOriginUrl(origin);
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
-        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
-        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        User user = User.getUserFromUserName(getTenantQualifiedUsername());
         PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
                 .startRegistration(buildStartRegistrationOptions(user, false));
 
@@ -187,9 +186,7 @@ public class WebAuthnService {
         URL originUrl = getOriginUrl(origin);
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
-        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
-        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-
+        User user = User.getUserFromUserName(getTenantQualifiedUsername());
         PublicKeyCredentialCreationOptions credentialCreationOptions =
                 relyingParty.startRegistration(buildStartRegistrationOptions(user, true));
 
@@ -560,8 +557,7 @@ public class WebAuthnService {
                             .ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
         }
 
-        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
-        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        User user = User.getUserFromUserName(getTenantQualifiedUsername());
         Optional<FIDO2CredentialRegistration> credReg = userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user
                 .toString(), identifier);
 
@@ -600,8 +596,7 @@ public class WebAuthnService {
                     .ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
         }
 
-        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
-        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        User user = User.getUserFromUserName(getTenantQualifiedUsername());
         Optional<FIDO2CredentialRegistration> credentialRegistration =
                 userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user.toString(), identifier);
 
@@ -728,21 +723,36 @@ public class WebAuthnService {
 
         String displayName;
         try {
-
-            displayName =
-                    FIDO2AuthenticatorServiceComponent.getRealmService()
-                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(user.getTenantDomain()))
-                            .getUserStoreManager()
-                    .getUserClaimValue(user.getUserName(), formattedNameClaimURL, null);
+            UserStoreManager userStoreManager = getUserStoreManager(user);
+            displayName = userStoreManager.getUserClaimValue(user.getUserName(), displayNameClaimURL, null);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: " + formattedNameClaimURL +
-                    " for the user: " + user, e);
+            throw new FIDO2AuthenticatorServerException(
+                    "Failed retrieving user claim: " + displayNameClaimURL + " for the user: " + user, e);
         }
         if (StringUtils.isEmpty(displayName)) {
             displayName = user.toString();
         }
-
         return displayName;
+    }
+
+    private UserStoreManager getUserStoreManager(User user) throws UserStoreException {
+
+        UserStoreManager userStoreManager = FIDO2AuthenticatorServiceComponent.getRealmService()
+                .getTenantUserRealm(IdentityTenantUtil.getTenantId(user.getTenantDomain())).getUserStoreManager();
+        if (userStoreManager instanceof org.wso2.carbon.user.core.UserStoreManager) {
+            return ((org.wso2.carbon.user.core.UserStoreManager) userStoreManager).getSecondaryUserStoreManager(
+                    user.getUserStoreDomain());
+        }
+        if (log.isDebugEnabled()) {
+            String debugLog = String.format(
+                    "Unable to resolve the corresponding user store manager for the domain: %s, "
+                            + "as the provided user store manager: %s, is not an instance of "
+                            + "org.wso2.carbon.user.core.UserStoreManager. Therefore returning the user store "
+                            + "manager: %s, from the realm.", user.getUserStoreDomain(), userStoreManager.getClass(),
+                    userStoreManager.getClass());
+            log.debug(debugLog);
+        }
+        return userStoreManager;
     }
 
     private UserIdentity buildUserIdentity(User user) throws FIDO2AuthenticatorServerException {
@@ -753,8 +763,7 @@ public class WebAuthnService {
 
     private User getPrivilegedUser() {
 
-        User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
-        user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        User user = User.getUserFromUserName(getTenantQualifiedUsername());
         return user;
     }
 
@@ -866,6 +875,12 @@ public class WebAuthnService {
         }
 
         return originUrl;
+    }
+
+    private String getTenantQualifiedUsername() {
+
+        return UserCoreUtil.addTenantDomainToEntry(CarbonContext.getThreadLocalCarbonContext().getUsername(),
+                CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
     }
 
 }
