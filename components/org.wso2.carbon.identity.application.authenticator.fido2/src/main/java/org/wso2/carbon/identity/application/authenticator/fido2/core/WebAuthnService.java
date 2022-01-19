@@ -616,7 +616,6 @@ public class WebAuthnService {
     private RelyingParty buildRelyingParty(URL originUrl) {
 
         readTrustedOrigins();
-
         InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
         String rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
                 : originUrl.getHost();
