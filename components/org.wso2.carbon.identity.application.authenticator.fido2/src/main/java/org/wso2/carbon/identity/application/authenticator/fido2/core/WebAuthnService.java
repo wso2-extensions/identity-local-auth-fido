@@ -160,8 +160,14 @@ public class WebAuthnService {
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
-        PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
-                .startRegistration(buildStartRegistrationOptions(user, false));
+        PublicKeyCredentialCreationOptions credentialCreationOptions;
+        try {
+            // Store the user object in a thread local property.
+            IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+            credentialCreationOptions = relyingParty.startRegistration(buildStartRegistrationOptions(user, false));
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+        }
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
 
@@ -187,8 +193,14 @@ public class WebAuthnService {
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
-        PublicKeyCredentialCreationOptions credentialCreationOptions =
-                relyingParty.startRegistration(buildStartRegistrationOptions(user, true));
+        PublicKeyCredentialCreationOptions credentialCreationOptions;
+        try {
+            // Store the user object in a thread local property.
+            IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+            credentialCreationOptions = relyingParty.startRegistration(buildStartRegistrationOptions(user, true));
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+        }
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
         FIDO2Cache.getInstance().addToCacheByRequestId(new FIDO2CacheKey(request.getRequestId().getBase64()),
@@ -319,7 +331,13 @@ public class WebAuthnService {
                         .response(response.getCredential()).build()
                 );
 
-                addFIDO2Registration(publicKeyCredentialCreationOptions, response, registration);
+                try {
+                    // Store the user object in a thread local property.
+                    IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+                    addFIDO2Registration(publicKeyCredentialCreationOptions, response, registration);
+                } finally {
+                    IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+                }
 
                 Either.right(
                         new SuccessfulRegistrationResult(publicKeyCredentialCreationOptions, response, registration
@@ -730,7 +748,7 @@ public class WebAuthnService {
                     "Failed retrieving user claim: " + displayNameClaimURL + " for the user: " + user, e);
         }
         if (StringUtils.isEmpty(displayName)) {
-            displayName = user.toString();
+            displayName = user.getUserName();
         }
         return displayName;
     }
@@ -757,7 +775,7 @@ public class WebAuthnService {
 
     private UserIdentity buildUserIdentity(User user) throws FIDO2AuthenticatorServerException {
 
-        return UserIdentity.builder().name(user.toString()).displayName(getUserDisplayName(user))
+        return UserIdentity.builder().name(user.getUserName()).displayName(getUserDisplayName(user))
                 .id(generateRandom()).build();
     }
 
