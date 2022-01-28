@@ -308,8 +308,8 @@
         <org.apache.cxf.version>3.4.5</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
-        <orbit.yubico.webauthn.version>1.10.1.wso2v2</orbit.yubico.webauthn.version>
-        <yubico.webauthn.version>1.10.1</yubico.webauthn.version>
+        <orbit.yubico.webauthn.version>1.12.1.wso2v1</orbit.yubico.webauthn.version>
+        <yubico.webauthn.version>1.12.1</yubico.webauthn.version>
     </properties>
 
     <modules>
