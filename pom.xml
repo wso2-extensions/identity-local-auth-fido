@@ -273,12 +273,17 @@
                 <artifactId>cxf-rt-rs-service-description</artifactId>
                 <version>${org.apache.cxf.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.org.webauthn4j</groupId>
+                <artifactId>webauthn4j-core</artifactId>
+                <version>${webauthn4j.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <properties>
         <carbon.kernel.package.import.version.range>[4.4.0, 5.0.0)</carbon.kernel.package.import.version.range>
-        <identity.framework.version>5.20.66</identity.framework.version>
+        <identity.framework.version>5.20.300</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>31.0.1-jre</google.guava.version>
@@ -310,6 +315,7 @@
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>1.10.1.wso2v2</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>1.10.1</yubico.webauthn.version>
+        <webauthn4j.version>0.18.2.RELEASE</webauthn4j.version>
     </properties>
 
     <modules>

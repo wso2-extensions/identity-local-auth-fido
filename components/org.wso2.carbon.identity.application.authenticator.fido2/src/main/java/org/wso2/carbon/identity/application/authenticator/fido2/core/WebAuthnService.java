@@ -23,6 +23,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.InternetDomainName;
+import com.webauthn4j.WebAuthnManager;
+import com.webauthn4j.converter.exception.DataConversionException;
+import com.webauthn4j.data.PublicKeyCredentialParameters;
+import com.webauthn4j.data.RegistrationData;
+import com.webauthn4j.data.RegistrationParameters;
+import com.webauthn4j.data.client.Origin;
+import com.webauthn4j.data.client.challenge.DefaultChallenge;
+import com.webauthn4j.server.ServerProperty;
+import com.webauthn4j.validator.exception.ValidationException;
 import com.yubico.internal.util.JacksonCodecs;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
@@ -92,6 +101,9 @@ import java.util.Collection;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import static com.yubico.webauthn.data.UserVerificationRequirement.PREFERRED;
 
 /**
@@ -313,6 +325,42 @@ public class WebAuthnService {
             throw new FIDO2AuthenticatorClientException(message, FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.
                     ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode());
         } else {
+            // Webauthn-4j attestation validation.
+            WebAuthnManager webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager();
+
+            com.webauthn4j.data.RegistrationRequest registrationRequest = new com.webauthn4j.data.RegistrationRequest(
+                    response.getCredential().getResponse().getAttestationObject().getBytes(),
+                    response.getCredential().getResponse().getClientDataJSON().getBytes()
+            );
+
+            Set<Origin> originSet =
+                    relyingParty.getOrigins().stream().map(Origin::new).collect(Collectors.toSet());
+//            List<PublicKeyCredentialParameters> publicKeyCredentialParametersList = new ArrayList<>(
+//                    new PublicKeyCredentialParameters(new PublicKeyCredenti)
+//            )
+
+            RegistrationParameters registrationParameters = new RegistrationParameters(
+                    new ServerProperty(
+                            originSet,
+                            relyingParty.getIdentity().getId(),
+                            new DefaultChallenge(response.getCredential().getResponse().getClientData().getChallenge().getBytes()),
+                            null
+                    ),
+                    response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UV
+            );
+
+            RegistrationData registrationData;
+            try {
+                registrationData = webAuthnManager.parse(registrationRequest);
+                webAuthnManager.validate(registrationData, registrationParameters);
+            } catch (DataConversionException e) {
+                throw new FIDO2AuthenticatorServerException("Webauthn4j Validation data structure parse error!", e);
+            } catch (ValidationException e) {
+                throw new FIDO2AuthenticatorServerException("Webauthn4j Validation failed!", e);
+            }
+
+            ///////////////////////////
+
             try {
                 RegistrationResult registration = relyingParty.finishRegistration(FinishRegistrationOptions.builder()
                         .request(publicKeyCredentialCreationOptions)
