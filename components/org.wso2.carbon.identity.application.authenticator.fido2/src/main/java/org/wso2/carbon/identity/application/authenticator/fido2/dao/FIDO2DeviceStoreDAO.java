@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2Authen
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -71,7 +72,14 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
     public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
 
         Set<PublicKeyCredentialDescriptor> credentialIds = new HashSet<>();
-        User user = User.getUserFromUserName(username);
+        /*
+        Get the user object from a thread local property since the available username is not fully qualified to
+        rebuild the user object properly.
+        */
+        User user = (User) IdentityUtil.threadLocalProperties.get().get(FIDO2AuthenticatorConstants.FIDO2_USER);
+        if (user == null) {
+            user = User.getUserFromUserName(username);
+        }
 
         if (log.isDebugEnabled()) {
             log.debug("getCredentialIdsForUsername inputs {username: " + user +  "}");
@@ -299,7 +307,14 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
         if (log.isDebugEnabled()) {
             log.debug("addRegistrationByUsername inputs {username: " + username +  "}");
         }
-        User user = User.getUserFromUserName(username);
+        /*
+        Get the user object from a thread local property since the available username is not fully qualified to
+        rebuild the user object properly.
+        */
+        User user = (User) IdentityUtil.threadLocalProperties.get().get(FIDO2AuthenticatorConstants.FIDO2_USER);
+        if (user == null) {
+            user = User.getUserFromUserName(username);
+        }
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement preparedStatement = null;
 
