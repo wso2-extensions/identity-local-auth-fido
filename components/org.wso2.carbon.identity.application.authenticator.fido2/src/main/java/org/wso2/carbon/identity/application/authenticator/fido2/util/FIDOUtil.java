@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.application.authenticator.fido2.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yubico.internal.util.WebAuthnCodecs;
+import com.yubico.internal.util.JacksonCodecs;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class FIDOUtil {
 
-    private static final ObjectMapper jsonMapper = WebAuthnCodecs.json();
+    private static final ObjectMapper jsonMapper = JacksonCodecs.json();
 
     private FIDOUtil() {
     }

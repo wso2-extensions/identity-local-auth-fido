@@ -33,6 +33,8 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import java.text.MessageFormat;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.application.authenticator.fido2.endpoint.common.FIDO2Constants.ErrorMessages.ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH;
+
 /**
  * DefaultApiServiceImpl class is used to obtain FIDO2 metadata.
  */
@@ -42,6 +44,11 @@ public class DefaultApiServiceImpl extends DefaultApiService {
 
     @Override
     public Response rootGet() {
+
+        if (!Util.isValidAuthenticationType()) {
+            return Response.status(Response.Status.FORBIDDEN).entity(Util.getErrorDTO
+                    (ERROR_CODE_ACCESS_DENIED_FOR_BASIC_AUTH)).build();
+        }
 
         String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
