@@ -112,6 +112,8 @@ public class WebAuthnService {
 
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
     private static final String displayNameClaimURL = "http://wso2.org/claims/displayName";
+    private static final String firstNameClaimURL = "http://wso2.org/claims/givenname";
+    private static final String lastNameClaimURL = "http://wso2.org/claims/lastname";
 
     @Deprecated
     /** @deprecated Please use {@link #startFIDO2Registration(String)} instead. */
@@ -740,17 +742,32 @@ public class WebAuthnService {
     private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
 
         String displayName;
+        displayName = getUserClaimValue(user, displayNameClaimURL);
+        // If the displayName is not available, build the displayName with firstName and lastName.
+        if (StringUtils.isBlank(displayName)) {
+            String firstName = getUserClaimValue(user, firstNameClaimURL);
+            String lastName = getUserClaimValue(user, lastNameClaimURL);
+            if (StringUtils.isNotBlank(firstName) || StringUtils.isNotBlank(lastName)) {
+                displayName = StringUtils.join(new String[] { firstName, lastName }, " ");
+            } else {
+                // If the firstName or the lastName is not available, set the username as the displayName.
+                displayName = user.getUserName();
+            }
+        }
+        return StringUtils.trim(displayName);
+    }
+
+    private String getUserClaimValue(User user, String claimURL) throws FIDO2AuthenticatorServerException {
+
+        String claimValue;
         try {
             UserStoreManager userStoreManager = getUserStoreManager(user);
-            displayName = userStoreManager.getUserClaimValue(user.getUserName(), displayNameClaimURL, null);
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            claimValue = userStoreManager.getUserClaimValue(user.getUserName(), claimURL, null);
+        } catch (UserStoreException e) {
             throw new FIDO2AuthenticatorServerException(
-                    "Failed retrieving user claim: " + displayNameClaimURL + " for the user: " + user, e);
+                    "Failed retrieving user claim: " + claimURL + " for the user: " + user, e);
         }
-        if (StringUtils.isEmpty(displayName)) {
-            displayName = user.getUserName();
-        }
-        return displayName;
+        return claimValue;
     }
 
     private UserStoreManager getUserStoreManager(User user) throws UserStoreException {
