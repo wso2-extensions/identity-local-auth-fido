@@ -631,9 +631,19 @@ public class WebAuthnService {
     private RelyingParty buildRelyingParty(URL originUrl) {
 
         readTrustedOrigins();
-        InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
-        String rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
-                : originUrl.getHost();
+        String rpId;
+
+        try {
+            InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
+            rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
+                    : originUrl.getHost();
+        } catch (IllegalArgumentException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid domain name: '" + originUrl.getHost()
+                        + "' received for internet domain name creation. Defaulting to origin host.");
+            }
+            rpId = originUrl.getHost();
+        }
 
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
                 .id(rpId)
