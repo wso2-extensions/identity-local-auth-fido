@@ -639,7 +639,8 @@ public class WebAuthnService {
                     : originUrl.getHost();
         } catch (IllegalArgumentException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Invalid domain name received for internet domain name creation. Defaulting to origin host.");
+                log.debug("Invalid domain name: '" + originUrl.getHost()
+                        + "' received for internet domain name creation. Defaulting to origin host.");
             }
             rpId = originUrl.getHost();
         }
