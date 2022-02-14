@@ -18,19 +18,47 @@
 
 package org.wso2.carbon.identity.application.authenticator.fido2.core;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.InternetDomainName;
 import com.webauthn4j.WebAuthnManager;
+import com.webauthn4j.anchor.KeyStoreTrustAnchorsProvider;
+import com.webauthn4j.anchor.TrustAnchorsResolverImpl;
+import com.webauthn4j.authenticator.Authenticator;
+import com.webauthn4j.authenticator.AuthenticatorImpl;
 import com.webauthn4j.converter.exception.DataConversionException;
-import com.webauthn4j.data.PublicKeyCredentialParameters;
+import com.webauthn4j.data.AuthenticationRequest;
+import com.webauthn4j.data.AuthenticatorTransport;
+import com.webauthn4j.data.AuthenticatorTransport;
+import com.webauthn4j.data.PublicKeyCredentialType;
+import com.webauthn4j.data.PublicKeyCredentialType;
 import com.webauthn4j.data.RegistrationData;
 import com.webauthn4j.data.RegistrationParameters;
+import com.webauthn4j.data.attestation.AttestationObject;
+import com.webauthn4j.data.attestation.authenticator.AAGUID;
+import com.webauthn4j.data.attestation.authenticator.RSACOSEKey;
+import com.webauthn4j.data.attestation.statement.AttestationStatement;
+import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier;
+import com.webauthn4j.data.client.CollectedClientData;
 import com.webauthn4j.data.client.Origin;
 import com.webauthn4j.data.client.challenge.DefaultChallenge;
+import com.webauthn4j.data.extension.authenticator.RegistrationExtensionAuthenticatorOutput;
+import com.webauthn4j.data.extension.client.AuthenticationExtensionsClientOutputs;
+import com.webauthn4j.data.extension.client.RegistrationExtensionClientOutput;
 import com.webauthn4j.server.ServerProperty;
+import com.webauthn4j.validator.attestation.statement.androidkey.AndroidKeyAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.statement.androidsafetynet.AndroidSafetyNetAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.statement.apple.AppleAnonymousAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.statement.none.NoneAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.statement.packed.PackedAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.statement.tpm.TPMAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.statement.u2f.FIDOU2FAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.trustworthiness.certpath.NullCertPathTrustworthinessValidator;
+import com.webauthn4j.validator.attestation.trustworthiness.certpath.TrustAnchorCertPathTrustworthinessValidator;
+import com.webauthn4j.validator.attestation.trustworthiness.self.DefaultSelfAttestationTrustworthinessValidator;
 import com.webauthn4j.validator.exception.ValidationException;
 import com.yubico.internal.util.JacksonCodecs;
 import com.yubico.webauthn.AssertionRequest;
@@ -42,16 +70,13 @@ import com.yubico.webauthn.RegistrationResult;
 import com.yubico.webauthn.RelyingParty;
 import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.StartRegistrationOptions;
-import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
-import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
-import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
-import com.yubico.webauthn.data.PublicKeyCredential;
-import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
-import com.yubico.webauthn.data.ByteArray;
-import com.yubico.webauthn.data.RelyingPartyIdentity;
-import com.yubico.webauthn.data.UserIdentity;
+import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.data.AttestationConveyancePreference;
-import com.yubico.webauthn.data.RegistrationExtensionInputs;
+import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
+import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
+import com.yubico.webauthn.data.PublicKeyCredentialParameters;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import com.yubico.webauthn.exception.RegistrationFailedException;
@@ -59,6 +84,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -89,6 +115,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import sun.security.rsa.RSAPublicKeyImpl;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -97,9 +124,11 @@ import java.security.SecureRandom;
 import java.text.MessageFormat;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -243,12 +272,14 @@ public class WebAuthnService {
         }
 
         String requestId = response.getRequestId().getBase64();
-        FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance().getValueFromCacheByRequestId(new FIDO2CacheKey(requestId));
+        FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance().getValueFromCacheByRequestId(
+                new FIDO2CacheKey(requestId));
 
         PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions = null;
         RelyingParty relyingParty = null;
         if (cacheEntry != null) {
-            publicKeyCredentialCreationOptions = jsonMapper.readValue(cacheEntry.getPublicKeyCredentialCreationOptions(),
+            publicKeyCredentialCreationOptions = jsonMapper.readValue(
+                    cacheEntry.getPublicKeyCredentialCreationOptions(),
                     PublicKeyCredentialCreationOptions.class);
             relyingParty = buildRelyingParty(cacheEntry.getOrigin());
             FIDO2Cache.getInstance().clearCacheEntryByRequestId(new FIDO2CacheKey(requestId));
@@ -275,7 +306,8 @@ public class WebAuthnService {
             } catch (RegistrationFailedException e) {
                 throw new FIDO2AuthenticatorException("Registration failed!", e);
             } catch (IOException e) {
-                throw new FIDO2AuthenticatorServerException("Registration failed unexpectedly; this is likely a bug.", e);
+                throw new FIDO2AuthenticatorServerException(
+                        "Registration failed unexpectedly; this is likely a bug.", e);
             }
         }
     }
@@ -302,7 +334,7 @@ public class WebAuthnService {
         }
 
         User user = getPrivilegedUser();
-        if(FIDO2DeviceStoreDAO.getInstance().getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
+        if (FIDO2DeviceStoreDAO.getInstance().getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
                 response.getCredential().getId()).isPresent()) {
             throw new FIDO2AuthenticatorClientException("The username \"" + user + "\" is already registered.",
                     FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
@@ -310,13 +342,15 @@ public class WebAuthnService {
         }
 
         String requestId = response.getRequestId().getBase64();
-        FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance().getValueFromCacheByRequestId(new FIDO2CacheKey(requestId));
+        FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance().getValueFromCacheByRequestId(
+                new FIDO2CacheKey(requestId));
 
         PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions = null;
         RelyingParty relyingParty = null;
         if (cacheEntry != null) {
             try {
-                publicKeyCredentialCreationOptions = jsonMapper.readValue(cacheEntry.getPublicKeyCredentialCreationOptions(),
+                publicKeyCredentialCreationOptions = jsonMapper.readValue(cacheEntry
+                                .getPublicKeyCredentialCreationOptions(),
                         PublicKeyCredentialCreationOptions.class);
             } catch (JsonParseException | JsonMappingException e) {
                 throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
@@ -338,27 +372,52 @@ public class WebAuthnService {
                     ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode());
         } else {
             // Webauthn-4j attestation validation.
-            WebAuthnManager webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager();
+            WebAuthnManager webAuthnManager = new WebAuthnManager(
+                    Arrays.asList(
+                            new PackedAttestationStatementValidator(),
+                            new FIDOU2FAttestationStatementValidator(),
+                            new AndroidKeyAttestationStatementValidator(),
+                            new AndroidSafetyNetAttestationStatementValidator(),
+                            new TPMAttestationStatementValidator(),
+                            new AppleAnonymousAttestationStatementValidator(),
+                            new NoneAttestationStatementValidator()
+                    ),
+                    new NullCertPathTrustworthinessValidator(),
+                    new DefaultSelfAttestationTrustworthinessValidator()
+            );
+
+            Set<String> transports = response.getCredential().getResponse().getTransports().stream().map(
+                    com.yubico.webauthn.data.AuthenticatorTransport::getId).collect(Collectors.toSet()
+            );
 
             com.webauthn4j.data.RegistrationRequest registrationRequest = new com.webauthn4j.data.RegistrationRequest(
                     response.getCredential().getResponse().getAttestationObject().getBytes(),
-                    response.getCredential().getResponse().getClientDataJSON().getBytes()
+                    response.getCredential().getResponse().getClientDataJSON().getBytes(),
+                    transports
             );
 
             Set<Origin> originSet =
                     relyingParty.getOrigins().stream().map(Origin::new).collect(Collectors.toSet());
-//            List<PublicKeyCredentialParameters> publicKeyCredentialParametersList = new ArrayList<>(
-//                    new PublicKeyCredentialParameters(new PublicKeyCredenti)
-//            )
+
+            List<com.webauthn4j.data.PublicKeyCredentialParameters> publicKeyCredentialParametersList =
+                    relyingParty.getPreferredPubkeyParams().stream().map(pkcp ->
+                            new com.webauthn4j.data.PublicKeyCredentialParameters(
+                                    PublicKeyCredentialType.create(pkcp.getType().toJsonString()),
+                                    COSEAlgorithmIdentifier.create(pkcp.getAlg().getId())
+                            )
+                    ).collect(Collectors.toList());
 
             RegistrationParameters registrationParameters = new RegistrationParameters(
                     new ServerProperty(
                             originSet,
                             relyingParty.getIdentity().getId(),
-                            new DefaultChallenge(response.getCredential().getResponse().getClientData().getChallenge().getBytes()),
+                            new DefaultChallenge(response.getCredential().getResponse().getClientData()
+                                    .getChallenge().getBytes()),
                             null
                     ),
-                    response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UV
+                    publicKeyCredentialParametersList,
+                    response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UV,
+                    response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UP
             );
 
             RegistrationData registrationData;
@@ -366,12 +425,12 @@ public class WebAuthnService {
                 registrationData = webAuthnManager.parse(registrationRequest);
                 webAuthnManager.validate(registrationData, registrationParameters);
             } catch (DataConversionException e) {
-                throw new FIDO2AuthenticatorServerException("Webauthn4j Validation data structure parse error!", e);
+                throw new FIDO2AuthenticatorServerException("Webauthn4j Validation data structure parse error", e);
             } catch (ValidationException e) {
-                throw new FIDO2AuthenticatorServerException("Webauthn4j Validation failed!", e);
+                throw new FIDO2AuthenticatorClientException("Webauthn4j Validation failed",
+                        FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                                .ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
             }
-
-            ///////////////////////////
 
             try {
                 RegistrationResult registration = relyingParty.finishRegistration(FinishRegistrationOptions.builder()
@@ -415,9 +474,10 @@ public class WebAuthnService {
             } else {
                 RelyingParty relyingParty = buildRelyingParty(originUrl);
                 AssertionRequestWrapper request = new AssertionRequestWrapper(
-                        generateRandom(), relyingParty.startAssertion(StartAssertionOptions.builder()
-                        .username(user.toString()).build()));
-                FIDO2Cache.getInstance().addToCacheByRequestWrapperId(new FIDO2CacheKey(request.getRequestId().getBase64()),
+                        generateRandom(),
+                        relyingParty.startAssertion(StartAssertionOptions.builder().username(user.toString()).build()));
+                FIDO2Cache.getInstance().addToCacheByRequestWrapperId(
+                        new FIDO2CacheKey(request.getRequestId().getBase64()),
                         new FIDO2CacheEntry(null, jsonMapper.writeValueAsString(request
                                 .getRequest()), originUrl));
                 return FIDOUtil.writeJson(request);
@@ -463,10 +523,21 @@ public class WebAuthnService {
         final AssertionResponse response;
         AssertionRequest request = null;
         RelyingParty relyingParty = null;
+
+        /**
+         * Check if the responseJson is having the id field defined.
+         * This check should be performed according to the fido compliance test cases.
+         */
+        if (!responseJson.contains("\"id\"")) {
+            throw new AuthenticationFailedException("Assertion for finish authentication flow failed due to id not " +
+                    "found in json response: " + responseJson);
+        }
+
         try {
             response = jsonMapper.readValue(responseJson, AssertionResponse.class);
             String requestId = response.getRequestId().getBase64();
-            FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance().getValueFromCacheByRequestId(new FIDO2CacheKey(requestId));
+            FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance()
+                    .getValueFromCacheByRequestId(new FIDO2CacheKey(requestId));
 
             if (cacheEntry != null) {
                 request = jsonMapper.readValue(cacheEntry.getAssertionRequest(), AssertionRequest.class);
@@ -480,6 +551,73 @@ public class WebAuthnService {
             throw new AuthenticationFailedException("Assertion failed! No such assertion in progress.");
         } else {
             try {
+//                // Webauthn-4j assertion validation.
+//                AuthenticationRequest authenticationRequest = new AuthenticationRequest(
+//                        response.getCredential().getId().getBytes(),
+//                        response.getCredential().getResponse().getUserHandle().get().getBytes(),
+//                        response.getCredential().getResponse().getAuthenticatorData().getBytes(),
+//                        response.getCredential().getResponse().getClientDataJSON().getBytes(),
+//                        response.getCredential().getResponse().getSignature().getBytes()
+//                );
+//
+//                Set<Origin> originSet =
+//                        relyingParty.getOrigins().stream().map(Origin::new).collect(Collectors.toSet());
+//
+//                AuthenticatorData authenticatorData = new AuthenticatorData(
+//                        response.getCredential().getResponse().getAuthenticatorData());
+//
+//                // Temporary building rsa cose key object.
+//                RSACOSEKey coseKey = RSACOSEKey.create(RSAPublicKeyImpl.newKey(
+//                        authenticatorData.getAttestedCredentialData().get().getCredentialPublicKey().getBytes()
+//                ));
+//
+//                com.webauthn4j.data.attestation.authenticator.AttestedCredentialData attestedCredentialData =
+//                        new com.webauthn4j.data.attestation.authenticator.AttestedCredentialData(
+//                                new AAGUID(authenticatorData.getAttestedCredentialData().get().getAaguid().getBytes()),
+//                                authenticatorData.getAttestedCredentialData().get().getCredentialId().getBytes(),
+//                                coseKey
+//                        );
+//
+//                com.webauthn4j.data.attestation.authenticator
+//                        .AuthenticatorData<RegistrationExtensionAuthenticatorOutput> authenticatorData1 =
+//                        new com.webauthn4j.data.attestation.authenticator
+//                                .AuthenticatorData<RegistrationExtensionAuthenticatorOutput>(
+//                                        authenticatorData.getRpIdHash().getBytes(),
+//                                        authenticatorData.getFlags().value,
+//                                        authenticatorData.getSignatureCounter(),
+//                                        attestedCredentialData
+//                        );
+//
+//                // Temporary building fido u2f attestation statement.
+//                AttestationStatement attestationStatement;
+//
+//                AttestationObject attestationObject;
+//
+//                byte[] attestationObjectBytes;
+//                CollectedClientData collectedClientData;    // nullable
+//                byte[] collectedClientDataBytes;    // nullable
+//                AuthenticationExtensionsClientOutputs<RegistrationExtensionClientOutput> clientExtensions;  // nullable
+//                Set<AuthenticatorTransport> transports;     // nullable
+//                ///////////
+
+
+
+//                RegistrationData registrationData = new RegistrationData();
+//                Authenticator authenticator = AuthenticatorImpl.createFromRegistrationData(registrationData);
+//
+//                AuthenticationParameters authenticationParameters = new AuthenticationParameters(
+//                        new ServerProperty(
+//                                originSet,
+//                                relyingParty.getIdentity().getId(),
+//                                new DefaultChallenge(response.getCredential().getResponse().getClientData()
+//                                        .getChallenge().getBytes()),
+//                                null
+//                        ),
+//
+//                )
+                //////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////
+
                 PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential
                         = getPublicKeyCredential(response);
                 AssertionResult result = relyingParty.finishAssertion(FinishAssertionOptions.builder()
@@ -686,12 +824,18 @@ public class WebAuthnService {
                 .name(FIDO2AuthenticatorConstants.APPLICATION_NAME)
                 .build();
 
+        List<PublicKeyCredentialParameters> preferredPublicKeyCredentialParameters = Collections.unmodifiableList(
+                Arrays.asList(PublicKeyCredentialParameters.ES256, PublicKeyCredentialParameters.EdDSA,
+                        PublicKeyCredentialParameters.RS1, PublicKeyCredentialParameters.RS256)
+        );
+
         return RelyingParty.builder()
                 .identity(rpIdentity)
                 .credentialRepository(userStorage)
                 .origins(new HashSet<String>(origins))
                 .attestationConveyancePreference(AttestationConveyancePreference.DIRECT)
                 .allowUnrequestedExtensions(true)
+                .preferredPubkeyParams(preferredPublicKeyCredentialParameters)
                 .build();
     }
 
@@ -762,7 +906,8 @@ public class WebAuthnService {
         return new ByteArray(bytes);
     }
 
-    private StartRegistrationOptions buildStartRegistrationOptions(User user, boolean requireResidentKey) throws FIDO2AuthenticatorClientException {
+    private StartRegistrationOptions buildStartRegistrationOptions(User user, boolean requireResidentKey)
+            throws FIDO2AuthenticatorClientException {
 
         try {
             return StartRegistrationOptions.builder()
@@ -841,11 +986,11 @@ public class WebAuthnService {
             if (value == null) {
                 origins = new ArrayList<>();
             } else if (value instanceof ArrayList) {
-                origins = (ArrayList)value;
+                origins = (ArrayList) value;
             } else {
                 origins = new ArrayList<>(Arrays.asList((String) value));
             }
-            origins.replaceAll(i -> IdentityUtil.fillURLPlaceholders((String)i));
+            origins.replaceAll(i -> IdentityUtil.fillURLPlaceholders((String) i));
         }
     }
 
@@ -896,6 +1041,16 @@ public class WebAuthnService {
     private AssertionResponse getAssertionResponse(String responseJson) throws AuthenticationFailedException {
 
         final AssertionResponse response;
+
+        /**
+         * Check if the responseJson is having the id field defined.
+         * This check should be performed according to the fido compliance test cases.
+         */
+        if (!responseJson.contains("\"id\"")) {
+            throw new AuthenticationFailedException("Assertion for finish authentication flow failed due to id not " +
+                    "found in json response: " + responseJson);
+        }
+
         try {
             response = jsonMapper.readValue(responseJson, AssertionResponse.class);
         } catch (IOException e) {
