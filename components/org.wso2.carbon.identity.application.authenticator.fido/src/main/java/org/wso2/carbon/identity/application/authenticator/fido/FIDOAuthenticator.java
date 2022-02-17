@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -46,6 +48,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 
 /**
@@ -137,6 +141,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             response.sendRedirect(redirectUrl);
         } catch (IOException e) {
             throw new AuthenticationFailedException("Could not initiate FIDO authentication request", user, e);
+        } catch (URLBuilderException | URISyntaxException e) {
+            throw new AuthenticationFailedException("Error while building FIDO page URL.", e);
         }
     }
 
@@ -204,8 +210,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     }
 
     private String getRedirectUrl(boolean isDataNull, String loginPage, String urlEncodedData,
-                                  HttpServletResponse response, AuthenticatedUser user,
-                                  AuthenticationContext context) throws UnsupportedEncodingException {
+            HttpServletResponse response, AuthenticatedUser user, AuthenticationContext context)
+            throws UnsupportedEncodingException, URLBuilderException, URISyntaxException {
 
         String redirectURL;
         if (!isDataNull) {
@@ -221,7 +227,17 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     .AUTHENTICATION_STATUS, IdentityCoreConstants.UTF_8);
         }
 
-        return redirectURL;
+        return buildAbsoluteURL(redirectURL);
+    }
+
+    private String buildAbsoluteURL(String redirectUrl) throws URISyntaxException, URLBuilderException {
+
+        URI uri = new URI(redirectUrl);
+        if (uri.isAbsolute()) {
+            return redirectUrl;
+        } else {
+            return ServiceURLBuilder.create().addPath(redirectUrl).build().getAbsolutePublicURL();
+        }
     }
 
     private boolean isWebAuthnEnabled() {
@@ -235,9 +251,10 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return webAuthnEnabled;
     }
 
-    private String getRedirectUrl(HttpServletResponse response, AuthenticatedUser user, String appID,
-                                  String loginPage, AuthenticationContext context)
-            throws AuthenticationFailedException, UnsupportedEncodingException {
+    private String getRedirectUrl(HttpServletResponse response, AuthenticatedUser user, String appID, String loginPage,
+            AuthenticationContext context)
+            throws AuthenticationFailedException, UnsupportedEncodingException, URLBuilderException,
+            URISyntaxException {
 
         String redirectUrl;
         if (isWebAuthnEnabled()) {
