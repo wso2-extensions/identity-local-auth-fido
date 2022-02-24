@@ -76,7 +76,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.webauthn4j</groupId>
-            <artifactId>webauthn4j-core</artifactId>
+            <artifactId>webauthn4j</artifactId>
             <version>${webauthn4j.version}</version>
         </dependency>
     </dependencies>
@@ -160,7 +160,7 @@
                                 <bundleDef>com.fasterxml.jackson.core:jackson-databind</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.core:jackson-annotations</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.core:jackson-core</bundleDef>
-                                <bundleDef>org.wso2.orbit.org.webauthn4j:webauthn4j-core</bundleDef>
+                                <bundleDef>org.wso2.orbit.org.webauthn4j:webauthn4j</bundleDef>
                             </bundles>
                         </configuration>
                     </execution>

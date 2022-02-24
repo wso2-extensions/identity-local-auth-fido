@@ -275,7 +275,7 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.orbit.org.webauthn4j</groupId>
-                <artifactId>webauthn4j-core</artifactId>
+                <artifactId>webauthn4j</artifactId>
                 <version>${webauthn4j.version}</version>
             </dependency>
         </dependencies>
@@ -315,7 +315,7 @@
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>1.12.1.wso2v1</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>1.12.1</yubico.webauthn.version>
-        <webauthn4j.version>0.18.2.wso2v1</webauthn4j.version>
+        <webauthn4j.version>0.19.0.wso2v1</webauthn4j.version>
     </properties>
 
     <modules>

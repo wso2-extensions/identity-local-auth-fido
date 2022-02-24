@@ -77,7 +77,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.webauthn4j</groupId>
-            <artifactId>webauthn4j-core</artifactId>
+            <artifactId>webauthn4j</artifactId>
         </dependency>
     </dependencies>
 
