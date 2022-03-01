@@ -40,6 +40,8 @@ import com.webauthn4j.validator.attestation.statement.none.NoneAttestationStatem
 import com.webauthn4j.validator.attestation.statement.packed.PackedAttestationStatementValidator;
 import com.webauthn4j.validator.attestation.statement.tpm.TPMAttestationStatementValidator;
 import com.webauthn4j.validator.attestation.statement.u2f.FIDOU2FAttestationStatementValidator;
+import com.webauthn4j.validator.attestation.trustworthiness.certpath.CertPathTrustworthinessValidator;
+import com.webauthn4j.validator.attestation.trustworthiness.certpath.NullCertPathTrustworthinessValidator;
 import com.webauthn4j.validator.attestation.trustworthiness.self.DefaultSelfAttestationTrustworthinessValidator;
 import com.webauthn4j.validator.exception.ValidationException;
 import com.yubico.internal.util.JacksonCodecs;
@@ -90,6 +92,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2A
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceComponent;
+import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
@@ -139,7 +142,7 @@ public class WebAuthnService {
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
     private static final String displayNameClaimURL = "http://wso2.org/claims/displayName";
 
-    private static WebAuthnManager webAuthnManager;
+    private static volatile WebAuthnManager webAuthnManager;
     private static final Object lock = new Object();
 
     @Deprecated
@@ -1022,6 +1025,15 @@ public class WebAuthnService {
         if (webAuthnManager == null) {
             synchronized (lock) {
                 if (webAuthnManager == null) {
+                    CertPathTrustworthinessValidator certPathTrustworthinessValidator;
+
+                    if (FIDOUtil.isMetadataValidationsEnabled()) {
+                        certPathTrustworthinessValidator = FIDO2AuthenticatorServiceDataHolder.getInstance()
+                                .getMetadataService().getDefaultCertPathTrustworthinessValidator();
+                    } else {
+                        certPathTrustworthinessValidator = new NullCertPathTrustworthinessValidator();
+                    }
+
                     webAuthnManager = new WebAuthnManager(
                             Arrays.asList(
                                     new PackedAttestationStatementValidator(),
@@ -1032,7 +1044,7 @@ public class WebAuthnService {
                                     new AppleAnonymousAttestationStatementValidator(),
                                     new NoneAttestationStatementValidator()
                             ),
-                            MetadataService.getInstance().getDefaultCertPathTrustworthinessValidator(),
+                            certPathTrustworthinessValidator,
                             new DefaultSelfAttestationTrustworthinessValidator()
                     );
                 }

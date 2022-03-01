@@ -42,15 +42,13 @@
         <tag>HEAD</tag>
     </scm>
 
-
-
     <build>
         <pluginManagement>
             <plugins>
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-scr-plugin</artifactId>
-                    <version>1.7.2</version>
+                    <version>${maven.scr.plugin.version}</version>
                     <executions>
                         <execution>
                             <id>generate-scr-scrdescriptor</id>
@@ -278,6 +276,11 @@
                 <artifactId>webauthn4j</artifactId>
                 <version>${webauthn4j.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.core</artifactId>
+                <version>${identity.framework.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -316,6 +319,7 @@
         <orbit.yubico.webauthn.version>1.12.1.wso2v1</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>1.12.1</yubico.webauthn.version>
         <webauthn4j.version>0.19.0.wso2v1</webauthn4j.version>
+        <maven.scr.plugin.version>1.26.0</maven.scr.plugin.version>
     </properties>
 
     <modules>

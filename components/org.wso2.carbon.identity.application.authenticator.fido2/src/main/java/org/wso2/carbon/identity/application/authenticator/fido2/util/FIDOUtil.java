@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.application.authenticator.fido2.util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.internal.util.JacksonCodecs;
+import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -30,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 public class FIDOUtil {
 
     private static final ObjectMapper jsonMapper = JacksonCodecs.json();
+    private static Boolean metadataValidationsEnabled;
 
     private FIDOUtil() {
     }
@@ -43,5 +46,20 @@ public class FIDOUtil {
 
         return request.getScheme() + "://" + request.getServerName() + ":" +
                 request.getServerPort();
+    }
+
+    public static boolean isMetadataValidationsEnabled() {
+
+        if (metadataValidationsEnabled == null) {
+            String mdsEnabled = IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_MDS_ENABLED);
+
+            if (StringUtils.isNotBlank(mdsEnabled)) {
+                metadataValidationsEnabled = Boolean.parseBoolean(mdsEnabled);
+            } else {
+                metadataValidationsEnabled = false;
+            }
+        }
+
+        return metadataValidationsEnabled;
     }
 }

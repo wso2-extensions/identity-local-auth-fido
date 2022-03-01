@@ -50,6 +50,11 @@ public class FIDO2AuthenticatorConstants {
 
     public static final String FIDO2_USER = "FIDO2User";
 
+    public static final String FIDO_MDS_ENABLED = "FIDO.MetadataService.Enable";
+    public static final String FIDO_MDS_ENDPOINTS = "FIDO.MetadataService.MDSEndpoints.Endpoint";
+    public static final String FIDO_MDS_ROOT_CERTIFICATE = "FIDO.MetadataService.MDSRootCertificateFilePath";
+    public static final String FIDO_METADATA_STATEMENTS = "FIDO.MetadataService.MetadataStatementDirectory";
+
     public static class SQLQueries {
 
         private SQLQueries() {
