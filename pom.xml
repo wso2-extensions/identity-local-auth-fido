@@ -273,6 +273,25 @@
                 <artifactId>cxf-rt-rs-service-description</artifactId>
                 <version>${org.apache.cxf.version}</version>
             </dependency>
+
+            <!--Test Dependencies-->
+            <dependency>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <version>${testng.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-module-testng</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-api-mockito</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -310,6 +329,9 @@
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>1.10.1.wso2v2</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>1.10.1</yubico.webauthn.version>
+        <!--Test Dependencies-->
+        <testng.version>6.9.10</testng.version>
+        <powermock.version>1.6.5</powermock.version>
     </properties>
 
     <modules>

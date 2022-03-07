@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+
+<suite name="Suite1" verbose="1">
+    <test name="FIDO-Authenticator-Unit-Tests">
+        <classes>
+            <class name="org.wso2.carbon.identity.application.authenticator.fido2.WebAuthnServiceTest" />
+        </classes>
+    </test>
+</suite>
