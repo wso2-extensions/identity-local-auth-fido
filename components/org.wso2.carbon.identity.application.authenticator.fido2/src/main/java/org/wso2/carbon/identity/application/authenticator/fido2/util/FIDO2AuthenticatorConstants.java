@@ -48,6 +48,8 @@ public class FIDO2AuthenticatorConstants {
             "failed due to invalid origin.";
     public static final String DECODING_FAILED_MESSAGE = "Registration failed! Failed to decode response object.";
 
+    public static final String FIDO2_USER = "FIDO2User";
+
     public static class SQLQueries {
 
         private SQLQueries() {

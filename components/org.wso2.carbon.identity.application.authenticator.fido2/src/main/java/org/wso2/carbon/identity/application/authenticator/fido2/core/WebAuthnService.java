@@ -112,6 +112,8 @@ public class WebAuthnService {
 
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
     private static final String displayNameClaimURL = "http://wso2.org/claims/displayName";
+    private static final String firstNameClaimURL = "http://wso2.org/claims/givenname";
+    private static final String lastNameClaimURL = "http://wso2.org/claims/lastname";
 
     @Deprecated
     /** @deprecated Please use {@link #startFIDO2Registration(String)} instead. */
@@ -160,8 +162,14 @@ public class WebAuthnService {
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
-        PublicKeyCredentialCreationOptions credentialCreationOptions = relyingParty
-                .startRegistration(buildStartRegistrationOptions(user, false));
+        PublicKeyCredentialCreationOptions credentialCreationOptions;
+        try {
+            // Store the user object in a thread local property.
+            IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+            credentialCreationOptions = relyingParty.startRegistration(buildStartRegistrationOptions(user, false));
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+        }
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
 
@@ -187,8 +195,14 @@ public class WebAuthnService {
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
-        PublicKeyCredentialCreationOptions credentialCreationOptions =
-                relyingParty.startRegistration(buildStartRegistrationOptions(user, true));
+        PublicKeyCredentialCreationOptions credentialCreationOptions;
+        try {
+            // Store the user object in a thread local property.
+            IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+            credentialCreationOptions = relyingParty.startRegistration(buildStartRegistrationOptions(user, true));
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+        }
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
         FIDO2Cache.getInstance().addToCacheByRequestId(new FIDO2CacheKey(request.getRequestId().getBase64()),
@@ -319,7 +333,13 @@ public class WebAuthnService {
                         .response(response.getCredential()).build()
                 );
 
-                addFIDO2Registration(publicKeyCredentialCreationOptions, response, registration);
+                try {
+                    // Store the user object in a thread local property.
+                    IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+                    addFIDO2Registration(publicKeyCredentialCreationOptions, response, registration);
+                } finally {
+                    IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+                }
 
                 Either.right(
                         new SuccessfulRegistrationResult(publicKeyCredentialCreationOptions, response, registration
@@ -611,9 +631,19 @@ public class WebAuthnService {
     private RelyingParty buildRelyingParty(URL originUrl) {
 
         readTrustedOrigins();
-        InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
-        String rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
-                : originUrl.getHost();
+        String rpId;
+
+        try {
+            InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
+            rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
+                    : originUrl.getHost();
+        } catch (IllegalArgumentException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid domain name: '" + originUrl.getHost()
+                        + "' received for internet domain name creation. Defaulting to origin host.");
+            }
+            rpId = originUrl.getHost();
+        }
 
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
                 .id(rpId)
@@ -722,17 +752,32 @@ public class WebAuthnService {
     private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
 
         String displayName;
+        displayName = getUserClaimValue(user, displayNameClaimURL);
+        // If the displayName is not available, build the displayName with firstName and lastName.
+        if (StringUtils.isBlank(displayName)) {
+            String firstName = getUserClaimValue(user, firstNameClaimURL);
+            String lastName = getUserClaimValue(user, lastNameClaimURL);
+            if (StringUtils.isNotBlank(firstName) || StringUtils.isNotBlank(lastName)) {
+                displayName = StringUtils.join(new String[] { firstName, lastName }, " ");
+            } else {
+                // If the firstName or the lastName is not available, set the username as the displayName.
+                displayName = user.getUserName();
+            }
+        }
+        return StringUtils.trim(displayName);
+    }
+
+    private String getUserClaimValue(User user, String claimURL) throws FIDO2AuthenticatorServerException {
+
+        String claimValue;
         try {
             UserStoreManager userStoreManager = getUserStoreManager(user);
-            displayName = userStoreManager.getUserClaimValue(user.getUserName(), displayNameClaimURL, null);
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            claimValue = userStoreManager.getUserClaimValue(user.getUserName(), claimURL, null);
+        } catch (UserStoreException e) {
             throw new FIDO2AuthenticatorServerException(
-                    "Failed retrieving user claim: " + displayNameClaimURL + " for the user: " + user, e);
+                    "Failed retrieving user claim: " + claimURL + " for the user: " + user, e);
         }
-        if (StringUtils.isEmpty(displayName)) {
-            displayName = user.toString();
-        }
-        return displayName;
+        return claimValue;
     }
 
     private UserStoreManager getUserStoreManager(User user) throws UserStoreException {
@@ -757,7 +802,7 @@ public class WebAuthnService {
 
     private UserIdentity buildUserIdentity(User user) throws FIDO2AuthenticatorServerException {
 
-        return UserIdentity.builder().name(user.toString()).displayName(getUserDisplayName(user))
+        return UserIdentity.builder().name(user.getUserName()).displayName(getUserDisplayName(user))
                 .id(generateRandom()).build();
     }
 
