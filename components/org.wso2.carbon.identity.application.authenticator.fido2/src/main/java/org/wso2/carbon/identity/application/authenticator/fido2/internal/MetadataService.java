@@ -72,8 +72,8 @@ public class MetadataService {
                 FidoMDS3MetadataBLOBProvider fidoMDS3MetadataBLOBProvider = new FidoMDS3MetadataBLOBProvider(
                         objectConverter, url, getMDS3RootCertificate()
                 );
-                // FIDO conformance test env workaround.
-                fidoMDS3MetadataBLOBProvider.setRevocationCheckEnabled(false);
+//                // FIDO conformance test env workaround.
+//                fidoMDS3MetadataBLOBProvider.setRevocationCheckEnabled(false);
                 fidoMDS3MetadataBLOBProvider.refresh();
                 return fidoMDS3MetadataBLOBProvider;
             } catch (RuntimeException | FileNotFoundException | CertificateException e) {
