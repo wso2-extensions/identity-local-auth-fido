@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.application.authenticator.fido2.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.user.core.service.RealmService;
 
 /**
@@ -33,6 +34,7 @@ public class FIDO2AuthenticatorServiceDataHolder {
     private BundleContext bundleContext = null;
     private RealmService realmService = null;
     private MetadataService metadataService = null;
+    private ConfigurationManager configurationManager = null;
 
     private FIDO2AuthenticatorServiceDataHolder() {
     }
@@ -65,5 +67,15 @@ public class FIDO2AuthenticatorServiceDataHolder {
     public MetadataService getMetadataService() {
 
         return this.metadataService;
+    }
+
+    public void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        this.configurationManager = configurationManager;
+    }
+
+    public ConfigurationManager getConfigurationManager() {
+
+        return configurationManager;
     }
 }

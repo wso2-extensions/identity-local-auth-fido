@@ -49,11 +49,20 @@ public class FIDO2AuthenticatorConstants {
     public static final String DECODING_FAILED_MESSAGE = "Registration failed! Failed to decode response object.";
 
     public static final String FIDO2_USER = "FIDO2User";
+    public static final String DISPLAY_NAME_CLAIM_URL = "http://wso2.org/claims/displayName";
 
     public static final String FIDO_MDS_ENABLED = "FIDO.MetadataService.Enable";
     public static final String FIDO_MDS_ENDPOINTS = "FIDO.MetadataService.MDSEndpoints.Endpoint";
     public static final String FIDO_MDS_ROOT_CERTIFICATE = "FIDO.MetadataService.MDSRootCertificateFilePath";
     public static final String FIDO_METADATA_STATEMENTS = "FIDO.MetadataService.MetadataStatementDirectory";
+    public static final int FIDO_MDS_SCHEDULER_INITIAL_DELAY = 0;
+
+    public static final String FIDO_CONFIG_RESOURCE_TYPE_NAME = "fido-config";
+    public static final String FIDO2_CONFIG_RESOURCE_NAME = "fido2-validations";
+    public static final String FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME = "AttestationValidation.Enable";
+    public static final boolean FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE = true;
+    public static final String FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME = "MDSValidation.Enable";
+    public static final boolean FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE = false;
 
     public static class SQLQueries {
 
@@ -140,4 +149,3 @@ public class FIDO2AuthenticatorConstants {
         }
     }
 }
-

@@ -48,6 +48,11 @@ public class FIDOUtil {
                 request.getServerPort();
     }
 
+    /**
+     * Check whether metadata validations are enabled for the server.
+     *
+     * @return boolean indicating server mds validation preference.
+     */
     public static boolean isMetadataValidationsEnabled() {
 
         if (metadataValidationsEnabled == null) {

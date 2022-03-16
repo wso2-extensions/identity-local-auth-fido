@@ -82,6 +82,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.dao.FIDO2DeviceS
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.AssertionRequestWrapper;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.AssertionResponse;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.CredentialRegistration;
+import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2Configuration;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2CredentialRegistration;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2RegistrationRequest;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.RegistrationRequest;
@@ -93,10 +94,13 @@ import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2A
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceComponent;
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceDataHolder;
+import org.wso2.carbon.identity.application.authenticator.fido2.internal.MetadataService;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -131,18 +135,15 @@ public class WebAuthnService {
     private static final Log log = LogFactory.getLog(WebAuthnService.class);
 
     private static final int USER_HANDLE_LENGTH = 32;
-
     private final Clock clock = Clock.systemDefaultZone();
     private static final SecureRandom random = new SecureRandom();
     private final ObjectMapper jsonMapper = JacksonCodecs.json();
     private static final FIDO2DeviceStoreDAO userStorage = FIDO2DeviceStoreDAO.getInstance();
-
     private static ArrayList origins = null;
-
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
-    private static final String displayNameClaimURL = "http://wso2.org/claims/displayName";
 
     private static volatile WebAuthnManager webAuthnManager;
+    private static volatile WebAuthnManager webAuthnManagerMDSEnabled;
     private static final Object lock = new Object();
 
     @Deprecated
@@ -318,8 +319,8 @@ public class WebAuthnService {
             response = jsonMapper.readValue(challengeResponse, RegistrationResponse.class);
         } catch (JsonParseException | JsonMappingException e) {
             throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST
-                            .getErrorCode(), e);
+                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                            .ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode(), e);
         } catch (IOException e) {
             throw new FIDO2AuthenticatorServerException(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
         }
@@ -362,56 +363,59 @@ public class WebAuthnService {
             throw new FIDO2AuthenticatorClientException(message, FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.
                     ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode());
         } else {
-            // Webauthn4j attestation validations.
-            Set<String> transports = response.getCredential().getResponse().getTransports().stream().map(
-                    com.yubico.webauthn.data.AuthenticatorTransport::getId).collect(Collectors.toSet()
-            );
+            // Perform webauthn4j attestation validations if enabled.
+            if (getAuthenticatorConfigs().isAttestationValidationEnabled()) {
+                Set<String> transports = response.getCredential().getResponse().getTransports().stream().map(
+                        com.yubico.webauthn.data.AuthenticatorTransport::getId).collect(Collectors.toSet()
+                );
 
-            com.webauthn4j.data.RegistrationRequest registrationRequest = new com.webauthn4j.data.RegistrationRequest(
-                    response.getCredential().getResponse().getAttestationObject().getBytes(),
-                    response.getCredential().getResponse().getClientDataJSON().getBytes(),
-                    transports
-            );
+                com.webauthn4j.data.RegistrationRequest registrationRequest =
+                        new com.webauthn4j.data.RegistrationRequest(
+                                response.getCredential().getResponse().getAttestationObject().getBytes(),
+                                response.getCredential().getResponse().getClientDataJSON().getBytes(),
+                                transports
+                        );
 
-            Set<Origin> originSet =
-                    relyingParty.getOrigins().stream().map(Origin::new).collect(Collectors.toSet());
+                Set<Origin> originSet =
+                        relyingParty.getOrigins().stream().map(Origin::new).collect(Collectors.toSet());
 
-            List<com.webauthn4j.data.PublicKeyCredentialParameters> publicKeyCredentialParametersList =
-                    relyingParty.getPreferredPubkeyParams().stream().map(pkcp ->
-                            new com.webauthn4j.data.PublicKeyCredentialParameters(
-                                    PublicKeyCredentialType.create(pkcp.getType().toJsonString()),
-                                    COSEAlgorithmIdentifier.create(pkcp.getAlg().getId())
-                            )
-                    ).collect(Collectors.toList());
+                List<com.webauthn4j.data.PublicKeyCredentialParameters> publicKeyCredentialParametersList =
+                        relyingParty.getPreferredPubkeyParams().stream().map(pkcp ->
+                                new com.webauthn4j.data.PublicKeyCredentialParameters(
+                                        PublicKeyCredentialType.create(pkcp.getType().toJsonString()),
+                                        COSEAlgorithmIdentifier.create(pkcp.getAlg().getId())
+                                )
+                        ).collect(Collectors.toList());
 
-            RegistrationParameters registrationParameters = new RegistrationParameters(
-                    new ServerProperty(
-                            originSet,
-                            relyingParty.getIdentity().getId(),
-                            new DefaultChallenge(response.getCredential().getResponse().getClientData()
-                                    .getChallenge().getBytes()),
-                            null
-                    ),
-                    publicKeyCredentialParametersList,
-                    response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UV,
-                    response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UP
-            );
+                RegistrationParameters registrationParameters = new RegistrationParameters(
+                        new ServerProperty(
+                                originSet,
+                                relyingParty.getIdentity().getId(),
+                                new DefaultChallenge(response.getCredential().getResponse().getClientData()
+                                        .getChallenge().getBytes()),
+                                null
+                        ),
+                        publicKeyCredentialParametersList,
+                        response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UV,
+                        response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UP
+                );
 
-            RegistrationData registrationData;
-            try {
-                registrationData = getWebAuthnManager().parse(registrationRequest);
-                getWebAuthnManager().validate(registrationData, registrationParameters);
-            } catch (DataConversionException e) {
-                throw new FIDO2AuthenticatorServerException("Attestation data structure parse error", e);
-            } catch (ValidationException e) {
-                throw new FIDO2AuthenticatorClientException("Validation failed: Invalid attestation!",
-                        FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                                .ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
-            } catch (MDSException e) {
-                if (!Objects.equals(e.getMessage(), "MetadataBLOB signature is invalid")) {
-                    throw new FIDO2AuthenticatorClientException("Validation failed: Invalid metadata!",
+                RegistrationData registrationData;
+                try {
+                    registrationData = getWebAuthnManager().parse(registrationRequest);
+                    getWebAuthnManager().validate(registrationData, registrationParameters);
+                } catch (DataConversionException e) {
+                    throw new FIDO2AuthenticatorServerException("Attestation data structure parse error", e);
+                } catch (ValidationException e) {
+                    throw new FIDO2AuthenticatorClientException("Validation failed: Invalid attestation!",
                             FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
                                     .ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
+                } catch (MDSException e) {
+                    if (!Objects.equals(e.getMessage(), "MetadataBLOB signature is invalid")) {
+                        throw new FIDO2AuthenticatorClientException("Validation failed: Invalid metadata!",
+                                FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
+                                        .ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
+                    }
                 }
             }
 
@@ -459,7 +463,8 @@ public class WebAuthnService {
                 RelyingParty relyingParty = buildRelyingParty(originUrl);
                 AssertionRequestWrapper request = new AssertionRequestWrapper(
                         generateRandom(),
-                        relyingParty.startAssertion(StartAssertionOptions.builder().username(user.toString()).build()));
+                        relyingParty.startAssertion(StartAssertionOptions.builder().username(user.toString()).build())
+                );
                 FIDO2Cache.getInstance().addToCacheByRequestWrapperId(
                         new FIDO2CacheKey(request.getRequestId().getBase64()),
                         new FIDO2CacheEntry(null, jsonMapper.writeValueAsString(request
@@ -486,9 +491,11 @@ public class WebAuthnService {
             RelyingParty relyingParty = buildRelyingParty(originUrl);
             AssertionRequestWrapper request = new AssertionRequestWrapper(generateRandom(),
                     relyingParty.startAssertion(StartAssertionOptions.builder().build()));
-            FIDO2Cache.getInstance().addToCacheByRequestWrapperId(new FIDO2CacheKey(request.getRequestId().getBase64()),
+            FIDO2Cache.getInstance().addToCacheByRequestWrapperId(
+                    new FIDO2CacheKey(request.getRequestId().getBase64()),
                     new FIDO2CacheEntry(null, jsonMapper.writeValueAsString(request
-                            .getRequest()), originUrl));
+                            .getRequest()), originUrl)
+            );
             return FIDOUtil.writeJson(request);
         } catch (MalformedURLException | JsonProcessingException e) {
             throw new AuthenticationFailedException("Usernameless authentication initialization failed for the " +
@@ -643,8 +650,8 @@ public class WebAuthnService {
 
         User user = User.getUserFromUserName(CarbonContext.getThreadLocalCarbonContext().getUsername());
         user.setTenantDomain(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-        Optional<CredentialRegistration> credReg = userStorage.getRegistrationByUsernameAndCredentialId(user.toString(),
-                identifier);
+        Optional<CredentialRegistration> credReg = userStorage.getRegistrationByUsernameAndCredentialId(
+                user.toString(), identifier);
 
         if (credReg.isPresent()) {
             userStorage.removeRegistrationByUsername(user.toString(), credReg.get());
@@ -852,10 +859,11 @@ public class WebAuthnService {
         String displayName;
         try {
             UserStoreManager userStoreManager = getUserStoreManager(user);
-            displayName = userStoreManager.getUserClaimValue(user.getUserName(), displayNameClaimURL, null);
+            displayName = userStoreManager.getUserClaimValue(user.getUserName(),
+                    FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL, null);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            throw new FIDO2AuthenticatorServerException(
-                    "Failed retrieving user claim: " + displayNameClaimURL + " for the user: " + user, e);
+            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: "
+                    + FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL + " for the user: " + user, e);
         }
         if (StringUtils.isEmpty(displayName)) {
             displayName = user.getUserName();
@@ -1022,35 +1030,101 @@ public class WebAuthnService {
     }
 
     private WebAuthnManager getWebAuthnManager() {
-        if (webAuthnManager == null) {
-            synchronized (lock) {
-                if (webAuthnManager == null) {
-                    CertPathTrustworthinessValidator certPathTrustworthinessValidator;
+        if (FIDOUtil.isMetadataValidationsEnabled() && getAuthenticatorConfigs().isMdsValidationEnabled()) {
+            if (webAuthnManagerMDSEnabled == null) {
+                synchronized (lock) {
+                    if (webAuthnManagerMDSEnabled == null) {
+                        MetadataService metadataService = FIDO2AuthenticatorServiceDataHolder.getInstance()
+                                .getMetadataService();
+                        if (metadataService.getDefaultCertPathTrustworthinessValidator() == null) {
+                            log.info("FIDO2 mds certificate trustworthiness validator is null. " +
+                                    "Hence initializing...");
+                            metadataService.initializeDefaultCertPathTrustworthinessValidator();
+                        }
+                        CertPathTrustworthinessValidator certPathTrustworthinessValidator = metadataService
+                                .getDefaultCertPathTrustworthinessValidator();
 
-                    if (FIDOUtil.isMetadataValidationsEnabled()) {
-                        certPathTrustworthinessValidator = FIDO2AuthenticatorServiceDataHolder.getInstance()
-                                .getMetadataService().getDefaultCertPathTrustworthinessValidator();
-                    } else {
-                        certPathTrustworthinessValidator = new NullCertPathTrustworthinessValidator();
+                        webAuthnManagerMDSEnabled = new WebAuthnManager(
+                                Arrays.asList(
+                                        new PackedAttestationStatementValidator(),
+                                        new FIDOU2FAttestationStatementValidator(),
+                                        new AndroidKeyAttestationStatementValidator(),
+                                        new AndroidSafetyNetAttestationStatementValidator(),
+                                        new TPMAttestationStatementValidator(),
+                                        new AppleAnonymousAttestationStatementValidator(),
+                                        new NoneAttestationStatementValidator()
+                                ),
+                                certPathTrustworthinessValidator,
+                                new DefaultSelfAttestationTrustworthinessValidator()
+                        );
                     }
-
-                    webAuthnManager = new WebAuthnManager(
-                            Arrays.asList(
-                                    new PackedAttestationStatementValidator(),
-                                    new FIDOU2FAttestationStatementValidator(),
-                                    new AndroidKeyAttestationStatementValidator(),
-                                    new AndroidSafetyNetAttestationStatementValidator(),
-                                    new TPMAttestationStatementValidator(),
-                                    new AppleAnonymousAttestationStatementValidator(),
-                                    new NoneAttestationStatementValidator()
-                            ),
-                            certPathTrustworthinessValidator,
-                            new DefaultSelfAttestationTrustworthinessValidator()
-                    );
                 }
             }
+
+            return webAuthnManagerMDSEnabled;
+        } else {
+            if (webAuthnManager == null) {
+                synchronized (lock) {
+                    if (webAuthnManager == null) {
+                        webAuthnManager = new WebAuthnManager(
+                                Arrays.asList(
+                                        new PackedAttestationStatementValidator(),
+                                        new FIDOU2FAttestationStatementValidator(),
+                                        new AndroidKeyAttestationStatementValidator(),
+                                        new AndroidSafetyNetAttestationStatementValidator(),
+                                        new TPMAttestationStatementValidator(),
+                                        new AppleAnonymousAttestationStatementValidator(),
+                                        new NoneAttestationStatementValidator()
+                                ),
+                                new NullCertPathTrustworthinessValidator(),
+                                new DefaultSelfAttestationTrustworthinessValidator()
+                        );
+                    }
+                }
+            }
+
+            return webAuthnManager;
+        }
+    }
+
+    private FIDO2Configuration getAuthenticatorConfigs() {
+
+        boolean attestationValidationEnabled;
+        boolean mdsValidationEnabled;
+
+        try {
+            attestationValidationEnabled = Boolean.parseBoolean(FIDO2AuthenticatorServiceDataHolder.getInstance()
+                    .getConfigurationManager().getAttribute(FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME,
+                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME,
+                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME
+                    ).getValue()
+            );
+        } catch (ConfigurationManagementException e) {
+            if (log.isDebugEnabled() && !Objects.equals(e.getErrorCode(),
+                    ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
+                log.debug("Error in retrieving FIDO2 attestation validation configuration. " +
+                        "Using default config. Error: " + e.getMessage());
+            }
+            attestationValidationEnabled = FIDO2AuthenticatorConstants
+                    .FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
         }
 
-        return webAuthnManager;
+        try {
+            mdsValidationEnabled = Boolean.parseBoolean(FIDO2AuthenticatorServiceDataHolder.getInstance()
+                    .getConfigurationManager().getAttribute(FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME,
+                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME,
+                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME
+                    ).getValue()
+            );
+        } catch (ConfigurationManagementException e) {
+            if (log.isDebugEnabled() && !Objects.equals(e.getErrorCode(),
+                    ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
+                log.debug("Error in retrieving FIDO2 mds validation configuration. " +
+                        "Using default config. Error: " + e.getMessage());
+            }
+            mdsValidationEnabled = FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
+        }
+
+        return new FIDO2Configuration(attestationValidationEnabled, mdsValidationEnabled);
     }
 }

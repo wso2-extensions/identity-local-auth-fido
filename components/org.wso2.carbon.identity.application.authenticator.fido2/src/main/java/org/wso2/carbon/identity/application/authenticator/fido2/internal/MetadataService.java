@@ -48,21 +48,22 @@ import java.util.Collections;
 import java.util.Objects;
 
 /**
- * Helper class for FIDO metadata validations.
+ * Helper class for FIDO2 metadata validations.
  */
 public class MetadataService {
 
     private static final Log log = LogFactory.getLog(MetadataService.class);
-    private ObjectConverter objectConverter;
-    private DefaultCertPathTrustworthinessValidator defaultCertPathTrustworthinessValidator;
+    private ObjectConverter objectConverter = null;
+    private DefaultCertPathTrustworthinessValidator defaultCertPathTrustworthinessValidator = null;
     private static ArrayList<String> mdsEndpoints = null;
 
     public MetadataService() {
-
-        initializeDefaultCertPathTrustworthinessValidator();
     }
 
-    private void initializeDefaultCertPathTrustworthinessValidator() {
+    /**
+     * Initialize the DefaultCertPathTrustworthinessValidator object needed for webauthn4j mds validations.
+     */
+    public void initializeDefaultCertPathTrustworthinessValidator() {
 
         objectConverter = new ObjectConverter();
 
@@ -121,16 +122,21 @@ public class MetadataService {
         defaultCertPathTrustworthinessValidator.setFullChainProhibited(true);
     }
 
+    /**
+     * Get the DefaultCertPathTrustworthinessValidator object needed for webauthn4j mds validations.
+     *
+     * @return DefaultCertPathTrustworthinessValidator
+     */
+    public DefaultCertPathTrustworthinessValidator getDefaultCertPathTrustworthinessValidator() {
+
+        return defaultCertPathTrustworthinessValidator;
+    }
+
     private X509Certificate getMDS3RootCertificate() throws CertificateException, FileNotFoundException {
 
         CertificateFactory certificateFactory = CertificateFactory.getInstance("X509");
         FileInputStream fileInputStream = new FileInputStream(readMDSRootCertificatePath());
         return (X509Certificate) certificateFactory.generateCertificate(fileInputStream);
-    }
-
-    public DefaultCertPathTrustworthinessValidator getDefaultCertPathTrustworthinessValidator() {
-
-        return defaultCertPathTrustworthinessValidator;
     }
 
     private ArrayList<String> getMDSEndpoints() {
@@ -151,6 +157,7 @@ public class MetadataService {
     }
 
     private String readMDSRootCertificatePath() {
+
         String value = IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_MDS_ROOT_CERTIFICATE);
 
         if (StringUtils.isNotBlank(value)) {
@@ -161,6 +168,7 @@ public class MetadataService {
     }
 
     private String readMetadataStatementDirectory() {
+
         String value = IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_METADATA_STATEMENTS);
 
         if (StringUtils.isNotBlank(value)) {
