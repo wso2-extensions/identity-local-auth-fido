@@ -50,6 +50,8 @@ public class FIDO2AuthenticatorConstants {
 
     public static final String FIDO2_USER = "FIDO2User";
     public static final String DISPLAY_NAME_CLAIM_URL = "http://wso2.org/claims/displayName";
+    public static final String FIRST_NAME_CLAIM_URL = "http://wso2.org/claims/givenname";
+    public static final String LAST_NAME_CLAIM_URL = "http://wso2.org/claims/lastname";
 
     public static final String FIDO_MDS_ENABLED = "FIDO.MetadataService.Enable";
     public static final String FIDO_MDS_ENDPOINTS = "FIDO.MetadataService.MDSEndpoints.Endpoint";

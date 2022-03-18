@@ -739,9 +739,19 @@ public class WebAuthnService {
     private RelyingParty buildRelyingParty(URL originUrl) {
 
         readTrustedOrigins();
-        InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
-        String rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
-                : originUrl.getHost();
+        String rpId;
+
+        try {
+            InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
+            rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
+                    : originUrl.getHost();
+        } catch (IllegalArgumentException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid domain name: '" + originUrl.getHost()
+                        + "' received for internet domain name creation. Defaulting to origin host.");
+            }
+            rpId = originUrl.getHost();
+        }
 
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
                 .id(rpId)
@@ -857,18 +867,32 @@ public class WebAuthnService {
     private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
 
         String displayName;
+        displayName = getUserClaimValue(user, FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL);
+        // If the displayName is not available, build the displayName with firstName and lastName.
+        if (StringUtils.isBlank(displayName)) {
+            String firstName = getUserClaimValue(user, FIDO2AuthenticatorConstants.FIRST_NAME_CLAIM_URL);
+            String lastName = getUserClaimValue(user, FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL);
+            if (StringUtils.isNotBlank(firstName) || StringUtils.isNotBlank(lastName)) {
+                displayName = StringUtils.join(new String[] { firstName, lastName }, " ");
+            } else {
+                // If the firstName or the lastName is not available, set the username as the displayName.
+                displayName = user.getUserName();
+            }
+        }
+        return StringUtils.trim(displayName);
+    }
+
+    private String getUserClaimValue(User user, String claimURL) throws FIDO2AuthenticatorServerException {
+
+        String claimValue;
         try {
             UserStoreManager userStoreManager = getUserStoreManager(user);
-            displayName = userStoreManager.getUserClaimValue(user.getUserName(),
-                    FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL, null);
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            throw new FIDO2AuthenticatorServerException("Failed retrieving user claim: "
-                    + FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL + " for the user: " + user, e);
+            claimValue = userStoreManager.getUserClaimValue(user.getUserName(), claimURL, null);
+        } catch (UserStoreException e) {
+            throw new FIDO2AuthenticatorServerException(
+                    "Failed retrieving user claim: " + claimURL + " for the user: " + user, e);
         }
-        if (StringUtils.isEmpty(displayName)) {
-            displayName = user.getUserName();
-        }
-        return displayName;
+        return claimValue;
     }
 
     private UserStoreManager getUserStoreManager(User user) throws UserStoreException {
