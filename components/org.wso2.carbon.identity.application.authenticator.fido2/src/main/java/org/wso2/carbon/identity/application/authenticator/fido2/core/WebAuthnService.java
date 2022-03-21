@@ -73,6 +73,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authenticator.fido2.cache.FIDO2Cache;
@@ -96,10 +97,8 @@ import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2Au
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.MetadataService;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
-import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -126,6 +125,29 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.yubico.webauthn.data.UserVerificationRequirement.PREFERRED;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.APPLICATION_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_USER;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIRST_NAME_CLAIM_URL;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.TRUSTED_ORIGINS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS;
 
 /**
  * FIDO2 core APIs.
@@ -153,14 +175,14 @@ public class WebAuthnService {
 
         readTrustedOrigins();
         if (!origins.contains(origin.trim())) {
-            throw new FIDO2AuthenticatorException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE);
+            throw new FIDO2AuthenticatorException(INVALID_ORIGIN_MESSAGE);
         }
 
         URL originUrl;
         try {
             originUrl = new URL(origin);
         } catch (MalformedURLException e) {
-            throw new FIDO2AuthenticatorException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE);
+            throw new FIDO2AuthenticatorException(INVALID_ORIGIN_MESSAGE);
         }
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
@@ -196,10 +218,10 @@ public class WebAuthnService {
         PublicKeyCredentialCreationOptions credentialCreationOptions;
         try {
             // Store the user object in a thread local property.
-            IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+            IdentityUtil.threadLocalProperties.get().put(FIDO2_USER, user);
             credentialCreationOptions = relyingParty.startRegistration(buildStartRegistrationOptions(user, false));
         } finally {
-            IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+            IdentityUtil.threadLocalProperties.get().remove(FIDO2_USER);
         }
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
@@ -229,10 +251,10 @@ public class WebAuthnService {
         PublicKeyCredentialCreationOptions credentialCreationOptions;
         try {
             // Store the user object in a thread local property.
-            IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+            IdentityUtil.threadLocalProperties.get().put(FIDO2_USER, user);
             credentialCreationOptions = relyingParty.startRegistration(buildStartRegistrationOptions(user, true));
         } finally {
-            IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+            IdentityUtil.threadLocalProperties.get().remove(FIDO2_USER);
         }
 
         FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(generateRandom(), credentialCreationOptions);
@@ -252,9 +274,9 @@ public class WebAuthnService {
             response = jsonMapper.readValue(challengeResponse, RegistrationResponse.class);
         } catch (IOException e) {
             if (log.isDebugEnabled()) {
-                log.debug(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
+                log.debug(DECODING_FAILED_MESSAGE, e);
             }
-            throw new FIDO2AuthenticatorException(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
+            throw new FIDO2AuthenticatorException(DECODING_FAILED_MESSAGE, e);
         }
 
         User user = getPrivilegedUser();
@@ -319,18 +341,16 @@ public class WebAuthnService {
             response = jsonMapper.readValue(challengeResponse, RegistrationResponse.class);
         } catch (JsonParseException | JsonMappingException e) {
             throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                            .ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode(), e);
+                    ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode(), e);
         } catch (IOException e) {
-            throw new FIDO2AuthenticatorServerException(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
+            throw new FIDO2AuthenticatorServerException(DECODING_FAILED_MESSAGE, e);
         }
 
         User user = getPrivilegedUser();
         if (FIDO2DeviceStoreDAO.getInstance().getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
                 response.getCredential().getId()).isPresent()) {
             throw new FIDO2AuthenticatorClientException("The username \"" + user + "\" is already registered.",
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                            .ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS.getErrorCode());
+                    ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS.getErrorCode());
         }
 
         String requestId = response.getRequestId().getBase64();
@@ -346,10 +366,9 @@ public class WebAuthnService {
                         PublicKeyCredentialCreationOptions.class);
             } catch (JsonParseException | JsonMappingException e) {
                 throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
-                        FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                                .ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode(), e);
+                        ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode(), e);
             } catch (IOException e) {
-                throw new FIDO2AuthenticatorServerException(FIDO2AuthenticatorConstants.DECODING_FAILED_MESSAGE, e);
+                throw new FIDO2AuthenticatorServerException(DECODING_FAILED_MESSAGE, e);
             }
             relyingParty = buildRelyingParty(cacheEntry.getOrigin());
             FIDO2Cache.getInstance().clearCacheEntryByRequestId(new FIDO2CacheKey(requestId));
@@ -360,8 +379,8 @@ public class WebAuthnService {
             if (log.isDebugEnabled()) {
                 log.debug(MessageFormat.format("Fail finishRegistration challengeResponse: {0}", challengeResponse));
             }
-            throw new FIDO2AuthenticatorClientException(message, FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.
-                    ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode());
+            throw new FIDO2AuthenticatorClientException(message, ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST
+                    .getErrorCode());
         } else {
             // Perform webauthn4j attestation validations if enabled.
             if (getAuthenticatorConfigs().isAttestationValidationEnabled()) {
@@ -408,13 +427,11 @@ public class WebAuthnService {
                     throw new FIDO2AuthenticatorServerException("Attestation data structure parse error", e);
                 } catch (ValidationException e) {
                     throw new FIDO2AuthenticatorClientException("Validation failed: Invalid attestation!",
-                            FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                                    .ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
+                            ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
                 } catch (MDSException e) {
                     if (!Objects.equals(e.getMessage(), "MetadataBLOB signature is invalid")) {
                         throw new FIDO2AuthenticatorClientException("Validation failed: Invalid metadata!",
-                                FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                                        .ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
+                                ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
                     }
                 }
             }
@@ -428,10 +445,10 @@ public class WebAuthnService {
 
                 try {
                     // Store the user object in a thread local property.
-                    IdentityUtil.threadLocalProperties.get().put(FIDO2AuthenticatorConstants.FIDO2_USER, user);
+                    IdentityUtil.threadLocalProperties.get().put(FIDO2_USER, user);
                     addFIDO2Registration(publicKeyCredentialCreationOptions, response, registration);
                 } finally {
-                    IdentityUtil.threadLocalProperties.get().remove(FIDO2AuthenticatorConstants.FIDO2_USER);
+                    IdentityUtil.threadLocalProperties.get().remove(FIDO2_USER);
                 }
 
                 Either.right(
@@ -672,8 +689,7 @@ public class WebAuthnService {
 
         if (StringUtils.isBlank(credentialId)) {
             throw new FIDO2AuthenticatorClientException("Credential ID must not be empty.",
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                            .ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
+                    ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
         }
 
         final ByteArray identifier;
@@ -681,8 +697,7 @@ public class WebAuthnService {
             identifier = ByteArray.fromBase64Url(credentialId);
         } catch (Base64UrlException e) {
             throw new FIDO2AuthenticatorClientException("Credential ID is not valid Base64Url data: " + credentialId,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                            .ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
+                    ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
         }
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
@@ -693,8 +708,7 @@ public class WebAuthnService {
             userStorage.removeFIDO2RegistrationByUsername(user.toString(), credReg.get());
         } else {
             throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                            .ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
+                    ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
         }
     }
 
@@ -711,8 +725,7 @@ public class WebAuthnService {
 
         if (StringUtils.isBlank(credentialId)) {
             throw new FIDO2AuthenticatorClientException("Credential ID must not be empty.",
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                            .ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
+                    ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
         }
 
         final ByteArray identifier;
@@ -720,8 +733,7 @@ public class WebAuthnService {
             identifier = ByteArray.fromBase64Url(credentialId);
         } catch (Base64UrlException e) {
             throw new FIDO2AuthenticatorClientException("The Credential ID: " + credentialId + " is not a valid " +
-                    "Base64Url data.", FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                    .ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
+                    "Base64Url data.", ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
         }
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
@@ -730,8 +742,7 @@ public class WebAuthnService {
 
         if (!credentialRegistration.isPresent()) {
             throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes
-                            .ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
+                    ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
         }
         userStorage.updateFIDO2DeviceDisplayName(user, credentialRegistration.get(), newDisplayName);
     }
@@ -753,10 +764,7 @@ public class WebAuthnService {
             rpId = originUrl.getHost();
         }
 
-        RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
-                .id(rpId)
-                .name(FIDO2AuthenticatorConstants.APPLICATION_NAME)
-                .build();
+        RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder().id(rpId).name(APPLICATION_NAME).build();
 
         List<PublicKeyCredentialParameters> preferredPublicKeyCredentialParameters = Collections.unmodifiableList(
                 Arrays.asList(PublicKeyCredentialParameters.ES256, PublicKeyCredentialParameters.EdDSA,
@@ -867,11 +875,11 @@ public class WebAuthnService {
     private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
 
         String displayName;
-        displayName = getUserClaimValue(user, FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL);
+        displayName = getUserClaimValue(user, DISPLAY_NAME_CLAIM_URL);
         // If the displayName is not available, build the displayName with firstName and lastName.
         if (StringUtils.isBlank(displayName)) {
-            String firstName = getUserClaimValue(user, FIDO2AuthenticatorConstants.FIRST_NAME_CLAIM_URL);
-            String lastName = getUserClaimValue(user, FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL);
+            String firstName = getUserClaimValue(user, FIRST_NAME_CLAIM_URL);
+            String lastName = getUserClaimValue(user, LAST_NAME_CLAIM_URL);
             if (StringUtils.isNotBlank(firstName) || StringUtils.isNotBlank(lastName)) {
                 displayName = StringUtils.join(new String[] { firstName, lastName }, " ");
             } else {
@@ -930,8 +938,7 @@ public class WebAuthnService {
     private void readTrustedOrigins() {
 
         if (origins == null) {
-            Object value = IdentityConfigParser.getInstance().getConfiguration()
-                    .get(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS);
+            Object value = IdentityConfigParser.getInstance().getConfiguration().get(TRUSTED_ORIGINS);
             if (value == null) {
                 origins = new ArrayList<>();
             } else if (value instanceof ArrayList) {
@@ -1027,9 +1034,8 @@ public class WebAuthnService {
 
         readTrustedOrigins();
         if (!origins.contains(origin.trim())) {
-            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
-                            .getErrorCode());
+            throw new FIDO2AuthenticatorClientException(INVALID_ORIGIN_MESSAGE,
+                    ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN.getErrorCode());
         }
     }
 
@@ -1039,9 +1045,8 @@ public class WebAuthnService {
         try {
             originUrl = new URL(origin);
         } catch (MalformedURLException e) {
-            throw new FIDO2AuthenticatorClientException(FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE,
-                    FIDO2AuthenticatorConstants.ClientExceptionErrorCodes.ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN
-                            .getErrorCode(), e);
+            throw new FIDO2AuthenticatorClientException(INVALID_ORIGIN_MESSAGE,
+                    ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN.getErrorCode(), e);
         }
 
         return originUrl;
@@ -1053,7 +1058,7 @@ public class WebAuthnService {
                 CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
     }
 
-    private WebAuthnManager getWebAuthnManager() {
+    private WebAuthnManager getWebAuthnManager() throws FIDO2AuthenticatorServerException {
         if (FIDOUtil.isMetadataValidationsEnabled() && getAuthenticatorConfigs().isMdsValidationEnabled()) {
             if (webAuthnManagerMDSEnabled == null) {
                 synchronized (lock) {
@@ -1111,42 +1116,53 @@ public class WebAuthnService {
         }
     }
 
-    private FIDO2Configuration getAuthenticatorConfigs() {
+    private FIDO2Configuration getAuthenticatorConfigs() throws FIDO2AuthenticatorServerException {
 
         boolean attestationValidationEnabled;
         boolean mdsValidationEnabled;
 
         try {
             attestationValidationEnabled = Boolean.parseBoolean(FIDO2AuthenticatorServiceDataHolder.getInstance()
-                    .getConfigurationManager().getAttribute(FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME,
-                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME,
-                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME
-                    ).getValue()
+                    .getConfigurationManager().getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONFIG_RESOURCE_NAME,
+                            FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME).getValue()
             );
         } catch (ConfigurationManagementException e) {
-            if (log.isDebugEnabled() && !Objects.equals(e.getErrorCode(),
-                    ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
-                log.debug("Error in retrieving FIDO2 attestation validation configuration. " +
-                        "Using default config. Error: " + e.getMessage());
+            if (Objects.equals(e.getErrorCode(), ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
+                if (log.isDebugEnabled()) {
+                    log.debug(FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME
+                            + " attribute doesn't exist for the tenant: "
+                            + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
+                            + ". Using the default configuration value of "
+                            + FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE);
+                }
+                attestationValidationEnabled = FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
+            } else {
+                throw new FIDO2AuthenticatorServerException("Error in retrieving "
+                        + FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME + " configuration for the tenant: "
+                        + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId(), e);
             }
-            attestationValidationEnabled = FIDO2AuthenticatorConstants
-                    .FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
         }
 
         try {
             mdsValidationEnabled = Boolean.parseBoolean(FIDO2AuthenticatorServiceDataHolder.getInstance()
-                    .getConfigurationManager().getAttribute(FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME,
-                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME,
-                            FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME
-                    ).getValue()
+                    .getConfigurationManager().getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONFIG_RESOURCE_NAME,
+                            FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME).getValue()
             );
         } catch (ConfigurationManagementException e) {
-            if (log.isDebugEnabled() && !Objects.equals(e.getErrorCode(),
-                    ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
-                log.debug("Error in retrieving FIDO2 mds validation configuration. " +
-                        "Using default config. Error: " + e.getMessage());
+            if (Objects.equals(e.getErrorCode(), ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
+                if (log.isDebugEnabled()) {
+                    log.debug(FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME
+                            + " attribute doesn't exist for the tenant: "
+                            + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
+                            + ". Using the default configuration value of "
+                            + FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE);
+                }
+                mdsValidationEnabled = FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
+            } else {
+                throw new FIDO2AuthenticatorServerException("Error in retrieving "
+                        + FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME + " configuration for the tenant: "
+                        + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId(), e);
             }
-            mdsValidationEnabled = FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
         }
 
         return new FIDO2Configuration(attestationValidationEnabled, mdsValidationEnabled);

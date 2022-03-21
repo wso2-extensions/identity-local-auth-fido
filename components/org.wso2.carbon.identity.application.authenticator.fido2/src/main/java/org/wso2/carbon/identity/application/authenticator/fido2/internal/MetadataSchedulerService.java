@@ -18,8 +18,10 @@
 
 package org.wso2.carbon.identity.application.authenticator.fido2.internal;
 
+import lombok.SneakyThrows;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 
 import java.util.concurrent.Executors;
@@ -51,6 +53,7 @@ public class MetadataSchedulerService {
 
     private static final class MetadataInitializationTask implements Runnable {
 
+        @SneakyThrows(FIDO2AuthenticatorServerException.class)
         @Override
         public void run() {
 

@@ -26,6 +26,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 
 import javax.servlet.http.HttpServletRequest;
 
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_MDS_ENABLED;
+
 /**
  * FIDOUtil class for FIDO authentication component.
  */
@@ -56,7 +58,7 @@ public class FIDOUtil {
     public static boolean isMetadataValidationsEnabled() {
 
         if (metadataValidationsEnabled == null) {
-            String mdsEnabled = IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_MDS_ENABLED);
+            String mdsEnabled = IdentityUtil.getProperty(FIDO_MDS_ENABLED);
 
             if (StringUtils.isNotBlank(mdsEnabled)) {
                 metadataValidationsEnabled = Boolean.parseBoolean(mdsEnabled);

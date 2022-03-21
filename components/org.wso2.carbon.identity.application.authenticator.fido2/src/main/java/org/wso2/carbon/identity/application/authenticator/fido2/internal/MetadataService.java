@@ -27,10 +27,9 @@ import com.webauthn4j.metadata.anchor.AggregatingTrustAnchorRepository;
 import com.webauthn4j.metadata.anchor.MetadataBLOBBasedTrustAnchorRepository;
 import com.webauthn4j.metadata.anchor.MetadataStatementsBasedTrustAnchorRepository;
 import com.webauthn4j.validator.attestation.trustworthiness.certpath.DefaultCertPathTrustworthinessValidator;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
+import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 
@@ -47,6 +46,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Objects;
 
+import static org.apache.commons.lang.StringUtils.EMPTY;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_MDS_ENDPOINTS;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_MDS_ROOT_CERTIFICATE;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_METADATA_STATEMENTS;
+
 /**
  * Helper class for FIDO2 metadata validations.
  */
@@ -57,30 +62,33 @@ public class MetadataService {
     private DefaultCertPathTrustworthinessValidator defaultCertPathTrustworthinessValidator = null;
     private static ArrayList<String> mdsEndpoints = null;
 
-    public MetadataService() {
-    }
-
     /**
      * Initialize the DefaultCertPathTrustworthinessValidator object needed for webauthn4j mds validations.
      */
-    public void initializeDefaultCertPathTrustworthinessValidator() {
+    public void initializeDefaultCertPathTrustworthinessValidator() throws FIDO2AuthenticatorServerException {
 
         objectConverter = new ObjectConverter();
+        X509Certificate rootCertificate;
+        try {
+            rootCertificate = getMDS3RootCertificate();
+        } catch (FileNotFoundException | CertificateException e) {
+            log.error("Exception in reading the FIDO2 mds root certificate: " + e.getMessage());
+            throw new FIDO2AuthenticatorServerException("Exception in reading the FIDO2 mds root certificate", e);
+        }
 
         // Create URL based MDS BLOB provider.
         MetadataBLOBProvider[] fidoMDS3MetdataBLOBProviders = getMDSEndpoints().stream().map(url -> {
             try {
                 FidoMDS3MetadataBLOBProvider fidoMDS3MetadataBLOBProvider = new FidoMDS3MetadataBLOBProvider(
-                        objectConverter, url, getMDS3RootCertificate()
+                        objectConverter, url, rootCertificate
                 );
-//                // FIDO conformance test env workaround.
-//                fidoMDS3MetadataBLOBProvider.setRevocationCheckEnabled(false);
+                // FIDO conformance test env workaround.
+                fidoMDS3MetadataBLOBProvider.setRevocationCheckEnabled(false);
                 fidoMDS3MetadataBLOBProvider.refresh();
                 return fidoMDS3MetadataBLOBProvider;
-            } catch (RuntimeException | FileNotFoundException | CertificateException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Exception in constructing url based MDS blob provider: " + e.getMessage());
-                }
+            } catch (RuntimeException e) {
+                log.error("Exception in constructing url based MDS blob provider for " + url
+                        + ". Specifying a null provider. Reason: " + e.getMessage());
                 return null;
             }
         }).filter(Objects::nonNull).toArray(MetadataBLOBProvider[]::new);
@@ -91,17 +99,22 @@ public class MetadataService {
         // Create local file based MDS provider (Requires to provide metadata from json files).
         MetadataStatementsBasedTrustAnchorRepository metadataStatementsBasedTrustAnchorRepository = null;
         try {
-            Path[] metadataPaths = Files.list(Paths.get(readMetadataStatementDirectory())).toArray(Path[]::new);
+            Path mdsDirectory = Paths.get(readMetadataStatementDirectory());
+            if (Files.list(mdsDirectory).findAny().isPresent()) {
+                Path[] metadataPaths = Files.list(mdsDirectory).toArray(Path[]::new);
 
-            LocalFilesMetadataStatementsProvider localFilesMetadataStatementsProvider =
-                    new LocalFilesMetadataStatementsProvider(objectConverter, metadataPaths);
-            metadataStatementsBasedTrustAnchorRepository = new MetadataStatementsBasedTrustAnchorRepository(
-                    localFilesMetadataStatementsProvider
-            );
-        } catch (IOException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Exception in constructing file based MDS blob provider: " + e.getMessage());
+                LocalFilesMetadataStatementsProvider localFilesMetadataStatementsProvider =
+                        new LocalFilesMetadataStatementsProvider(objectConverter, metadataPaths);
+                metadataStatementsBasedTrustAnchorRepository = new MetadataStatementsBasedTrustAnchorRepository(
+                        localFilesMetadataStatementsProvider
+                );
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("No metadata statements found in the configured directory.");
+                }
             }
+        } catch (IOException e) {
+            log.error("Exception in constructing file based MDS blob provider: " + e.getMessage());
         }
 
         // Construct trust anchor repository.
@@ -142,8 +155,7 @@ public class MetadataService {
     private ArrayList<String> getMDSEndpoints() {
 
         if (mdsEndpoints == null) {
-            Object value = IdentityConfigParser.getInstance().getConfiguration()
-                    .get(FIDO2AuthenticatorConstants.FIDO_MDS_ENDPOINTS);
+            Object value = IdentityConfigParser.getInstance().getConfiguration().get(FIDO_MDS_ENDPOINTS);
             if (value == null) {
                 mdsEndpoints = new ArrayList<>();
             } else if (value instanceof ArrayList) {
@@ -158,23 +170,23 @@ public class MetadataService {
 
     private String readMDSRootCertificatePath() {
 
-        String value = IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_MDS_ROOT_CERTIFICATE);
+        String value = IdentityUtil.getProperty(FIDO_MDS_ROOT_CERTIFICATE);
 
-        if (StringUtils.isNotBlank(value)) {
+        if (isNotBlank(value)) {
             return value;
         } else {
-            return "";
+            return EMPTY;
         }
     }
 
     private String readMetadataStatementDirectory() {
 
-        String value = IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_METADATA_STATEMENTS);
+        String value = IdentityUtil.getProperty(FIDO_METADATA_STATEMENTS);
 
-        if (StringUtils.isNotBlank(value)) {
+        if (isNotBlank(value)) {
             return value;
         } else {
-            return "";
+            return EMPTY;
         }
     }
 }
