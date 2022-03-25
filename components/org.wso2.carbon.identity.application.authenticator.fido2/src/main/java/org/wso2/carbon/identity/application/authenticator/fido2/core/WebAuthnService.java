@@ -148,6 +148,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.TRUSTED_ORIGINS;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
 
 /**
  * FIDO2 core APIs.
@@ -1136,6 +1137,15 @@ public class WebAuthnService {
                             + FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE);
                 }
                 attestationValidationEnabled = FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
+            } else if (Objects.equals(e.getErrorCode(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode())) {
+                if (log.isDebugEnabled()) {
+                    log.debug(FIDO2_CONFIG_RESOURCE_NAME + " resource doesn't exist for the tenant: "
+                            + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
+                            + ". Using the default configuration value for the attribute: "
+                            + FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME + ", value: "
+                            + FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE);
+                }
+                attestationValidationEnabled = FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
             } else {
                 throw new FIDO2AuthenticatorServerException("Error in retrieving "
                         + FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME + " configuration for the tenant: "
@@ -1155,6 +1165,15 @@ public class WebAuthnService {
                             + " attribute doesn't exist for the tenant: "
                             + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
                             + ". Using the default configuration value of "
+                            + FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE);
+                }
+                mdsValidationEnabled = FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
+            } else if (Objects.equals(e.getErrorCode(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode())) {
+                if (log.isDebugEnabled()) {
+                    log.debug(FIDO2_CONFIG_RESOURCE_NAME + " resource doesn't exist for the tenant: "
+                            + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
+                            + ". Using the default configuration value for the attribute: "
+                            + FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME + ", value: "
                             + FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE);
                 }
                 mdsValidationEnabled = FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;

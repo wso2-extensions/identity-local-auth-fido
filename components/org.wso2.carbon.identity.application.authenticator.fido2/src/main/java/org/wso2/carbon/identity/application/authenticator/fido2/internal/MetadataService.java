@@ -93,6 +93,19 @@ public class MetadataService {
             }
         }).filter(Objects::nonNull).toArray(MetadataBLOBProvider[]::new);
 
+        /**
+         * If metadata validation is enabled, URL based MDS initialization will be enforced.
+         * Hence will abort the initialization if the BLOB list is empty. Server will try to reinitialize during
+         * the next device registration.
+         */
+        if (fidoMDS3MetdataBLOBProviders.length == 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Ended up in an empty url based metadata BLOB providers list. " +
+                        "Hence aborting the current initialization.");
+            }
+            return;
+        }
+
         MetadataBLOBBasedTrustAnchorRepository metadataBLOBBasedTrustAnchorRepository =
                 new MetadataBLOBBasedTrustAnchorRepository(fidoMDS3MetdataBLOBProviders);
 
