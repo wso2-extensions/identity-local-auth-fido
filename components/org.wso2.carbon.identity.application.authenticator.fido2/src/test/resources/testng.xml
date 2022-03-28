@@ -3,7 +3,7 @@
 <suite name="Suite1" verbose="1">
     <test name="FIDO-Authenticator-Unit-Tests">
         <classes>
-            <class name="org.wso2.carbon.identity.application.authenticator.fido2.WebAuthnServiceTest" />
+            <class name="org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnServiceTest" />
         </classes>
     </test>
 </suite>
