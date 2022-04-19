@@ -273,7 +273,7 @@
             <dependency>
                 <groupId>org.wso2.orbit.org.webauthn4j</groupId>
                 <artifactId>webauthn4j</artifactId>
-                <version>${webauthn4j.version}</version>
+                <version>${orbit.webauthn4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
@@ -285,12 +285,17 @@
                 <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${jackson.datatype.jsr310.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <properties>
         <carbon.kernel.package.import.version.range>[4.4.0, 5.0.0)</carbon.kernel.package.import.version.range>
-        <identity.framework.version>5.20.300</identity.framework.version>
+        <identity.framework.version>5.20.341-SNAPSHOT</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>31.0.1-jre</google.guava.version>
@@ -322,7 +327,8 @@
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>1.12.1.wso2v1</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>1.12.1</yubico.webauthn.version>
-        <webauthn4j.version>0.19.1.wso2v1</webauthn4j.version>
+        <jackson.datatype.jsr310.version>2.13.1</jackson.datatype.jsr310.version>
+        <orbit.webauthn4j.version>0.19.1.wso2v1</orbit.webauthn4j.version>
         <maven.scr.plugin.version>1.26.0</maven.scr.plugin.version>
     </properties>
 

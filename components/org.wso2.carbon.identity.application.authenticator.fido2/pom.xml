@@ -139,8 +139,9 @@
                             com.fasterxml.jackson.annotation.*; version="${fasterxml.jackson.version}",
                             com.fasterxml.jackson.datatype.jdk8.*; version="${fasterxml.jackson.version}",
                             com.fasterxml.jackson.dataformat.cbor.*; version="${fasterxml.jackson.version}",
-                            com.webauthn4j.*; version="${webauthn4j.version}",
-                            org.wso2.carbon.identity.configuration.mgt.core.*
+                            com.webauthn4j.*; version="${orbit.webauthn4j.version}",
+                            org.wso2.carbon.identity.configuration.mgt.core.*,
+                            com.fasterxml.jackson.datatype.jackson-datatype-jsr310.*; version="${jackson.datatype.jsr310.version}"
                         </Import-Package>
                         <Export-Package>
                             org.wso2.carbon.identity.application.authenticator.fido2.*;
