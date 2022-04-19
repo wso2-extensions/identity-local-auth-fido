@@ -1134,7 +1134,7 @@ public class WebAuthnService {
                             + " attribute doesn't exist for the tenant: "
                             + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
                             + ". Using the default configuration value of "
-                            + FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE);
+                            + FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE + ".");
                 }
                 attestationValidationEnabled = FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
             } else if (Objects.equals(e.getErrorCode(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode())) {
@@ -1143,7 +1143,7 @@ public class WebAuthnService {
                             + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
                             + ". Using the default configuration value for the attribute: "
                             + FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME + ", value: "
-                            + FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE);
+                            + FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE + ".");
                 }
                 attestationValidationEnabled = FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE;
             } else {
@@ -1165,7 +1165,7 @@ public class WebAuthnService {
                             + " attribute doesn't exist for the tenant: "
                             + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
                             + ". Using the default configuration value of "
-                            + FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE);
+                            + FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE + ".");
                 }
                 mdsValidationEnabled = FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
             } else if (Objects.equals(e.getErrorCode(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode())) {
@@ -1174,7 +1174,7 @@ public class WebAuthnService {
                             + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
                             + ". Using the default configuration value for the attribute: "
                             + FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME + ", value: "
-                            + FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE);
+                            + FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE + ".");
                 }
                 mdsValidationEnabled = FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
             } else {

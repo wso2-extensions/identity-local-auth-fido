@@ -57,11 +57,16 @@ public class MetadataSchedulerService {
         @Override
         public void run() {
 
-            log.debug("Start running the FIDO2 Metadata Initialization task.");
+            if (log.isDebugEnabled()) {
+                log.debug("Starting the FIDO2 metadata initialization task.");
+            }
+
             if (FIDOUtil.isMetadataValidationsEnabled()) {
                 if (FIDO2AuthenticatorServiceDataHolder.getInstance().getMetadataService() == null) {
-                    log.debug("Setting a new MetadataService object as the FIDO Authenticator metadata service " +
-                            "is null");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Setting a new MetadataService object as the FIDO Authenticator metadata " +
+                                "service is null.");
+                    }
                     FIDO2AuthenticatorServiceDataHolder.getInstance().setMetadataService(new MetadataService());
                 }
 
@@ -70,12 +75,15 @@ public class MetadataSchedulerService {
 
                 if (FIDO2AuthenticatorServiceDataHolder.getInstance().getMetadataService()
                         .getDefaultCertPathTrustworthinessValidator() == null) {
-                    log.error("Error initializing default cert path trustworthiness validator");
+                    log.error("Error initializing default cert path trustworthiness validator.");
                 } else {
                     log.info("FIDO2 Metadata Initialization is successful.");
                 }
             }
-            log.debug("Stop running the FIDO2 Metadata Initialization task.");
+
+            if (log.isDebugEnabled()) {
+                log.debug("Stopping the FIDO2 metadata initialization task.");
+            }
         }
     }
 }

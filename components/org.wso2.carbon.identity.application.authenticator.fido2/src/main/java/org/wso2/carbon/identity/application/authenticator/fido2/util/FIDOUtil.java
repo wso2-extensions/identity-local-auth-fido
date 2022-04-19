@@ -27,6 +27,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_MDS_ENABLED;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_MDS_SCHEDULER_INITIAL_DELAY;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_MDS_SCHEDULER_INITIAL_DELAY_DEFAULT_VALUE;
 
 /**
  * FIDOUtil class for FIDO authentication component.
@@ -35,6 +37,7 @@ public class FIDOUtil {
 
     private static final ObjectMapper jsonMapper = JacksonCodecs.json();
     private static Boolean metadataValidationsEnabled;
+    private static Integer mdsSchedulerInitialDelay;
 
     private FIDOUtil() {
     }
@@ -68,5 +71,20 @@ public class FIDOUtil {
         }
 
         return metadataValidationsEnabled;
+    }
+
+    public static long getMDSSchedulerInitialDelay() {
+
+        if (mdsSchedulerInitialDelay == null) {
+            String initialDelay = IdentityUtil.getProperty(FIDO_MDS_SCHEDULER_INITIAL_DELAY);
+
+            if (StringUtils.isNotBlank(initialDelay)) {
+                mdsSchedulerInitialDelay = Integer.parseInt(initialDelay);
+            } else {
+                mdsSchedulerInitialDelay = FIDO_MDS_SCHEDULER_INITIAL_DELAY_DEFAULT_VALUE;
+            }
+        }
+
+        return mdsSchedulerInitialDelay;
     }
 }

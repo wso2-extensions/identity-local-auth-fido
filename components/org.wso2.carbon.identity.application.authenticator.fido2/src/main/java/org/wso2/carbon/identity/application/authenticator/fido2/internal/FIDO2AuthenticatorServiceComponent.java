@@ -68,7 +68,7 @@ public class FIDO2AuthenticatorServiceComponent {
         if (FIDOUtil.isMetadataValidationsEnabled()) {
             FIDO2AuthenticatorServiceDataHolder.getInstance().setMetadataService(new MetadataService());
             MetadataSchedulerService metadataSchedulerService = new MetadataSchedulerService(
-                    FIDO_MDS_SCHEDULER_INITIAL_DELAY);
+                    FIDOUtil.getMDSSchedulerInitialDelay());
             metadataSchedulerService.activateMetadataInitialization();
         }
 
