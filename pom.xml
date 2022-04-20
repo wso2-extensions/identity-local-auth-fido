@@ -271,7 +271,7 @@
                 <version>${org.apache.cxf.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.orbit.org.webauthn4j</groupId>
+                <groupId>org.wso2.orbit.webauthn4j</groupId>
                 <artifactId>webauthn4j</artifactId>
                 <version>${orbit.webauthn4j.version}</version>
             </dependency>
