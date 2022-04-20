@@ -47,7 +47,7 @@ public class MetadataSchedulerService {
     public void activateMetadataInitialization() {
 
         Runnable metadataInitializationTask = new MetadataInitializationTask();
-        scheduler.schedule(metadataInitializationTask, delay, TimeUnit.MINUTES);
+        scheduler.schedule(metadataInitializationTask, delay, TimeUnit.SECONDS);
         log.info("FIDO2 Metadata Scheduler service is activated.");
     }
 
