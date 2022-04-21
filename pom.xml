@@ -281,8 +281,8 @@
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>31.0.1-jre</google.guava.version>
-        <fasterxml.jackson.version>2.13.0</fasterxml.jackson.version>
-        <jackson-databind.version>2.13.0</jackson-databind.version>
+        <fasterxml.jackson.version>2.13.2</fasterxml.jackson.version>
+        <jackson-databind.version>2.13.2.2</jackson-databind.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
         <imp.pkg.version.javax.servlet>[2.6.0, 3.0.0)</imp.pkg.version.javax.servlet>
@@ -300,11 +300,11 @@
         <lombok.version>1.18.8</lombok.version>
         <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
         <swagger.jaxrs.version>1.6.2</swagger.jaxrs.version>
-        <jackson-jaxrs-json-provider.version>2.13.0</jackson-jaxrs-json-provider.version>
-        <jackson-dataformat-xml.version>2.13.0</jackson-dataformat-xml.version>
+        <jackson-jaxrs-json-provider.version>2.13.2</jackson-jaxrs-json-provider.version>
+        <jackson-dataformat-xml.version>2.13.2</jackson-dataformat-xml.version>
         <guava.osgi.version.range>[18.0.0,32.0.0]</guava.osgi.version.range>
         <springframework.version>4.3.29.RELEASE</springframework.version>
-        <org.apache.cxf.version>3.4.5</org.apache.cxf.version>
+        <org.apache.cxf.version>3.5.0</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>1.12.1.wso2v1</orbit.yubico.webauthn.version>
