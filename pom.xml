@@ -295,7 +295,7 @@
 
     <properties>
         <carbon.kernel.package.import.version.range>[4.4.0, 5.0.0)</carbon.kernel.package.import.version.range>
-        <identity.framework.version>5.20.300</identity.framework.version>
+        <identity.framework.version>5.20.379</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 6.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>31.0.1-jre</google.guava.version>

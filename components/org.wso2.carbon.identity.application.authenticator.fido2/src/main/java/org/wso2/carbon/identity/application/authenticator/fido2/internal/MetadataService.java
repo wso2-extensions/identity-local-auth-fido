@@ -111,23 +111,26 @@ public class MetadataService {
 
         // Create local file based MDS provider (Requires to provide metadata from json files).
         MetadataStatementsBasedTrustAnchorRepository metadataStatementsBasedTrustAnchorRepository = null;
-        try {
-            Path mdsDirectory = Paths.get(readMetadataStatementDirectory());
-            if (Files.list(mdsDirectory).findAny().isPresent()) {
-                Path[] metadataPaths = Files.list(mdsDirectory).toArray(Path[]::new);
 
-                LocalFilesMetadataStatementsProvider localFilesMetadataStatementsProvider =
-                        new LocalFilesMetadataStatementsProvider(objectConverter, metadataPaths);
-                metadataStatementsBasedTrustAnchorRepository = new MetadataStatementsBasedTrustAnchorRepository(
-                        localFilesMetadataStatementsProvider
-                );
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("No metadata statements found in the configured directory.");
+        Path mdsDirectory = Paths.get(readMetadataStatementDirectory());
+        if (Files.isDirectory(mdsDirectory)) {
+            try {
+                if (Files.list(mdsDirectory).findAny().isPresent()) {
+                    Path[] metadataPaths = Files.list(mdsDirectory).toArray(Path[]::new);
+
+                    LocalFilesMetadataStatementsProvider localFilesMetadataStatementsProvider =
+                            new LocalFilesMetadataStatementsProvider(objectConverter, metadataPaths);
+                    metadataStatementsBasedTrustAnchorRepository = new MetadataStatementsBasedTrustAnchorRepository(
+                            localFilesMetadataStatementsProvider
+                    );
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("No metadata statements found in the configured directory.");
+                    }
                 }
+            } catch (IOException e) {
+                log.error("Exception in constructing file based MDS blob provider: " + e.getMessage());
             }
-        } catch (IOException e) {
-            log.error("Exception in constructing file based MDS blob provider: " + e.getMessage());
         }
 
         // Construct trust anchor repository.
