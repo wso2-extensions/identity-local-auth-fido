@@ -79,11 +79,6 @@
             <artifactId>webauthn4j</artifactId>
             <version>${orbit.webauthn4j.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>${jackson.datatype.jsr310.version}</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -166,7 +161,6 @@
                                 <bundleDef>com.fasterxml.jackson.core:jackson-annotations</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.core:jackson-core</bundleDef>
                                 <bundleDef>org.wso2.orbit.webauthn4j:webauthn4j</bundleDef>
-                                <bundleDef>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</bundleDef>
                             </bundles>
                         </configuration>
                     </execution>
