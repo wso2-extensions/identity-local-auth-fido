@@ -23,6 +23,9 @@ import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2A
 import org.wso2.carbon.identity.user.store.configuration.listener.AbstractUserStoreConfigListener;
 import org.wso2.carbon.user.api.UserStoreException;
 
+/**
+ * User store configuration listener.
+ */
 public class UserStoreConfigListenerImpl extends AbstractUserStoreConfigListener {
 
     @Override
