@@ -28,6 +28,7 @@ import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
@@ -320,60 +321,17 @@ public class FIDOAuthenticatorTest {
                 FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME);
     }
 
-    @Test(description = "Test case for initiateAuthenticationRequest() method when Webauthn is enabled and returns " +
-            "non null response")
-    public void testInitiateAuthenticationRequestWebauthnEnabled() throws Exception {
+    @DataProvider(name = "initiateAuthenticationRequestWebauthnDataProvider")
+    public static Object[][] initiateAuthenticationRequestWebauthnDataProvider() {
 
-        AuthenticationContext context = new AuthenticationContext();
-        List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
-        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
-        authenticatorConfig.setApplicationAuthenticator(fidoAuthenticator);
-        authenticatorList.add(authenticatorConfig);
-
-        AuthenticatedUser authenticatedUser = AuthenticatedUser
-                .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
-        authenticatedUser.setFederatedUser(false);
-        authenticatedUser.setUserName(USERNAME);
-        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
-
-        StepConfig stepConfig = new StepConfig();
-        stepConfig.setAuthenticatorList(authenticatorList);
-        stepConfig.setAuthenticatedUser(authenticatedUser);
-        Map<Integer, StepConfig> stepMap = new HashMap<>();
-        stepMap.put(1, stepConfig);
-        SequenceConfig sequenceConfig = new SequenceConfig();
-        sequenceConfig.setStepMap(stepMap);
-        context.setSequenceConfig(sequenceConfig);
-
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
-
-        context.setProperty("username", USERNAME);
-        context.setProperty("authenticatedUser", authenticatedUser);
-        context.setContextIdentifier(UUID.randomUUID().toString());
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
-        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
-        when(webAuthnService.startAuthentication(anyString(), anyString(), anyString(), anyString())).thenReturn(
-                "1234");
-
-        Map<String, String> parameterMap = new HashMap<>();
-        parameterMap.put(FIDOAuthenticatorConstants.APP_ID, "https://localhost:9443");
-        parameterMap.put(FIDOAuthenticatorConstants.FIDO2_AUTH, "fido2-auth");
-        authenticatorConfig.setParameterMap(parameterMap);
-
-        mockStatic(FileBasedConfigurationBuilder.class);
-        when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
-        when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
-
-        mockStatic(URLEncoder.class);
-        when(URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
-        mockServiceURLBuilder();
-
-        fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+        return new Object[][] {
+                {"1234"}, {null}
+        };
     }
 
-    @Test(description = "Test case for initiateAuthenticationRequest() method when Webauthn is enabled and returns " +
-            "null response")
-    public void testInitiateAuthenticationRequestWebauthnEnabledNullResponse() throws Exception {
+    @Test(description = "Test case for initiateAuthenticationRequest() method when Webauthn is enabled",
+            dataProvider = "initiateAuthenticationRequestWebauthnDataProvider")
+    public void testInitiateAuthenticationRequestWebauthnEnabled(String startAuthenticationResponse) throws Exception {
 
         AuthenticationContext context = new AuthenticationContext();
         List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
@@ -403,7 +361,9 @@ public class FIDOAuthenticatorTest {
         context.setContextIdentifier(UUID.randomUUID().toString());
         when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
         whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
-        when(webAuthnService.startAuthentication(anyString(), anyString(), anyString(), anyString())).thenReturn(null);
+        when(webAuthnService.startAuthentication(anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(startAuthenticationResponse);
+
         Map<String, String> parameterMap = new HashMap<>();
         parameterMap.put(FIDOAuthenticatorConstants.APP_ID, "https://localhost:9443");
         parameterMap.put(FIDOAuthenticatorConstants.FIDO2_AUTH, "fido2-auth");
