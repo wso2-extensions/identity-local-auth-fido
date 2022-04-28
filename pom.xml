@@ -285,6 +285,31 @@
                 <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
+
+            <!--Test Dependencies-->
+            <dependency>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <version>${testng.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-module-testng</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-api-mockito</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jacoco</groupId>
+                <artifactId>org.jacoco.agent</artifactId>
+                <classifier>runtime</classifier>
+                <version>${jacoco.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -324,6 +349,10 @@
         <yubico.webauthn.version>1.12.1</yubico.webauthn.version>
         <orbit.webauthn4j.version>0.19.1.wso2v2</orbit.webauthn4j.version>
         <maven.scr.plugin.version>1.26.0</maven.scr.plugin.version>
+        <!--Test Dependencies-->
+        <testng.version>6.9.10</testng.version>
+        <powermock.version>1.6.5</powermock.version>
+        <jacoco.version>0.8.2</jacoco.version>
     </properties>
 
     <modules>
