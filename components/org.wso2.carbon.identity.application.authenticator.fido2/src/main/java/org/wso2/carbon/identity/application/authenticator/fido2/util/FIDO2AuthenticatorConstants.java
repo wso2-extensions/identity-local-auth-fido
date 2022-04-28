@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) (2019-2022), WSO2 Inc. (http://www.wso2.com).
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -49,6 +49,23 @@ public class FIDO2AuthenticatorConstants {
     public static final String DECODING_FAILED_MESSAGE = "Registration failed! Failed to decode response object.";
 
     public static final String FIDO2_USER = "FIDO2User";
+    public static final String DISPLAY_NAME_CLAIM_URL = "http://wso2.org/claims/displayName";
+    public static final String FIRST_NAME_CLAIM_URL = "http://wso2.org/claims/givenname";
+    public static final String LAST_NAME_CLAIM_URL = "http://wso2.org/claims/lastname";
+
+    public static final String FIDO_MDS_ENABLED = "FIDO.MetadataService.Enable";
+    public static final String FIDO_MDS_ENDPOINTS = "FIDO.MetadataService.MDSEndpoints.Endpoint";
+    public static final String FIDO_MDS_ROOT_CERTIFICATE = "FIDO.MetadataService.MDSRootCertificateFilePath";
+    public static final String FIDO_METADATA_STATEMENTS = "FIDO.MetadataService.MetadataStatementDirectory";
+    public static final String FIDO_MDS_SCHEDULER_INITIAL_DELAY = "FIDO.MetadataService.SchedulerInitialDelay";
+    public static final int FIDO_MDS_SCHEDULER_INITIAL_DELAY_DEFAULT_VALUE = 0;
+
+    public static final String FIDO_CONFIG_RESOURCE_TYPE_NAME = "fido-config";
+    public static final String FIDO2_CONFIG_RESOURCE_NAME = "fido2-validations";
+    public static final String FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME = "AttestationValidation.Enable";
+    public static final boolean FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE = true;
+    public static final String FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME = "MDSValidation.Enable";
+    public static final boolean FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE = false;
 
     public static class SQLQueries {
 
@@ -113,7 +130,8 @@ public class FIDO2AuthenticatorConstants {
         ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL("50009"),
         ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50010"),
         ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL("50011"),
-        ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50012");
+        ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE("50012"),
+        ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION("50013");
 
         private String errorCode;
 
@@ -134,4 +152,3 @@ public class FIDO2AuthenticatorConstants {
         }
     }
 }
-

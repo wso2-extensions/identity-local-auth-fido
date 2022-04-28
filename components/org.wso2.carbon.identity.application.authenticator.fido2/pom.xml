@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
         <artifactId>identity-application-auth-fido</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.3.21-SNAPSHOT</version>
+        <version>5.3.23-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -74,6 +74,18 @@
         <dependency>
             <groupId>org.wso2.orbit.yubico.webauthn</groupId>
             <artifactId>yubico-webauthn</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.webauthn4j</groupId>
+            <artifactId>webauthn4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
         </dependency>
 
         <!--Test Dependencies-->
@@ -149,7 +161,9 @@
                             com.fasterxml.jackson.databind.*; version="${fasterxml.jackson.version}",
                             com.fasterxml.jackson.annotation.*; version="${fasterxml.jackson.version}",
                             com.fasterxml.jackson.datatype.jdk8.*; version="${fasterxml.jackson.version}",
-                            com.fasterxml.jackson.dataformat.cbor.*; version="${fasterxml.jackson.version}"
+                            com.fasterxml.jackson.dataformat.cbor.*; version="${fasterxml.jackson.version}",
+                            com.webauthn4j.*; version="${orbit.webauthn4j.version}",
+                            org.wso2.carbon.identity.configuration.mgt.core.*
                         </Import-Package>
                         <Export-Package>
                             org.wso2.carbon.identity.application.authenticator.fido2.*;

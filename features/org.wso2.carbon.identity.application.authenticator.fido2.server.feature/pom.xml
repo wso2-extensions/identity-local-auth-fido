@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
         <artifactId>identity-application-auth-fido</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.3.21-SNAPSHOT</version>
+        <version>5.3.23-SNAPSHOT</version>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.application.authenticator.fido2.server.feature</artifactId>
@@ -73,6 +73,11 @@
             <artifactId>org.wso2.carbon.identity.application.authenticator.fido2.endpoint</artifactId>
             <version>${project.version}</version>
             <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.webauthn4j</groupId>
+            <artifactId>webauthn4j</artifactId>
+            <version>${orbit.webauthn4j.version}</version>
         </dependency>
     </dependencies>
 
@@ -155,6 +160,7 @@
                                 <bundleDef>com.fasterxml.jackson.core:jackson-databind</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.core:jackson-annotations</bundleDef>
                                 <bundleDef>com.fasterxml.jackson.core:jackson-core</bundleDef>
+                                <bundleDef>org.wso2.orbit.webauthn4j:webauthn4j</bundleDef>
                             </bundles>
                         </configuration>
                     </execution>
