@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
     <artifactId>identity-application-auth-fido</artifactId>
-    <version>5.3.23-SNAPSHOT</version>
+    <version>5.3.24-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon - FIDO Identity Application Authenticator</name>
     <description>
