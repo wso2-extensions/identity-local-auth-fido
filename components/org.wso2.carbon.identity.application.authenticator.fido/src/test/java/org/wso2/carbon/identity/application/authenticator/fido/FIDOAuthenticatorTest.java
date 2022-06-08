@@ -151,21 +151,21 @@ public class FIDOAuthenticatorTest {
         PowerMockito.when(ServiceURLBuilder.create()).thenReturn(builder);
     }
 
-    @Test(description = "Test case for canHandle() method true case.")
+    @Test(description = "Test case for canHandle() method true case.", priority = 1)
     public void testCanHandle() {
 
         when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
         Assert.assertTrue(fidoAuthenticator.canHandle(httpServletRequest));
     }
 
-    @Test(description = "Test case for canHandle() method false case.")
+    @Test(description = "Test case for canHandle() method false case.", priority = 2)
     public void testCanHandleFalse() {
 
         when(httpServletRequest.getParameter("tokenResponse")).thenReturn(null);
         Assert.assertFalse(fidoAuthenticator.canHandle(httpServletRequest));
     }
 
-    @Test(description = "Test case for successful logout request with valid token response.")
+    @Test(description = "Test case for successful logout request with valid token response.", priority = 3)
     public void testProcessLogoutRequestWithValidTokenResponse() throws Exception {
 
         when(authenticationContext.isLogoutRequest()).thenReturn(true);
@@ -175,7 +175,7 @@ public class FIDOAuthenticatorTest {
         Assert.assertEquals(status, AuthenticatorFlowStatus.SUCCESS_COMPLETED);
     }
 
-    @Test(description = "Test case for successful logout request with null token response.")
+    @Test(description = "Test case for successful logout request with null token response.", priority = 4)
     public void testProcessLogoutRequestWithNullTokenResponse() throws Exception {
 
         when(authenticationContext.isLogoutRequest()).thenReturn(true);
@@ -185,7 +185,8 @@ public class FIDOAuthenticatorTest {
         Assert.assertEquals(status, AuthenticatorFlowStatus.SUCCESS_COMPLETED);
     }
 
-    @Test(description = "Test case for usernameless processAuthenticationResponse() method when Webauthn is enabled")
+    @Test(description = "Test case for usernameless processAuthenticationResponse() method when Webauthn is enabled",
+            priority = 5)
     public void testProcessUsernamelessAuthenticationResponseWebauthnEnabled() throws Exception {
 
         AuthenticationContext context = new AuthenticationContext();
@@ -222,7 +223,7 @@ public class FIDOAuthenticatorTest {
         Assert.assertEquals(context.getLastAuthenticatedUser(), authenticatedUser);
     }
 
-    @Test(description = "Test case for processAuthenticationResponse() method when Webauthn is enabled")
+    @Test(description = "Test case for processAuthenticationResponse() method when Webauthn is enabled", priority = 6)
     public void testProcessAuthenticationResponseWebauthnEnabled() throws Exception {
 
         AuthenticationContext context = new AuthenticationContext();
@@ -257,7 +258,7 @@ public class FIDOAuthenticatorTest {
         Assert.assertEquals(context.getLastAuthenticatedUser(), authenticatedUser);
     }
 
-    @Test(description = "Test case for processAuthenticationResponse() method when Webauthn is disabled")
+    @Test(description = "Test case for processAuthenticationResponse() method when Webauthn is disabled", priority = 7)
     public void testProcessAuthenticationResponseWebauthnDisabled() throws Exception {
 
         AuthenticationContext context = new AuthenticationContext();
@@ -300,7 +301,7 @@ public class FIDOAuthenticatorTest {
         Assert.assertEquals(context.getLastAuthenticatedUser(), authenticatedUser);
     }
 
-    @Test(description = "Test case for getContextIdentifier() method")
+    @Test(description = "Test case for getContextIdentifier() method", priority = 8)
     public void testGetContextIdentifier() {
 
         final String sessionDataKey = "654321";
@@ -308,13 +309,13 @@ public class FIDOAuthenticatorTest {
         Assert.assertEquals(fidoAuthenticator.getContextIdentifier(httpServletRequest), sessionDataKey);
     }
 
-    @Test(description = "Test case for getName() method")
+    @Test(description = "Test case for getName() method", priority = 9)
     public void testGetName() {
 
         Assert.assertEquals(fidoAuthenticator.getName(), FIDOAuthenticatorConstants.AUTHENTICATOR_NAME);
     }
 
-    @Test(description = "Test case for getFriendlyName() method")
+    @Test(description = "Test case for getFriendlyName() method", priority = 10)
     public void testGetFriendlyName() {
 
         Assert.assertEquals(fidoAuthenticator.getFriendlyName(),
@@ -330,7 +331,7 @@ public class FIDOAuthenticatorTest {
     }
 
     @Test(description = "Test case for initiateAuthenticationRequest() method when Webauthn is enabled",
-            dataProvider = "initiateAuthenticationRequestWebauthnDataProvider")
+            dataProvider = "initiateAuthenticationRequestWebauthnDataProvider", priority = 11)
     public void testInitiateAuthenticationRequestWebauthnEnabled(String startAuthenticationResponse) throws Exception {
 
         AuthenticationContext context = new AuthenticationContext();
@@ -392,7 +393,7 @@ public class FIDOAuthenticatorTest {
     }
 
     @Test(description = "Test case for initiateAuthenticationRequest() method when Webauthn is disabled",
-            dataProvider = "initiateAuthenticationRequestU2FDataProvider")
+            dataProvider = "initiateAuthenticationRequestU2FDataProvider", priority = 12)
     public void testInitiateAuthenticationRequestWebauthnDisabled(boolean isU2FNullResponse)
             throws Exception {
 
@@ -450,7 +451,7 @@ public class FIDOAuthenticatorTest {
         fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
     }
 
-    @Test(description = "Test case for retryAuthenticationEnabled() method")
+    @Test(description = "Test case for retryAuthenticationEnabled() method", priority = 13)
     public void testRetryAuthenticationEnabled() {
 
         Assert.assertFalse(fidoAuthenticator.retryAuthenticationEnabled());

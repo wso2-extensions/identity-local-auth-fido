@@ -98,7 +98,7 @@ public class U2FServiceTest {
         instance.set(null, null);
     }
 
-    @Test(description = "Test case for startAuthentication() method")
+    @Test(description = "Test case for startAuthentication() method", priority = 1)
     public void testStartAuthentication() throws AuthenticationFailedException, NoEligableDevicesException,
             FIDOAuthenticatorServerException {
 
@@ -119,7 +119,7 @@ public class U2FServiceTest {
         Assert.assertEquals(u2FService.startAuthentication(fidoUser), authenticateRequestData);
     }
 
-    @Test(description = "Test case for startAuthentication() method when no registered devices found")
+    @Test(description = "Test case for startAuthentication() method when no registered devices found", priority = 2)
     public void testStartAuthenticationWhenNoRegisteredDevices() throws AuthenticationFailedException,
             NoEligableDevicesException, FIDOAuthenticatorServerException {
 
@@ -137,7 +137,7 @@ public class U2FServiceTest {
         Assert.assertNull(u2FService.startAuthentication(fidoUser));
     }
 
-    @Test(description = "Test case for finishAuthentication() method")
+    @Test(description = "Test case for finishAuthentication() method", priority = 3)
     public void testFinishAuthentication() throws DeviceCompromisedException, FIDOAuthenticatorServerException,
             AuthenticationFailedException {
 
@@ -156,7 +156,7 @@ public class U2FServiceTest {
         u2FService.finishAuthentication(fidoUser);
     }
 
-    @Test(description = "Test case for startRegistration() method")
+    @Test(description = "Test case for startRegistration() method", priority = 4)
     public void testStartRegistration() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
@@ -172,7 +172,7 @@ public class U2FServiceTest {
         Assert.assertEquals(u2FService.startRegistration(fidoUser), registerRequestData);
     }
 
-    @Test(description = "Test case for finishRegistration() method")
+    @Test(description = "Test case for finishRegistration() method", priority = 5)
     public void testFinishRegistration() throws FIDOAuthenticatorServerException, NoSuchFieldException,
             IllegalAccessException {
 
@@ -194,7 +194,7 @@ public class U2FServiceTest {
         Assert.assertEquals(fidoUser.getDeviceRegistration(), deviceRegistration);
     }
 
-    @Test(description = "Test case for isDeviceRegistered() method")
+    @Test(description = "Test case for isDeviceRegistered() method", priority = 6)
     public void testIsDeviceRegistered() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
@@ -206,7 +206,7 @@ public class U2FServiceTest {
         Assert.assertTrue(u2FService.isDeviceRegistered(fidoUser));
     }
 
-    @Test(description = "Test case for isDeviceRegistered() method when no registered devices")
+    @Test(description = "Test case for isDeviceRegistered() method when no registered devices", priority = 7)
     public void testIsDeviceRegisteredWhenNoRegisteredDevices() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
@@ -216,7 +216,7 @@ public class U2FServiceTest {
         Assert.assertFalse(u2FService.isDeviceRegistered(fidoUser));
     }
 
-    @Test(description = "Test case for getDeviceMetadata() method")
+    @Test(description = "Test case for getDeviceMetadata() method", priority = 8)
     public void testGetDeviceMetadata() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
@@ -228,7 +228,7 @@ public class U2FServiceTest {
         Assert.assertEquals(u2FService.getDeviceMetadata(fidoUser), deviceMetadata);
     }
 
-    @Test(description = "Test case for removeAllRegistrations() method")
+    @Test(description = "Test case for removeAllRegistrations() method", priority = 9)
     public void testRemoveAllRegistrations() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
@@ -236,7 +236,7 @@ public class U2FServiceTest {
         u2FService.removeAllRegistrations(fidoUser);
     }
 
-    @Test(description = "Test case for removeRegistration() method")
+    @Test(description = "Test case for removeRegistration() method", priority = 10)
     public void testRemoveRegistration() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);

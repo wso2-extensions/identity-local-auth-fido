@@ -1,0 +1,14 @@
+{
+  "requestId": "VHJeDO8lxy1z4DYwULkNe5BY8ajeOVb-V0RRKABpwWk",
+  "credential": {
+    "id": "ATfjfbakUOSN_bz0bFThKAL9nA8FtZVKsKLZr1-ab6kGSiG36eIU8pHnG38sbgmg3U5ad7QFULle0ee0vn2rwah74_IuSjsWL_3LNgk8emvOcBppGO1dqB6tQsllRQg",
+    "response": {
+      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFYnUJ8g",
+      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoidWpjWE15Z2drUFktaFFRZ0FyOXR0Y0pnR0piQ0ZhZFUyeGE1LWVQajBpNCIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0Ojk0NDMiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+      "signature": "MEYCIQD0CzxyOrJki_LwwkjZf-K4dj1NgBqaI4pqdXoLC8xzJAIhAPIxuEnGlEUDNzpjpLfy-nxlzDOxx3uFnCil5jq5Ypnf",
+      "userHandle": "p9e-VBtVg8u2p47sG4QAUZfddmbWB-408ucOcIL6oOA"
+    },
+    "clientExtensionResults": {},
+    "type": "public-key"
+  }
+}

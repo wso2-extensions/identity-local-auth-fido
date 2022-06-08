@@ -79,7 +79,7 @@ public class FIDOAdminServiceTest {
         fidoAdminService = new FIDOAdminService();
     }
 
-    @Test(description = "Test case for startRegistration() method")
+    @Test(description = "Test case for startRegistration() method", priority = 1)
     public void testStartRegistration() throws FIDOAuthenticatorServerException, FIDOAuthenticatorClientException {
 
         when(u2FService.startRegistration(any())).thenReturn(registerRequestData);
@@ -87,7 +87,7 @@ public class FIDOAdminServiceTest {
         Assert.assertEquals(fidoAdminService.startRegistration(APP_ID), "1234");
     }
 
-    @Test(description = "Test case for finishRegistration() method")
+    @Test(description = "Test case for finishRegistration() method", priority = 2)
     public void testFinishRegistration() throws FIDOAuthenticatorClientException {
 
         String response = "testResponse";
@@ -96,19 +96,19 @@ public class FIDOAdminServiceTest {
         fidoAdminService.finishRegistration(response);
     }
 
-    @Test(description = "Test case for removeAllRegistrations() method")
+    @Test(description = "Test case for removeAllRegistrations() method", priority = 3)
     public void testRemoveAllRegistrations() throws FIDOAuthenticatorClientException {
 
         fidoAdminService.removeAllRegistrations();
     }
 
-    @Test(description = "Test case for removeRegistration() method")
+    @Test(description = "Test case for removeRegistration() method", priority = 4)
     public void testRemoveRegistration() throws FIDOAuthenticatorClientException {
 
         fidoAdminService.removeRegistration("deviceRemarks");
     }
 
-    @Test(description = "Test case for isDeviceRegistered() method when there's a registered device")
+    @Test(description = "Test case for isDeviceRegistered() method when there's a registered device", priority = 5)
     public void testIsDeviceRegisteredForRegisteredUser() throws FIDOAuthenticatorClientException,
             FIDOAuthenticatorServerException {
 
@@ -116,7 +116,7 @@ public class FIDOAdminServiceTest {
         Assert.assertTrue(fidoAdminService.isDeviceRegistered());
     }
 
-    @Test(description = "Test case for isDeviceRegistered() method when there's no registered device")
+    @Test(description = "Test case for isDeviceRegistered() method when there's no registered device", priority = 6)
     public void testIsDeviceRegisteredForNonRegisteredUser() throws FIDOAuthenticatorClientException,
             FIDOAuthenticatorServerException {
 
@@ -124,7 +124,7 @@ public class FIDOAdminServiceTest {
         Assert.assertFalse(fidoAdminService.isDeviceRegistered());
     }
 
-    @Test(description = "Test case for getDeviceMetadataList() when devices are there")
+    @Test(description = "Test case for getDeviceMetadataList() when devices are there", priority = 7)
     public void testGetDeviceMetadataListWhenDevicesPresent() throws FIDOAuthenticatorClientException,
             FIDOAuthenticatorServerException {
 
@@ -136,7 +136,7 @@ public class FIDOAdminServiceTest {
         Assert.assertEquals(returnedDeviceList, deviceList.toArray(new String[0]));
     }
 
-    @Test(description = "Test case for getDeviceMetadataList() when devices are not there")
+    @Test(description = "Test case for getDeviceMetadataList() when devices are not there", priority = 8)
     public void testGetDeviceMetadataListWhenDevicesNotPresent() throws FIDOAuthenticatorClientException,
             FIDOAuthenticatorServerException {
 
