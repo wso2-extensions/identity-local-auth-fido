@@ -28,8 +28,8 @@ public class FIDOAuthenticatorConstants {
     public static final String AUTHENTICATOR_NAME = "FIDOAuthenticator";
     public static final String AUTHENTICATOR_FRIENDLY_NAME = "fido";
     public static final String UNUSED = "unused";
-    public static final String AUTHENTICATION_STATUS = "Authentication Failed !";
-    public static final String AUTHENTICATION_ERROR_MESSAGE = "No registered device found, Please register your device before sign in.";
+    public static final String AUTHENTICATION_STATUS = "authentication.failed";
+    public static final String AUTHENTICATION_ERROR_MESSAGE = "no.registered.device.found";
 
     public static final String U2F_KEY_HANDLE = "KEY_HANDLE";
     public static final String U2F_DEVICE_DATA = "DEVICE_DATA";
