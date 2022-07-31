@@ -26,7 +26,7 @@ public class FIDOAuthenticatorConstants {
     }
 
     public static final String AUTHENTICATOR_NAME = "FIDOAuthenticator";
-    public static final String AUTHENTICATOR_FRIENDLY_NAME = "fido";
+    public static final String AUTHENTICATOR_FRIENDLY_NAME = "Security Key/Biometrics";
     public static final String UNUSED = "unused";
     public static final String AUTHENTICATION_STATUS = "authentication.failed";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "no.registered.device.found";
