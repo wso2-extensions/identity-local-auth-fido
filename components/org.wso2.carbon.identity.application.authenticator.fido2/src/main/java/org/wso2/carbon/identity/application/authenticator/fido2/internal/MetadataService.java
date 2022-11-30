@@ -82,8 +82,7 @@ public class MetadataService {
                 FidoMDS3MetadataBLOBProvider fidoMDS3MetadataBLOBProvider = new FidoMDS3MetadataBLOBProvider(
                         objectConverter, url, rootCertificate
                 );
-                // FIDO conformance test env workaround.
-                fidoMDS3MetadataBLOBProvider.setRevocationCheckEnabled(false);
+                fidoMDS3MetadataBLOBProvider.setRevocationCheckEnabled(true);
                 fidoMDS3MetadataBLOBProvider.refresh();
                 return fidoMDS3MetadataBLOBProvider;
             } catch (RuntimeException e) {
