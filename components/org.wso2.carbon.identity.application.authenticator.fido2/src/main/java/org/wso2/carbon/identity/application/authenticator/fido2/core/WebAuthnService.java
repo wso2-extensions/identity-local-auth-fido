@@ -64,6 +64,7 @@ import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
 import com.yubico.webauthn.data.PublicKeyCredentialParameters;
 import com.yubico.webauthn.data.RegistrationExtensionInputs;
 import com.yubico.webauthn.data.RelyingPartyIdentity;
+import com.yubico.webauthn.data.ResidentKeyRequirement;
 import com.yubico.webauthn.data.UserIdentity;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import com.yubico.webauthn.exception.AssertionFailedException;
@@ -402,7 +403,7 @@ public class WebAuthnService {
                 List<com.webauthn4j.data.PublicKeyCredentialParameters> publicKeyCredentialParametersList =
                         relyingParty.getPreferredPubkeyParams().stream().map(pkcp ->
                                 new com.webauthn4j.data.PublicKeyCredentialParameters(
-                                        PublicKeyCredentialType.create(pkcp.getType().toJsonString()),
+                                        PublicKeyCredentialType.create(String.valueOf(pkcp.getType())),
                                         COSEAlgorithmIdentifier.create(pkcp.getAlg().getId())
                                 )
                         ).collect(Collectors.toList());
@@ -575,7 +576,7 @@ public class WebAuthnService {
                     }
 
                     new SuccessfulAuthenticationResult(request, response, userStorage
-                            .getFIDO2RegistrationsByUsername(result.getUsername()), result.getWarnings());
+                            .getFIDO2RegistrationsByUsername(result.getUsername()), null);
                 } else {
                     throw new AuthenticationFailedException("Assertion failed: Invalid assertion.");
                 }
@@ -620,7 +621,7 @@ public class WebAuthnService {
                 userStorage.updateFIDO2SignatureCount(result);
 
                 new SuccessfulAuthenticationResult(request, response,
-                        userStorage.getFIDO2RegistrationsByUsername(result.getUsername()), result.getWarnings());
+                        userStorage.getFIDO2RegistrationsByUsername(result.getUsername()), null);
             } catch (FIDO2AuthenticatorServerException e) {
                 throw new AuthenticationFailedException("Error in usernameless authentication flow.", e);
             }
@@ -777,7 +778,6 @@ public class WebAuthnService {
                 .credentialRepository(userStorage)
                 .origins(new HashSet<String>(origins))
                 .attestationConveyancePreference(AttestationConveyancePreference.DIRECT)
-                .allowUnrequestedExtensions(true)
                 .preferredPubkeyParams(preferredPublicKeyCredentialParameters)
                 .build();
     }
@@ -805,7 +805,6 @@ public class WebAuthnService {
                 .credential(credential)
                 .signatureCount(response.getCredential().getResponse().getParsedAuthenticatorData()
                         .getSignatureCounter())
-                .attestationMetadata(registration.getAttestationMetadata())
                 .build();
         userStorage.addRegistrationByUsername(userIdentity.getName(), reg);
     }
@@ -824,9 +823,11 @@ public class WebAuthnService {
                 .build();
 
         boolean requireResidentKey = false;
-        if (publicKeyCredentialCreationOptions.getAuthenticatorSelection().isPresent()) {
-            requireResidentKey =
-                    publicKeyCredentialCreationOptions.getAuthenticatorSelection().get().isRequireResidentKey();
+        if ((publicKeyCredentialCreationOptions.getAuthenticatorSelection().isPresent()) &&
+                (publicKeyCredentialCreationOptions.getAuthenticatorSelection().get().getResidentKey().isPresent()) &&
+                (publicKeyCredentialCreationOptions.getAuthenticatorSelection().get().getResidentKey().get()) ==
+                        ResidentKeyRequirement.REQUIRED) {
+            requireResidentKey = true;
         }
 
         FIDO2CredentialRegistration reg = FIDO2CredentialRegistration.builder()
@@ -835,7 +836,6 @@ public class WebAuthnService {
                 .credential(credential)
                 .signatureCount(response.getCredential().getResponse().getParsedAuthenticatorData()
                         .getSignatureCounter())
-                .attestationMetadata(registration.getAttestationMetadata())
                 .displayName(null)
                 .isUsernamelessSupported(requireResidentKey)
                 .build();
@@ -867,10 +867,12 @@ public class WebAuthnService {
 
     private AuthenticatorSelectionCriteria buildAuthenticatorSelection(boolean requireResidentKey) {
 
-        return AuthenticatorSelectionCriteria.builder()
-                .requireResidentKey(requireResidentKey)
-                .userVerification(PREFERRED)
-                .build();
+        if (requireResidentKey) {
+            return AuthenticatorSelectionCriteria.builder().residentKey(ResidentKeyRequirement.REQUIRED)
+                    .userVerification(PREFERRED).build();
+        }
+        return AuthenticatorSelectionCriteria.builder().residentKey(ResidentKeyRequirement.DISCOURAGED)
+                .userVerification(PREFERRED).build();
     }
 
     private String getUserDisplayName(User user) throws FIDO2AuthenticatorServerException {
