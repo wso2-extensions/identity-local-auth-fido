@@ -44,6 +44,7 @@ import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
 import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.PublicKeyCredentialParameters;
 import com.yubico.webauthn.data.RelyingPartyIdentity;
+import com.yubico.webauthn.data.ResidentKeyRequirement;
 import com.yubico.webauthn.data.UserIdentity;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import com.yubico.webauthn.exception.AssertionFailedException;
@@ -253,7 +254,6 @@ public class WebAuthnServiceTest {
         when(relyingPartyBuilder.origins(anySet())).thenReturn(relyingPartyBuilder);
         when(relyingPartyBuilder.attestationConveyancePreference(AttestationConveyancePreference.DIRECT))
                 .thenReturn(relyingPartyBuilder);
-        when(relyingPartyBuilder.allowUnrequestedExtensions(anyBoolean())).thenReturn(relyingPartyBuilder);
         when(relyingPartyBuilder.preferredPubkeyParams(anyList())).thenReturn(relyingPartyBuilder);
         when(relyingPartyBuilder.build()).thenReturn(relyingParty);
 
@@ -435,8 +435,14 @@ public class WebAuthnServiceTest {
         AuthenticatorSelectionCriteria authenticatorSelectionCriteria = mock(AuthenticatorSelectionCriteria.class);
         when(publicKeyCredentialCreationOptions.getAuthenticatorSelection()).thenReturn(
                 Optional.ofNullable(authenticatorSelectionCriteria));
-        when(authenticatorSelectionCriteria.isRequireResidentKey()).thenReturn(requireResidentKey);
+        if (requireResidentKey) {
+            when(authenticatorSelectionCriteria.getResidentKey()).thenReturn(Optional.ofNullable(
+                    ResidentKeyRequirement.REQUIRED));
 
+        } else {
+            when(authenticatorSelectionCriteria.getResidentKey()).thenReturn(Optional.ofNullable(
+                    ResidentKeyRequirement.DISCOURAGED));
+        }
         mockStatic(RegisteredCredential.class);
         RegisteredCredential registeredCredential = mock(RegisteredCredential.class);
         RegisteredCredential.RegisteredCredentialBuilder registeredCredentialBuilder =
@@ -515,7 +521,6 @@ public class WebAuthnServiceTest {
         when(relyingParty.finishAssertion(any(FinishAssertionOptions.class))).thenReturn(assertionResult);
         when(assertionResult.isSuccess()).thenReturn(false);
         when(assertionResult.getUsername()).thenReturn(USERNAME);
-        when(assertionResult.getWarnings()).thenReturn(new ArrayList<>());
 
         webAuthnService.finishAuthentication(USERNAME, TENANT_DOMAIN, USER_STORE_DOMAIN,
                 finishAuthenticationResponseString);
@@ -534,7 +539,6 @@ public class WebAuthnServiceTest {
         when(relyingParty.finishAssertion(any(FinishAssertionOptions.class))).thenReturn(assertionResult);
         when(assertionResult.isSuccess()).thenReturn(true);
         when(assertionResult.getUsername()).thenReturn(USERNAME);
-        when(assertionResult.getWarnings()).thenReturn(new ArrayList<>());
 
         webAuthnService.finishAuthentication(USERNAME, TENANT_DOMAIN, USER_STORE_DOMAIN,
                 finishAuthenticationResponseString);
@@ -554,7 +558,6 @@ public class WebAuthnServiceTest {
         when(relyingParty.finishAssertion(any(FinishAssertionOptions.class))).thenReturn(assertionResult);
         when(assertionResult.isSuccess()).thenReturn(false);
         when(assertionResult.getUsername()).thenReturn(USERNAME);
-        when(assertionResult.getWarnings()).thenReturn(new ArrayList<>());
 
         webAuthnService.finishUsernamelessAuthentication(finishUsernamelessAuthenticationResponseString);
     }
@@ -573,7 +576,6 @@ public class WebAuthnServiceTest {
         when(relyingParty.finishAssertion(any(FinishAssertionOptions.class))).thenReturn(assertionResult);
         when(assertionResult.isSuccess()).thenReturn(true);
         when(assertionResult.getUsername()).thenReturn(USERNAME);
-        when(assertionResult.getWarnings()).thenReturn(new ArrayList<>());
 
         AuthenticatedUser authenticatedUserResponse = webAuthnService.finishUsernamelessAuthentication(
                 finishUsernamelessAuthenticationResponseString);

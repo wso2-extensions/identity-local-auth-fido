@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.application.authenticator.fido.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang.StringUtils;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -28,11 +29,13 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authenticator.fido.FIDOAuthenticator;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.utils.ServerConstants;
 
 /**
  * OSGI declarative service component which handles registration and unregistration of FIDOAuthenticatorComponent.
@@ -62,14 +65,17 @@ public class FIDOAuthenticatorServiceComponent {
             log.error("Error registering FIDOAuthenticator service.", e);
         }
 
-        U2FService u2FService = U2FService.getInstance();
-        try {
-            bundleContext.registerService(U2FService.class, u2FService, null);
-            if (log.isDebugEnabled()) {
-                log.debug("U2FService is registered.");
+        String providerName = ServerConfiguration.getInstance().getFirstProperty(ServerConstants.JCE_PROVIDER);
+        if (StringUtils.isBlank(providerName) || providerName.equals(ServerConstants.JCE_PROVIDER_BC)) {
+            U2FService u2FService = U2FService.getInstance();
+            try {
+                bundleContext.registerService(U2FService.class, u2FService, null);
+                if (log.isDebugEnabled()) {
+                    log.debug("U2FService is registered.");
+                }
+            } catch (Exception e) {
+                log.error("Error registering U2FService.", e);
             }
-        } catch (Exception e) {
-            log.error("Error registering U2FService.", e);
         }
 
         try {

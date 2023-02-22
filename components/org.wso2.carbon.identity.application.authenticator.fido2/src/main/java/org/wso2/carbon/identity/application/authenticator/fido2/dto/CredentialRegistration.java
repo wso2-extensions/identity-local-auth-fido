@@ -20,8 +20,8 @@ package org.wso2.carbon.identity.application.authenticator.fido2.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.yubico.fido.metadata.MetadataBLOBPayloadEntry;
 import com.yubico.webauthn.RegisteredCredential;
-import com.yubico.webauthn.attestation.Attestation;
 import com.yubico.webauthn.data.UserIdentity;
 import lombok.Builder;
 import lombok.Value;
@@ -51,7 +51,7 @@ public class CredentialRegistration {
     Instant registrationTime;
     RegisteredCredential credential;
 
-    Optional<Attestation> attestationMetadata;
+    Optional<MetadataBLOBPayloadEntry> attestationMetadata;
 
     @JsonProperty("registrationTime")
     public String getRegistrationTimestamp() {
