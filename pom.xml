@@ -337,7 +337,7 @@
         <identity.application.auth.fido.package.export.version>${project.version}</identity.application.auth.fido.package.export.version>
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
-        <carbon.kernel.version>4.9.1-m1</carbon.kernel.version>
+        <carbon.kernel.version>4.9.2</carbon.kernel.version>
         <slf4j.version.range>[1.6.1, 2.0.0)</slf4j.version.range>
         <slf4j.api.version>1.7.26</slf4j.api.version>
         <lombok.version>1.18.8</lombok.version>
