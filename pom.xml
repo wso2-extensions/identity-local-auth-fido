@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
     <artifactId>identity-application-auth-fido</artifactId>
-    <version>5.3.31-SNAPSHOT</version>
+    <version>5.3.33-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon - FIDO Identity Application Authenticator</name>
     <description>
@@ -173,6 +173,11 @@
             <dependency>
                 <groupId>org.wso2.carbon</groupId>
                 <artifactId>org.wso2.carbon.core</artifactId>
+                <version>${carbon.kernel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon</groupId>
+                <artifactId>org.wso2.carbon.utils</artifactId>
                 <version>${carbon.kernel.version}</version>
             </dependency>
             <dependency>
@@ -332,7 +337,7 @@
         <identity.application.auth.fido.package.export.version>${project.version}</identity.application.auth.fido.package.export.version>
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
-        <carbon.kernel.version>4.4.7</carbon.kernel.version>
+        <carbon.kernel.version>4.9.2</carbon.kernel.version>
         <slf4j.version.range>[1.6.1, 2.0.0)</slf4j.version.range>
         <slf4j.api.version>1.7.26</slf4j.api.version>
         <lombok.version>1.18.8</lombok.version>
@@ -345,8 +350,8 @@
         <org.apache.cxf.version>3.5.0</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
-        <orbit.yubico.webauthn.version>1.12.1.wso2v1</orbit.yubico.webauthn.version>
-        <yubico.webauthn.version>1.12.1</yubico.webauthn.version>
+        <orbit.yubico.webauthn.version>2.4.0.wso2v1</orbit.yubico.webauthn.version>
+        <yubico.webauthn.version>2.4.0</yubico.webauthn.version>
         <orbit.webauthn4j.version>0.19.1.wso2v2</orbit.webauthn4j.version>
         <maven.scr.plugin.version>1.26.0</maven.scr.plugin.version>
         <!--Test Dependencies-->
