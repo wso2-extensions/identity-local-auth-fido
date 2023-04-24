@@ -82,6 +82,7 @@ public class MetadataService {
                 FidoMDS3MetadataBLOBProvider fidoMDS3MetadataBLOBProvider = new FidoMDS3MetadataBLOBProvider(
                         objectConverter, url, rootCertificate
                 );
+                // Enabling revocation check.
                 fidoMDS3MetadataBLOBProvider.setRevocationCheckEnabled(true);
                 fidoMDS3MetadataBLOBProvider.refresh();
                 return fidoMDS3MetadataBLOBProvider;
