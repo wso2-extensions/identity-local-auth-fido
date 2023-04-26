@@ -352,7 +352,7 @@
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>2.4.0.wso2v1</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>2.4.0</yubico.webauthn.version>
-        <orbit.webauthn4j.version>0.19.1.wso2v2</orbit.webauthn4j.version>
+        <orbit.webauthn4j.version>0.21.0.wso2v1</orbit.webauthn4j.version>
         <maven.scr.plugin.version>1.26.0</maven.scr.plugin.version>
         <!--Test Dependencies-->
         <testng.version>6.9.10</testng.version>

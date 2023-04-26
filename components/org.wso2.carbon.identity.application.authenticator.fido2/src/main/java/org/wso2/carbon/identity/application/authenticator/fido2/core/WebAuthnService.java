@@ -403,7 +403,7 @@ public class WebAuthnService {
                 List<com.webauthn4j.data.PublicKeyCredentialParameters> publicKeyCredentialParametersList =
                         relyingParty.getPreferredPubkeyParams().stream().map(pkcp ->
                                 new com.webauthn4j.data.PublicKeyCredentialParameters(
-                                        PublicKeyCredentialType.create(String.valueOf(pkcp.getType())),
+                                        PublicKeyCredentialType.create(pkcp.getType().getId()),
                                         COSEAlgorithmIdentifier.create(pkcp.getAlg().getId())
                                 )
                         ).collect(Collectors.toList());
