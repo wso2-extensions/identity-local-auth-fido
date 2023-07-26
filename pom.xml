@@ -323,7 +323,7 @@
         <identity.framework.version>5.20.379</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 7.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
-        <google.guava.version>31.0.1-jre</google.guava.version>
+        <google.guava.version>32.1.1-jre</google.guava.version>
         <fasterxml.jackson.version>2.13.2</fasterxml.jackson.version>
         <jackson-databind.version>2.13.4.2</jackson-databind.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
@@ -345,7 +345,7 @@
         <swagger.jaxrs.version>1.6.2</swagger.jaxrs.version>
         <jackson-jaxrs-json-provider.version>2.13.2</jackson-jaxrs-json-provider.version>
         <jackson-dataformat-xml.version>2.13.2</jackson-dataformat-xml.version>
-        <guava.osgi.version.range>[18.0.0,32.0.0]</guava.osgi.version.range>
+        <guava.osgi.version.range>[18.0.0,34.0.0]</guava.osgi.version.range>
         <springframework.version>4.3.29.RELEASE</springframework.version>
         <org.apache.cxf.version>3.5.0</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
