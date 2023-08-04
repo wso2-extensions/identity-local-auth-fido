@@ -44,6 +44,8 @@ public class FIDOAuthenticatorConstants {
 
     public static final String WEBAUTHN_ENABLED = "FIDO.WebAuthn.Enable";
 
+    public static final String IS_USER_RESOLVED = "isUserResolved";
+
     public static class SQLQueries {
         private SQLQueries() {
         }

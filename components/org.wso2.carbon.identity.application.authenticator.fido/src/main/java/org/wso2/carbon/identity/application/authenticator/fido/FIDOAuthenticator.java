@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.I
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
+import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
@@ -42,7 +43,9 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -196,17 +199,44 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return u2FService.startAuthentication(fidoUser);
     }
 
-    private String initiateFido2AuthenticationRequest(AuthenticatedUser user, String appID)
-            throws AuthenticationFailedException {
+    private String initiateFido2AuthenticationRequest(AuthenticatedUser user, String appID, AuthenticationContext
+            context) throws AuthenticationFailedException {
 
         WebAuthnService webAuthnService = new WebAuthnService();
+
+        boolean isUserResolved = getIsUserResolved(context);
+
+        if (!isUserResolved && FIDOAuthenticatorServiceDataHolder.getInstance().getMultiAttributeLogin()
+                .isEnabled(context.getTenantDomain())) {
+
+            String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(user.getUserName());
+            String tenantDomain = MultitenantUtils.getTenantDomain(user.getUserName());
+            ResolvedUserResult resolvedUserResult = FIDOAuthenticatorServiceDataHolder.getInstance()
+                    .getMultiAttributeLogin().resolveUser(tenantAwareUsername, tenantDomain);
+            if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS.
+                    equals(resolvedUserResult.getResolvedStatus())) {
+                tenantAwareUsername = resolvedUserResult.getUser().getUsername();
+                user.setUserName(resolvedUserResult.getUser().getUsername());
+                user.setUserId(resolvedUserResult.getUser().getUserID());
+                user.setUserStoreDomain(resolvedUserResult.getUser().getUserStoreDomain());
+            }
+        }
 
         if (user == null) {
             return webAuthnService.startUsernamelessAuthentication(appID);
         }
-
         return webAuthnService.startAuthentication(user.getUserName(),
                 user.getTenantDomain(), user.getUserStoreDomain(), appID);
+    }
+
+    private boolean getIsUserResolved(AuthenticationContext context) {
+
+        boolean isUserResolved = false;
+        if (!context.getProperties().isEmpty() &&
+                context.getProperty(FIDOAuthenticatorConstants.IS_USER_RESOLVED) != null) {
+            isUserResolved = (boolean) context.getProperty(FIDOAuthenticatorConstants.IS_USER_RESOLVED);
+        }
+        return isUserResolved;
     }
 
     private String getRedirectUrl(boolean isDataNull, String loginPage, String urlEncodedData,
@@ -258,7 +288,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         String redirectUrl;
         if (isWebAuthnEnabled()) {
-            String data = initiateFido2AuthenticationRequest(user, appID);
+            String data = initiateFido2AuthenticationRequest(user, appID, context);
             boolean isDataNull = StringUtils.isBlank(data);
             String urlEncodedData = null;
             if (!isDataNull) {
