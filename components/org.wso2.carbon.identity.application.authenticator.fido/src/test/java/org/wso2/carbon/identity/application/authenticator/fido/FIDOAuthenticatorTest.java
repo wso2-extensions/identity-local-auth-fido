@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.config.model.StepConfig;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
@@ -46,6 +47,8 @@ import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.net.URLEncoder;
@@ -68,7 +71,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 
 @PrepareForTest({FIDOAuthenticator.class, IdentityUtil.class, MultitenantUtils.class, IdentityTenantUtil.class,
     U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
-    URLEncoder.class, ServiceURLBuilder.class})
+    URLEncoder.class, ServiceURLBuilder.class, FrameworkUtils.class})
 public class FIDOAuthenticatorTest {
 
     private static final String USER_STORE_DOMAIN = "PRIMARY";
@@ -101,6 +104,7 @@ public class FIDOAuthenticatorTest {
         mockStatic(IdentityUtil.class);
         mockStatic(MultitenantUtils.class);
         mockStatic(IdentityTenantUtil.class);
+        mockStatic(FrameworkUtils.class);
     }
 
     private void mockServiceURLBuilder() {
@@ -373,6 +377,9 @@ public class FIDOAuthenticatorTest {
         mockStatic(FileBasedConfigurationBuilder.class);
         when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
         when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
+
+        ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
+        when(FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).thenReturn(resolvedUserResult);
 
         mockStatic(URLEncoder.class);
         when(URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");

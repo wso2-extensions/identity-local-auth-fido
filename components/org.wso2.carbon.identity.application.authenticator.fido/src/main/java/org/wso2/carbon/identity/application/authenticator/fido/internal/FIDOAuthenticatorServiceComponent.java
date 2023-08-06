@@ -33,7 +33,6 @@ import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authenticator.fido.FIDOAuthenticator;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
-import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.ServerConstants;
@@ -125,21 +124,5 @@ public class FIDOAuthenticatorServiceComponent {
             log.debug("UnSetting the Realm Service in FIDO authenticator bundle.");
         }
         FIDOAuthenticatorServiceDataHolder.getInstance().setRealmService(null);
-    }
-
-    @Reference(
-            name = "MultiAttributeLoginService",
-            service = MultiAttributeLoginService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetMultiAttributeLoginService")
-    protected void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLogin) {
-
-        FIDOAuthenticatorServiceDataHolder.getInstance().setMultiAttributeLogin(multiAttributeLogin);
-    }
-
-    protected void unsetMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLogin) {
-
-        FIDOAuthenticatorServiceDataHolder.getInstance().setMultiAttributeLogin(null);
     }
 }

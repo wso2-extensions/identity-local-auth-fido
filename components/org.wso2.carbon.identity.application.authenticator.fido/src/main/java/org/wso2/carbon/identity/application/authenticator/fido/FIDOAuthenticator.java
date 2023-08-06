@@ -33,8 +33,8 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.A
 import org.wso2.carbon.identity.application.authentication.framework.exception.InvalidCredentialsException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
-import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
@@ -206,13 +206,12 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         boolean isUserResolved = getIsUserResolved(context);
 
-        if (!isUserResolved && FIDOAuthenticatorServiceDataHolder.getInstance().getMultiAttributeLogin()
-                .isEnabled(context.getTenantDomain())) {
+        if (!isUserResolved) {
 
             String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(user.getUserName());
             String tenantDomain = MultitenantUtils.getTenantDomain(user.getUserName());
-            ResolvedUserResult resolvedUserResult = FIDOAuthenticatorServiceDataHolder.getInstance()
-                    .getMultiAttributeLogin().resolveUser(tenantAwareUsername, tenantDomain);
+            ResolvedUserResult resolvedUserResult = FrameworkUtils.
+                    processMultiAttributeLoginIdentification(tenantAwareUsername, tenantDomain);
             if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS.
                     equals(resolvedUserResult.getResolvedStatus())) {
                 tenantAwareUsername = resolvedUserResult.getUser().getUsername();

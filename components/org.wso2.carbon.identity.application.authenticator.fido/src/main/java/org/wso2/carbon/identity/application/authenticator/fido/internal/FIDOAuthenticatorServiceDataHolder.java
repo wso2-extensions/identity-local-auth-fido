@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.application.authenticator.fido.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
-import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.user.core.service.RealmService;
 
 /**
@@ -33,7 +32,6 @@ public class FIDOAuthenticatorServiceDataHolder {
     private static final FIDOAuthenticatorServiceDataHolder instance = new FIDOAuthenticatorServiceDataHolder();
     private BundleContext bundleContext = null;
     private RealmService realmService = null;
-    private MultiAttributeLoginService multiAttributeLogin = null;
 
     private FIDOAuthenticatorServiceDataHolder() {
     }
@@ -57,15 +55,4 @@ public class FIDOAuthenticatorServiceDataHolder {
 
         this.bundleContext = bundleContext;
     }
-
-    public void setMultiAttributeLogin(MultiAttributeLoginService multiAttributeLogin) {
-
-        this.multiAttributeLogin = multiAttributeLogin;
-    }
-
-    public MultiAttributeLoginService getMultiAttributeLogin() {
-
-        return multiAttributeLogin;
-    }
-
 }
