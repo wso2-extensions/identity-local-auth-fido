@@ -156,6 +156,11 @@
                 <version>${identity.framework.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
+                <version>${identity.framework.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
                 <artifactId>org.wso2.carbon.identity.application.authenticator.fido2</artifactId>
                 <version>${project.version}</version>
@@ -179,6 +184,12 @@
                 <groupId>org.wso2.carbon</groupId>
                 <artifactId>org.wso2.carbon.utils</artifactId>
                 <version>${carbon.kernel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+                <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -320,7 +331,7 @@
 
     <properties>
         <carbon.kernel.package.import.version.range>[4.4.0, 5.0.0)</carbon.kernel.package.import.version.range>
-        <identity.framework.version>5.20.379</identity.framework.version>
+        <identity.framework.version>5.25.262</identity.framework.version>
         <carbon.identity.package.import.version.range>[5.0.0, 7.0.0)</carbon.identity.package.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>32.1.1-jre</google.guava.version>
@@ -337,7 +348,7 @@
         <identity.application.auth.fido.package.export.version>${project.version}</identity.application.auth.fido.package.export.version>
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
-        <carbon.kernel.version>4.9.2</carbon.kernel.version>
+        <carbon.kernel.version>4.9.10</carbon.kernel.version>
         <slf4j.version.range>[1.6.1, 2.0.0)</slf4j.version.range>
         <slf4j.api.version>1.7.26</slf4j.api.version>
         <lombok.version>1.18.8</lombok.version>
@@ -354,6 +365,8 @@
         <yubico.webauthn.version>2.4.0</yubico.webauthn.version>
         <orbit.webauthn4j.version>0.21.0.wso2v1</orbit.webauthn4j.version>
         <maven.scr.plugin.version>1.26.0</maven.scr.plugin.version>
+        <org.wso2.carbon.identity.organization.management.core.version>1.0.0
+        </org.wso2.carbon.identity.organization.management.core.version>
         <!--Test Dependencies-->
         <testng.version>6.9.10</testng.version>
         <powermock.version>1.6.5</powermock.version>
