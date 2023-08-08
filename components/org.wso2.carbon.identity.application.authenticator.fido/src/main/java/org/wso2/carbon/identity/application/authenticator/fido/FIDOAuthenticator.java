@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.AbstractApplicationAuthenticator;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationFlowHandler;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.LocalApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.config.ConfigurationFacade;
@@ -32,6 +33,7 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Aut
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.InvalidCredentialsException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
@@ -54,6 +56,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * FIDO U2F Specification based authenticator.
@@ -204,20 +209,20 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         WebAuthnService webAuthnService = new WebAuthnService();
 
-        boolean isUserResolved = getIsUserResolved(context);
-
-        if (!isUserResolved) {
-
-            String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(user.getUserName());
-            String tenantDomain = MultitenantUtils.getTenantDomain(user.getUserName());
-            ResolvedUserResult resolvedUserResult = FrameworkUtils.
-                    processMultiAttributeLoginIdentification(tenantAwareUsername, tenantDomain);
-            if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS.
-                    equals(resolvedUserResult.getResolvedStatus())) {
-                tenantAwareUsername = resolvedUserResult.getUser().getUsername();
-                user.setUserName(resolvedUserResult.getUser().getUsername());
-                user.setUserId(resolvedUserResult.getUser().getUserID());
-                user.setUserStoreDomain(resolvedUserResult.getUser().getUserStoreDomain());
+        if (isPreviousIdPAuthenticationFlowHandler(context)) {
+            boolean isUserResolved = getIsUserResolved(context);
+            if (!isUserResolved) {
+                String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(user.getUserName());
+                String tenantDomain = MultitenantUtils.getTenantDomain(user.getUserName());
+                ResolvedUserResult resolvedUserResult = FrameworkUtils.
+                        processMultiAttributeLoginIdentification(tenantAwareUsername, tenantDomain);
+                if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS.
+                        equals(resolvedUserResult.getResolvedStatus())) {
+                    tenantAwareUsername = resolvedUserResult.getUser().getUsername();
+                    user.setUserName(resolvedUserResult.getUser().getUsername());
+                    user.setUserId(resolvedUserResult.getUser().getUserID());
+                    user.setUserStoreDomain(resolvedUserResult.getUser().getUserStoreDomain());
+                }
             }
         }
 
@@ -226,6 +231,26 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         }
         return webAuthnService.startAuthentication(user.getUserName(),
                 user.getTenantDomain(), user.getUserStoreDomain(), appID);
+    }
+
+    /**
+     * This method checks if all the authentication steps up to now have been performed by authenticators that
+     * implements AuthenticationFlowHandler interface. If so, it returns true.
+     * AuthenticationFlowHandlers may not perform actual authentication though the authenticated user is set in the
+     * context. Hence, this method can be used to determine if the user has been authenticated by a previous step.
+     *
+     * @param context   AuthenticationContext.
+     * @return True if all the authentication steps up to now have been performed by AuthenticationFlowHandlers.
+     */
+    private boolean isPreviousIdPAuthenticationFlowHandler(AuthenticationContext context) {
+
+        Map<String, AuthenticatedIdPData> currentAuthenticatedIdPs = context.getCurrentAuthenticatedIdPs();
+        return currentAuthenticatedIdPs != null && !currentAuthenticatedIdPs.isEmpty() &&
+                currentAuthenticatedIdPs.values().stream().filter(Objects::nonNull)
+                        .map(AuthenticatedIdPData::getAuthenticators).filter(Objects::nonNull)
+                        .flatMap(List::stream)
+                        .allMatch(authenticator ->
+                                authenticator.getApplicationAuthenticator() instanceof AuthenticationFlowHandler);
     }
 
     private boolean getIsUserResolved(AuthenticationContext context) {
