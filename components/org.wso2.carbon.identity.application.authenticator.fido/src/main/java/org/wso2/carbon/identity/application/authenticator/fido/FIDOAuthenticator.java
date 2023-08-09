@@ -420,9 +420,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             return Optional.empty();
         }
         try {
-            if (authenticatedUser.getUserId() != null) {
-                return Optional.ofNullable(authenticatedUser.getUserId());
-            }
+            return Optional.of(authenticatedUser.getUserId());
         } catch (UserIdNotFoundException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error while getting the user id from the authenticated user.", e);
