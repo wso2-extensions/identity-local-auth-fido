@@ -62,5 +62,22 @@ public class FIDOAuthenticatorConstants {
         public static final String DELETE_DEVICE_REGISTRATION_FROM_DOMAIN = "DELETE FROM FIDO_DEVICE_STORE " +
                                                                          "WHERE TENANT_ID = ? AND DOMAIN_NAME = ?";
     }
+
+    /**
+     * Constants related to log management.
+     */
+    public static class LogConstants {
+
+        public static final String FIDO_AUTH_SERVICE = "local-auth-fido";
+
+        /**
+         * Define action IDs for diagnostic logs.
+         */
+        public static class ActionIDs {
+
+            public static final String PROCESS_AUTHENTICATION_RESPONSE = "process-fido-authentication-response";
+            public static final String VALIDATE_FIDO_REQUEST = "validate-fido-authentication-request";
+        }
+    }
 }
 
