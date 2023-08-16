@@ -35,12 +35,17 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.I
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -48,6 +53,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -57,8 +63,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.FIDO_AUTH_SERVICE;
 
 /**
  * FIDO U2F Specification based authenticator.
@@ -83,6 +95,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                  AuthenticationContext context)
             throws AuthenticationFailedException {
 
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    FIDO_AUTH_SERVICE, PROCESS_AUTHENTICATION_RESPONSE);
+            diagnosticLogBuilder.resultMessage("Processing FIDO authentication response.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .inputParam(LogConstants.InputKeys.STEP, context.getCurrentStep())
+                    .inputParams(getApplicationDetails(context));
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
         AuthenticatedUser user = getUsername(context);
         String tokenResponse = request.getParameter("tokenResponse");
         if (tokenResponse != null && !tokenResponse.contains("errorCode")) {
@@ -97,6 +119,21 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 processFidoAuthenticationResponse(user, appID, tokenResponse);
             }
             context.setSubject(user);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        FIDO_AUTH_SERVICE, PROCESS_AUTHENTICATION_RESPONSE);
+                diagnosticLogBuilder.resultMessage("Successfully processed FIDO authentication response.")
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .inputParam(LogConstants.InputKeys.STEP, context.getCurrentStep())
+                        .inputParams(getApplicationDetails(context))
+                        .inputParam(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ?
+                                LoggerUtils.getMaskedContent(user.getUserName()) : user.getUserName());
+                Optional<String> optionalUserId = getUserId(user);
+                optionalUserId.ifPresent(userId -> diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID,
+                        userId));
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("FIDO authentication failed : " + tokenResponse);
@@ -110,7 +147,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     public boolean canHandle(javax.servlet.http.HttpServletRequest httpServletRequest) {
 
         String tokenResponse = httpServletRequest.getParameter("tokenResponse");
-        return null != tokenResponse;
+        boolean canHandle = null != tokenResponse;
+        if (canHandle && LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    FIDO_AUTH_SERVICE, FrameworkConstants.LogConstants.ActionIDs.HANDLE_AUTH_STEP);
+            diagnosticLogBuilder.resultMessage("FIDO authenticator handling the authentication.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
+        return canHandle;
 
     }
 
@@ -139,6 +185,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                  AuthenticationContext context)
             throws AuthenticationFailedException {
 
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    FIDO_AUTH_SERVICE, VALIDATE_FIDO_REQUEST);
+            diagnosticLogBuilder.resultMessage("Validate fido authentication request.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .inputParam(LogConstants.InputKeys.STEP, context.getCurrentStep())
+                    .inputParams(getApplicationDetails(context));
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
         AuthenticatedUser user = getUsername(context);
         // Retrieving AppID
         // Origin as appID eg: https://example.com:8080
@@ -147,6 +203,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         try {
             String redirectUrl = getRedirectUrl(response, user, appID, getLoginPage(), context);
             response.sendRedirect(redirectUrl);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        FIDO_AUTH_SERVICE, VALIDATE_FIDO_REQUEST);
+                diagnosticLogBuilder.resultMessage("FIDO authentication request validation successful.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .inputParam(LogConstants.InputKeys.STEP, context.getCurrentStep())
+                        .inputParams(getApplicationDetails(context));
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
         } catch (IOException e) {
             throw new AuthenticationFailedException("Could not initiate FIDO authentication request", user, e);
         } catch (URLBuilderException | URISyntaxException e) {
@@ -379,4 +445,40 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return loginPage;
     }
 
+    /** Add application details to a map.
+     *
+     * @param context AuthenticationContext.
+     * @return Map with application details.
+     */
+    private Map<String, String> getApplicationDetails(AuthenticationContext context) {
+
+        Map<String, String> applicationDetailsMap = new HashMap<>();
+        FrameworkUtils.getApplicationResourceId(context).ifPresent(applicationId ->
+                applicationDetailsMap.put(LogConstants.InputKeys.APPLICATION_ID, applicationId));
+        FrameworkUtils.getApplicationName(context).ifPresent(applicationName ->
+                applicationDetailsMap.put(LogConstants.InputKeys.APPLICATION_NAME,
+                        applicationName));
+        return applicationDetailsMap;
+    }
+
+    /**
+     * Get the user id from the authenticated user.
+     *
+     * @param authenticatedUser AuthenticationContext.
+     * @return User id.
+     */
+    private Optional<String> getUserId(AuthenticatedUser authenticatedUser) {
+
+        if (authenticatedUser == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(authenticatedUser.getUserId());
+        } catch (UserIdNotFoundException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while getting the user id from the authenticated user.", e);
+            }
+        }
+        return Optional.empty();
+    }
 }

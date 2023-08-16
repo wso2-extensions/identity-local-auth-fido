@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -71,7 +72,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 
 @PrepareForTest({FIDOAuthenticator.class, IdentityUtil.class, MultitenantUtils.class, IdentityTenantUtil.class,
     U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
-    URLEncoder.class, ServiceURLBuilder.class, FrameworkUtils.class})
+    URLEncoder.class, ServiceURLBuilder.class, LoggerUtils.class, FrameworkUtils.class})
 public class FIDOAuthenticatorTest {
 
     private static final String USER_STORE_DOMAIN = "PRIMARY";
@@ -105,6 +106,8 @@ public class FIDOAuthenticatorTest {
         mockStatic(MultitenantUtils.class);
         mockStatic(IdentityTenantUtil.class);
         mockStatic(FrameworkUtils.class);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
     }
 
     private void mockServiceURLBuilder() {
