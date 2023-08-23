@@ -287,7 +287,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             }
         }
 
-        if (user == null) {return webAuthnService.startUsernamelessAuthentication(appID);
+        if (user == null) {
+            return webAuthnService.startUsernamelessAuthentication(appID);
         }
 
         return webAuthnService.startAuthentication(user.getUserName(),
