@@ -618,9 +618,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
     @Deprecated
     /**
-     *
      * @deprecated Please use {@link #removeFIDO2RegistrationByUsername(String, FIDO2CredentialRegistration)} instead.
-     *
      * */
     public void removeRegistrationByUsername(String username, CredentialRegistration registration) {
 
