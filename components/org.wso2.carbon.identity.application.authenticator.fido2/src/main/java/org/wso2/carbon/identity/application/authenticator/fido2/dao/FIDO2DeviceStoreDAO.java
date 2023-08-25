@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -96,7 +96,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(3, user.getUserName());
             resultSet = preparedStatement.executeQuery();
 
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 ByteArray credentiaId = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants
                         .CREDENTIAL_ID));
                 credentialIds.add(PublicKeyCredentialDescriptor.builder().id(credentiaId).build());
@@ -372,11 +372,15 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(3, user.getUserName());
             resultSet = preparedStatement.executeQuery();
 
-            while(resultSet.next()) {
-                ByteArray credentialId = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.CREDENTIAL_ID));
-                ByteArray userHandle = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.USER_HANDLE));
-                UserIdentity userIdentity = jsonMapper.readValue(resultSet.getString(FIDO2AuthenticatorConstants.USER_IDENTITY), UserIdentity.class);
-                ByteArray publicKeyCose = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.PUBLIC_KEY_COSE));
+            while (resultSet.next()) {
+                ByteArray credentialId =
+                        ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.CREDENTIAL_ID));
+                ByteArray userHandle =
+                        ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.USER_HANDLE));
+                UserIdentity userIdentity = jsonMapper
+                        .readValue(resultSet.getString(FIDO2AuthenticatorConstants.USER_IDENTITY), UserIdentity.class);
+                ByteArray publicKeyCose =
+                        ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.PUBLIC_KEY_COSE));
                 Long signatureCount = resultSet.getLong(FIDO2AuthenticatorConstants.SIGNATURE_COUNT);
                 Timestamp timestamp = resultSet.getTimestamp(FIDO2AuthenticatorConstants.TIME_REGISTERED);
 
@@ -435,7 +439,7 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             preparedStatement.setString(3, user.getUserName());
             resultSet = preparedStatement.executeQuery();
 
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 ByteArray credentialId = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants
                         .CREDENTIAL_ID));
                 ByteArray userHandle = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants
@@ -504,9 +508,12 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {
-                ByteArray userHandle = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.USER_HANDLE));
-                UserIdentity userIdentity = jsonMapper.readValue(resultSet.getString(FIDO2AuthenticatorConstants.USER_IDENTITY), UserIdentity.class);
-                ByteArray publicKeyCose = ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.PUBLIC_KEY_COSE));
+                ByteArray userHandle =
+                        ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.USER_HANDLE));
+                UserIdentity userIdentity = jsonMapper
+                        .readValue(resultSet.getString(FIDO2AuthenticatorConstants.USER_IDENTITY), UserIdentity.class);
+                ByteArray publicKeyCose =
+                        ByteArray.fromBase64(resultSet.getString(FIDO2AuthenticatorConstants.PUBLIC_KEY_COSE));
                 Long signatureCount = resultSet.getLong(FIDO2AuthenticatorConstants.SIGNATURE_COUNT);
                 Timestamp timestamp = resultSet.getTimestamp(FIDO2AuthenticatorConstants.TIME_REGISTERED);
 
@@ -610,7 +617,11 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
     }
 
     @Deprecated
-    /** @deprecated Please use {@link #removeFIDO2RegistrationByUsername(String, FIDO2CredentialRegistration)} instead. */
+    /**
+     *
+     * @deprecated Please use {@link #removeFIDO2RegistrationByUsername(String, FIDO2CredentialRegistration)} instead.
+     *
+     * */
     public void removeRegistrationByUsername(String username, CredentialRegistration registration) {
 
         User user = User.getUserFromUserName(username);
@@ -714,6 +725,52 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
     }
 
+    /**
+     * Updates FIDO2 signature count against the username.
+     *
+     * @param username Username.
+     * @param reg FIDO2 credentials.
+     * @throws FIDO2AuthenticatorServerException
+     */
+    public void updateFIDO2SignatureCountByUsername(String username, FIDO2CredentialRegistration reg) throws
+            FIDO2AuthenticatorServerException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("updateFIDO2SignatureCount inputs {username: " + username +  "}");
+        }
+        /*
+        Get the user object from a thread local property since the available username is not fully qualified to
+        rebuild the user object properly.
+        */
+        User user = (User) IdentityUtil.threadLocalProperties.get().get(FIDO2AuthenticatorConstants.FIDO2_USER);
+        if (user == null) {
+            user = User.getUserFromUserName(username);
+        }
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement preparedStatement = null;
+
+        try {
+            preparedStatement = connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries.
+                    UPDATE_FIDO2_DEVICE_SIGNATURE_COUNT_QUERY
+            );
+            preparedStatement.setLong(1, reg.getSignatureCount());
+            preparedStatement.setInt(2, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
+            preparedStatement.setString(3, user.getUserStoreDomain());
+            preparedStatement.setString(4, user.getUserName());
+            preparedStatement.setString(5, reg.getCredential().getCredentialId().getBase64());
+
+            preparedStatement.execute();
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
+        } catch (SQLException e) {
+            throw new FIDO2AuthenticatorServerException("Server error occurred while updating FIDO2 " +
+                    "signature count for username: " + username, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, preparedStatement);
+        }
+    }
+
     @Deprecated
     /** @deprecated Please use {@link #updateFIDO2SignatureCount(AssertionResult)} instead. */
     public void updateSignatureCount(AssertionResult result) {
@@ -745,9 +802,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                         "Credential \"%s\" is not registered to user \"%s\"",
                         result.getCredentialId(), result.getUsername()
                 )));
-        removeFIDO2RegistrationByUsername(result.getUsername(), registration);
-        registration.withSignatureCount(result.getSignatureCount());
-        addFIDO2RegistrationByUsername(result.getUsername(), registration);
+        registration = registration.withSignatureCount(result.getSignatureCount());
+        updateFIDO2SignatureCountByUsername(result.getUsername(), registration);
     }
 
     public void updateDomainNameOfRegistration(int tenantId, String currentUserStoreName, String newUserStoreName)
@@ -768,7 +824,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             }
 
         } catch (SQLException e) {
-            throw new FIDO2AuthenticatorServerException("Could not update the userstore domain : " + currentUserStoreName, e);
+            throw new FIDO2AuthenticatorServerException(
+                    "Could not update the userstore domain : " + currentUserStoreName, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, preparedStatement);
         }
