@@ -1,7 +1,7 @@
 /*
- * Copyright (c) (2019-2022), WSO2 Inc. (http://www.wso2.com).
+ * Copyright (c) (2019-2023), WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -67,6 +67,9 @@ public class FIDO2AuthenticatorConstants {
     public static final String FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME = "MDSValidation.Enable";
     public static final boolean FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE = false;
 
+    /**
+     * SQL Queries class for FIDO2 Authenticator Constants Util class.
+     */
     public static class SQLQueries {
 
         private SQLQueries() {
@@ -101,6 +104,10 @@ public class FIDO2AuthenticatorConstants {
                 "(TENANT_ID, DOMAIN_NAME, USER_NAME, TIME_REGISTERED, USER_HANDLE, CREDENTIAL_ID, PUBLIC_KEY_COSE, " +
                 "SIGNATURE_COUNT, USER_IDENTITY, DISPLAY_NAME, IS_USERNAMELESS_SUPPORTED) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        public static final String UPDATE_FIDO2_DEVICE_SIGNATURE_COUNT_QUERY = "UPDATE FIDO2_DEVICE_STORE " +
+                "SET SIGNATURE_COUNT = ? " +
+                "WHERE TENANT_ID = ? AND DOMAIN_NAME = ? AND USER_NAME = ? AND CREDENTIAL_ID = ?";
 
         public static final String DELETE_DEVICE_REGISTRATION_BY_USERNAME_AND_ID = "DELETE FROM FIDO2_DEVICE_STORE " +
                 "WHERE TENANT_ID = ? AND DOMAIN_NAME = ? AND USER_NAME = ? AND CREDENTIAL_ID = ?";
