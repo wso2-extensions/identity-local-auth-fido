@@ -928,8 +928,10 @@ public class WebAuthnService {
 
     private UserIdentity buildUserIdentity(User user) throws FIDO2AuthenticatorServerException {
 
+        ByteArray userHandle = FIDO2DeviceStoreDAO.getInstance().getUserHandleForUsername(user.toString())
+                .orElseGet(WebAuthnService::generateRandom);
         return UserIdentity.builder().name(user.getUserName()).displayName(getUserDisplayName(user))
-                .id(generateRandom()).build();
+                .id(userHandle).build();
     }
 
     private User getPrivilegedUser() {

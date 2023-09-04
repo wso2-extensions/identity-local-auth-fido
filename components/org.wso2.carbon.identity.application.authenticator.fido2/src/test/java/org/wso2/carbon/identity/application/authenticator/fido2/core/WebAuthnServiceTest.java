@@ -302,6 +302,8 @@ public class WebAuthnServiceTest {
         StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
                 mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
         when(StartRegistrationOptions.builder()).thenReturn(mandatoryStages1);
+        when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString()))
+                .thenReturn(Optional.ofNullable(null));
         when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
         when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
         when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
@@ -328,6 +330,8 @@ public class WebAuthnServiceTest {
         StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
                 mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
         when(StartRegistrationOptions.builder()).thenReturn(mandatoryStages1);
+        when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString()))
+                .thenReturn(Optional.ofNullable(null));
         when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
         when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
         when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
