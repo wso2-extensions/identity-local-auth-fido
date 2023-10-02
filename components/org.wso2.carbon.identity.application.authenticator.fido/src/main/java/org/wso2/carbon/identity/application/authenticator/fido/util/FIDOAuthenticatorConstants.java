@@ -26,7 +26,7 @@ public class FIDOAuthenticatorConstants {
     }
 
     public static final String AUTHENTICATOR_NAME = "FIDOAuthenticator";
-    public static final String AUTHENTICATOR_FRIENDLY_NAME = "Security Key/Biometrics";
+    public static final String AUTHENTICATOR_FRIENDLY_NAME = "Passkey";
     public static final String UNUSED = "unused";
     public static final String AUTHENTICATION_STATUS = "authentication.failed";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "no.registered.device.found";
@@ -37,12 +37,30 @@ public class FIDOAuthenticatorConstants {
 
     public static final String FIDO_AUTH = "FidoAuth";
     public static final String FIDO2_AUTH = "Fido2Auth";
+    public static final String FIDO2_REG = "Fido2Reg";
+    public static final String FIDO2_KEY_STATUS = "Fido2KeyStatus";
+    public static final String FIDO2_IDENTIFIER_FIRST = "Fido2IdentifierFirst";
     public static final String APP_ID = "AppID";
 
     public static final String URI_LOGIN = "login.do";
     public static final String URI_FIDO_LOGIN = "fido-auth.jsp";
+    public static final String URI_FIDO2_REG = "fido2-reg.jsp";
+    public static final String URI_FIDO2_KEY_STATUS = "fido2-key-status.jsp";
+    public static final String URI_FIDO2_IDENTIFIER_AUTH = "fido2-identifierfirst.jsp";
 
     public static final String WEBAUTHN_ENABLED = "FIDO.WebAuthn.Enable";
+    public static final String PROGRESSIVE_REG_ENABLED = "FIDO.ProgressiveRegistration.Enable";
+    public static final String IS_USER_CONSENT_FOR_REG_RECEIVED = "isUserConsentForRegReceived";
+    public static final String TOKEN_RESPONSE = "tokenResponse";
+    public static final String ERROR_CODE = "errorCode";
+    public static final String CHALLENGE_RESPONSE = "challengeResponse";
+    public static final String SCENARIO = "scenario";
+    public static final String USER_NAME = "username";
+    public static final String FIDO_KEY_DISPLAY_NAME = "displayName";
+    public static final String FIDO_KEY_CREDENTIAL = "credential";
+    public static final String FIDO_KEY_ID = "id";
+    public static final String LOCAL_AUTHENTICATOR = "LOCAL";
+    public static final String IS_IDF_INITIATED_FROM_AUTHENTICATOR = "isIdfInitiatedFromAuthenticator";
 
     public static class SQLQueries {
         private SQLQueries() {
@@ -64,6 +82,21 @@ public class FIDOAuthenticatorConstants {
     }
 
     /**
+     * Constants related to FIDO authentication and registration scenarios.
+     */
+    public static class ScenarioTypes {
+        private ScenarioTypes() {
+        }
+
+        public static final String IDF_INIT_FIDO_ENROL = "IDF_INIT_FIDO_ENROL";
+        public static final String IDF_INIT_FIDO_AUTH = "IDF_INIT_FIDO_AUTH";
+
+        public static final String INIT_FIDO_ENROL = "INIT_FIDO_ENROL";
+        public static final String FINISH_FIDO_ENROL = "FINISH_FIDO_ENROL";
+        public static final String CANCEL_FIDO_ENROL = "CANCEL_FIDO_ENROL";
+    }
+
+    /**
      * Constants related to log management.
      */
     public static class LogConstants {
@@ -80,4 +113,3 @@ public class FIDOAuthenticatorConstants {
         }
     }
 }
-

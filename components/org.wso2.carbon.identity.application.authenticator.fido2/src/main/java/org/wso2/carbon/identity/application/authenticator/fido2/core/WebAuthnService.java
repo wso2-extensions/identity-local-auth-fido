@@ -245,11 +245,23 @@ public class WebAuthnService {
     public Either<String, FIDO2RegistrationRequest> startFIDO2UsernamelessRegistration(@NonNull String origin)
             throws JsonProcessingException, FIDO2AuthenticatorClientException {
 
+        return this.startFIDO2UsernamelessRegistration(origin, null);
+    }
+
+    public Either<String, FIDO2RegistrationRequest> startFIDO2UsernamelessRegistration(@NonNull String origin,
+                                                                                       String username)
+            throws JsonProcessingException, FIDO2AuthenticatorClientException {
+
         validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
-        User user = User.getUserFromUserName(getTenantQualifiedUsername());
+        if (username == null) {
+            username = getTenantQualifiedUsername();
+        }
+
+        User user = User.getUserFromUserName(username);
+
         PublicKeyCredentialCreationOptions credentialCreationOptions;
         try {
             // Store the user object in a thread local property.
@@ -338,6 +350,12 @@ public class WebAuthnService {
     public void finishFIDO2Registration(String challengeResponse) throws FIDO2AuthenticatorServerException,
             FIDO2AuthenticatorClientException {
 
+        this.finishFIDO2Registration(challengeResponse, null);
+    }
+
+    public void finishFIDO2Registration(String challengeResponse, String username)
+            throws FIDO2AuthenticatorServerException, FIDO2AuthenticatorClientException {
+
         RegistrationResponse response;
         try {
             response = jsonMapper.readValue(challengeResponse, RegistrationResponse.class);
@@ -348,7 +366,11 @@ public class WebAuthnService {
             throw new FIDO2AuthenticatorServerException(DECODING_FAILED_MESSAGE, e);
         }
 
-        User user = getPrivilegedUser();
+        if (username == null) {
+            username = getTenantQualifiedUsername();
+        }
+
+        User user = User.getUserFromUserName(username);
         if (FIDO2DeviceStoreDAO.getInstance().getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
                 response.getCredential().getId()).isPresent()) {
             throw new FIDO2AuthenticatorClientException("The username \"" + user + "\" is already registered.",
@@ -739,6 +761,33 @@ public class WebAuthnService {
         }
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
+        Optional<FIDO2CredentialRegistration> credentialRegistration =
+                userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user.toString(), identifier);
+
+        if (!credentialRegistration.isPresent()) {
+            throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
+                    ERROR_CODE_UPDATE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
+        }
+        userStorage.updateFIDO2DeviceDisplayName(user, credentialRegistration.get(), newDisplayName);
+    }
+
+    public void updateFIDO2DeviceDisplayName(String credentialId, String newDisplayName, String username)
+            throws FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
+
+        if (StringUtils.isBlank(credentialId)) {
+            throw new FIDO2AuthenticatorClientException("Credential ID must not be empty.",
+                    ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
+        }
+
+        final ByteArray identifier;
+        try {
+            identifier = ByteArray.fromBase64Url(credentialId);
+        } catch (Base64UrlException e) {
+            throw new FIDO2AuthenticatorClientException("The Credential ID: " + credentialId + " is not a valid " +
+                    "Base64Url data.", ERROR_CODE_UPDATE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
+        }
+
+        User user = User.getUserFromUserName(username);
         Optional<FIDO2CredentialRegistration> credentialRegistration =
                 userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user.toString(), identifier);
 
@@ -1189,5 +1238,13 @@ public class WebAuthnService {
         }
 
         return new FIDO2Configuration(attestationValidationEnabled, mdsValidationEnabled);
+    }
+
+    public boolean isFidoKeyRegistered (String username) throws AuthenticationFailedException {
+        try {
+            return !userStorage.getFIDO2RegistrationsByUsername(username).isEmpty();
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException(e.getMessage());
+        }
     }
 }
