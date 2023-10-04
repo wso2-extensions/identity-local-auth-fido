@@ -37,20 +37,20 @@ public class FIDOAuthenticatorConstants {
 
     public static final String FIDO_AUTH = "FidoAuth";
     public static final String FIDO2_AUTH = "Fido2Auth";
-    public static final String FIDO2_REG = "Fido2Reg";
-    public static final String FIDO2_KEY_STATUS = "Fido2KeyStatus";
+    public static final String FIDO2_ENROL = "Fido2Enrol";
+    public static final String FIDO2_PASSKEY_STATUS = "Fido2PasskeyStatus";
     public static final String FIDO2_IDENTIFIER_FIRST = "Fido2IdentifierFirst";
     public static final String APP_ID = "AppID";
 
     public static final String URI_LOGIN = "login.do";
     public static final String URI_FIDO_LOGIN = "fido-auth.jsp";
-    public static final String URI_FIDO2_REG = "fido2-reg.jsp";
-    public static final String URI_FIDO2_KEY_STATUS = "fido2-key-status.jsp";
-    public static final String URI_FIDO2_IDENTIFIER_AUTH = "fido2-identifierfirst.jsp";
+    public static final String URI_FIDO2_ENROL = "fido2-enrol.jsp";
+    public static final String URI_FIDO2_PASSKEY_STATUS = "fido2-passkey-status.jsp";
+    public static final String URI_FIDO2_IDENTIFIER_FIRST = "fido2-identifierfirst.jsp";
 
     public static final String WEBAUTHN_ENABLED = "FIDO.WebAuthn.Enable";
-    public static final String PROGRESSIVE_REG_ENABLED = "FIDO.ProgressiveRegistration.Enable";
-    public static final String IS_USER_CONSENT_FOR_REG_RECEIVED = "isUserConsentForRegReceived";
+    public static final String PASSKEY_PROGRESSIVE_ENROLLMENT_ENABLED = "FIDO.PasskeyProgressiveEnrollment.Enable";
+    public static final String IS_PASSKEY_CREATION_CONSENT_RECEIVED = "isPasskeyCreationConsentReceived";
     public static final String TOKEN_RESPONSE = "tokenResponse";
     public static final String ERROR_CODE = "errorCode";
     public static final String CHALLENGE_RESPONSE = "challengeResponse";
