@@ -88,9 +88,7 @@ public class FIDOAuthenticatorConstants {
         private ScenarioTypes() {
         }
 
-        public static final String IDF_INIT_FIDO_ENROL = "IDF_INIT_FIDO_ENROL";
-        public static final String IDF_INIT_FIDO_AUTH = "IDF_INIT_FIDO_AUTH";
-
+        public static final String INIT_FIDO_AUTH = "INIT_FIDO_AUTH";
         public static final String INIT_FIDO_ENROL = "INIT_FIDO_ENROL";
         public static final String FINISH_FIDO_ENROL = "FINISH_FIDO_ENROL";
         public static final String CANCEL_FIDO_ENROL = "CANCEL_FIDO_ENROL";

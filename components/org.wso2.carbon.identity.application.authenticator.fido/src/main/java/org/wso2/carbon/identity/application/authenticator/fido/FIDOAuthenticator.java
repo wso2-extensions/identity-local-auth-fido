@@ -112,8 +112,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         // If a passkey enrollment request comes set a property to the context mentioning the user consent is received.
         if (!StringUtils.isEmpty(request.getParameter(SCENARIO)) &&
-                (request.getParameter(SCENARIO).equals(ScenarioTypes.INIT_FIDO_ENROL) ||
-                        request.getParameter(SCENARIO).equals(ScenarioTypes.IDF_INIT_FIDO_ENROL))) {
+                request.getParameter(SCENARIO).equals(ScenarioTypes.INIT_FIDO_ENROL)) {
             context.setProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED, true);
         }
 
@@ -163,7 +162,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 }
                 // If an authentication request initiated from the custom FIDO identifier page, go through this flow.
                 if (!StringUtils.isEmpty(request.getParameter(SCENARIO)) &&
-                        request.getParameter(SCENARIO).equals(ScenarioTypes.IDF_INIT_FIDO_AUTH)) {
+                        request.getParameter(SCENARIO).equals(ScenarioTypes.INIT_FIDO_AUTH)) {
                     persistUsername(context, request.getParameter(USER_NAME));
                     initiateAuthenticationRequest(request, response, context);
                     return AuthenticatorFlowStatus.INCOMPLETE;
