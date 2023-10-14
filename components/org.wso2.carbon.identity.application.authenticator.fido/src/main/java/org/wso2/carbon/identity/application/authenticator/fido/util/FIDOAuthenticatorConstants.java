@@ -43,6 +43,13 @@ public class FIDOAuthenticatorConstants {
     public static final String URI_FIDO_LOGIN = "fido-auth.jsp";
 
     public static final String WEBAUTHN_ENABLED = "FIDO.WebAuthn.Enable";
+    public static final String AUTHENTICATOR_FIDO = "authenticator.Fido";
+    public static final String TOKEN_RESPONSE = "tokenResponse";
+    public static final String CHALLENGE_DATA = "challengeData";
+    public static final String INTERNAL_PROMPT = "INTERNAL_PROMPT";
+    public static final String REQUIRED_PARAMS = "requiredParams";
+    public static final String CHALLENGE_DATA_SUFFIX = "_challengeData";
+    public static final String PROMPT_TYPE = "prompt_type";
 
     public static class SQLQueries {
         private SQLQueries() {

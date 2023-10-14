@@ -34,6 +34,8 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.I
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorParamMetadata;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
@@ -60,9 +62,16 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.CHALLENGE_DATA;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.REQUIRED_PARAMS;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.FIDO_AUTH_SERVICE;
@@ -222,6 +231,60 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     }
 
     /**
+     * This method is responsible for obtaining authenticator-specific data needed to
+     * initialize the authentication process within the provided authentication context.
+     *
+     * @param context The authentication context containing information about the current authentication attempt.
+     * @return An {@code Optional} containing an {@code AuthenticatorData} object representing the initiation data.
+     *         If the initiation data is available, it is encapsulated within the {@code Optional}; otherwise,
+     *         an empty {@code Optional} is returned.
+     */
+    @Override
+    public Optional<AuthenticatorData> getAuthInitiationData(AuthenticationContext context) {
+
+        AuthenticatorData authenticatorData = new AuthenticatorData();
+        authenticatorData.setName(getName());
+        authenticatorData.setDisplayName(getFriendlyName());
+        String idpName = context.getExternalIdP().getIdPName();
+        authenticatorData.setIdp(idpName);
+        authenticatorData.setI18nKey(getI18nKey());
+
+        List<String> requiredParameterList = new ArrayList<>();
+        requiredParameterList.add(TOKEN_RESPONSE);
+
+        Map<String, String> additionalData = new HashMap<>();
+        additionalData.put(CHALLENGE_DATA,
+                (String) context.getProperty(FIDOAuthenticatorConstants.AUTHENTICATOR_NAME +
+                        FIDOAuthenticatorConstants.CHALLENGE_DATA_SUFFIX));
+        additionalData.put(FIDOAuthenticatorConstants.PROMPT_TYPE, INTERNAL_PROMPT);
+        authenticatorData.setAdditionalData(additionalData);
+        additionalData.put(REQUIRED_PARAMS, requiredParameterList.toString());
+        return Optional.of(authenticatorData);
+    }
+
+    /**
+     * This method is responsible for validating whether the authenticator is supported for API Based Authentication.
+     *
+     * @return true if the authenticator is supported for API Based Authentication.
+     */
+    @Override
+    public boolean isAPIBasedAuthenticationSupported() {
+
+        return true;
+    }
+
+    /**
+     * Get the i18n key defined to represent the authenticator name.
+     *
+     * @return the 118n key.
+     */
+    @Override
+    public String getI18nKey() {
+
+        return AUTHENTICATOR_FIDO;
+    }
+
+    /**
      * Gets a FIDOAuthenticator instance.
      *
      * @return a FIDOAuthenticator.
@@ -345,6 +408,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         String redirectUrl;
         if (isWebAuthnEnabled()) {
             String data = initiateFido2AuthenticationRequest(user, appID, context);
+            context.setProperty(FIDOAuthenticatorConstants.AUTHENTICATOR_NAME +
+                    FIDOAuthenticatorConstants.CHALLENGE_DATA_SUFFIX, data);
             boolean isDataNull = StringUtils.isBlank(data);
             String urlEncodedData = null;
             if (!isDataNull) {
