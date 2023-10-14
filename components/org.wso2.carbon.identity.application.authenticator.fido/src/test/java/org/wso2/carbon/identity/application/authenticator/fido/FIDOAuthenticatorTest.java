@@ -35,10 +35,12 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.config.ConfigurationFacade;
 import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.ExternalIdPConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.StepConfig;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
@@ -50,11 +52,12 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -66,6 +69,10 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.REQUIRED_PARAMS;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
 
 @PrepareForTest({FIDOAuthenticator.class, IdentityUtil.class, MultitenantUtils.class, IdentityTenantUtil.class,
     U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
@@ -93,6 +100,8 @@ public class FIDOAuthenticatorTest {
     private FileBasedConfigurationBuilder fileBasedConfigurationBuilder;
     @Mock
     private AuthenticateRequestData authenticateRequestData;
+    @Mock
+    private ExternalIdPConfig externalIdPConfig;
 
     @BeforeMethod
     public void setUp() {
@@ -458,6 +467,37 @@ public class FIDOAuthenticatorTest {
     public void testRetryAuthenticationEnabled() {
 
         Assert.assertFalse(fidoAuthenticator.retryAuthenticationEnabled());
+    }
+
+    @Test
+    public void testGetAuthInitiationData() {
+
+        PowerMockito.when(authenticationContext.getExternalIdP()).thenReturn(externalIdPConfig);
+        PowerMockito.when(externalIdPConfig.getIdPName()).thenReturn("LOCAL");
+
+        Optional<AuthenticatorData> authenticatorData = fidoAuthenticator.getAuthInitiationData
+                (authenticationContext);
+
+        Assert.assertTrue(authenticatorData.isPresent());
+        AuthenticatorData authenticatorDataObj = authenticatorData.get();
+
+        Map<String, String> additionalData = new HashMap<>();
+
+        additionalData.put(FIDOAuthenticatorConstants.PROMPT_TYPE, INTERNAL_PROMPT);
+        List<String> requiredParameterList = new ArrayList<>();
+        requiredParameterList.add(TOKEN_RESPONSE);
+        additionalData.put(REQUIRED_PARAMS, requiredParameterList.toString());
+
+        Assert.assertEquals(authenticatorDataObj.getName(), FIDOAuthenticatorConstants.AUTHENTICATOR_NAME);
+        Assert.assertEquals(authenticatorDataObj.getI18nKey(), AUTHENTICATOR_FIDO);
+        Assert.assertEquals(authenticatorDataObj.getDisplayName(),
+                FIDOAuthenticatorConstants. AUTHENTICATOR_FRIENDLY_NAME);
+
+        // Iterate through the map and assert values
+        for (Map.Entry<String, String> entry : additionalData.entrySet()) {
+            String key = entry.getKey();
+            Assert.assertTrue(authenticatorDataObj.getAdditionalData().containsKey(key));
+        }
     }
 
     @ObjectFactory
