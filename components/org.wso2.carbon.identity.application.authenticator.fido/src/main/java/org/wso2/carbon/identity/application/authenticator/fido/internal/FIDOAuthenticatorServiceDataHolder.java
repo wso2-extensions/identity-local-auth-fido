@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.application.authenticator.fido.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
+import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.user.core.service.RealmService;
+
 
 /**
  * FIDO Authenticator data holder.
@@ -32,6 +34,7 @@ public class FIDOAuthenticatorServiceDataHolder {
     private static final FIDOAuthenticatorServiceDataHolder instance = new FIDOAuthenticatorServiceDataHolder();
     private BundleContext bundleContext = null;
     private RealmService realmService = null;
+    private static IdentityGovernanceService identityGovernanceService;
 
     private FIDOAuthenticatorServiceDataHolder() {
     }
@@ -54,5 +57,28 @@ public class FIDOAuthenticatorServiceDataHolder {
     public void setBundleContext(BundleContext bundleContext) {
 
         this.bundleContext = bundleContext;
+    }
+
+    /**
+     * Get Identity Governance service.
+     *
+     * @return Identity Governance service.
+     */
+    public static IdentityGovernanceService getIdentityGovernanceService() {
+
+        if (identityGovernanceService == null) {
+            throw new RuntimeException("IdentityGovernanceService not available. Component is not started properly.");
+        }
+        return identityGovernanceService;
+    }
+
+    /**
+     * Set Identity Governance service.
+     *
+     * @param identityGovernanceService Identity Governance service.
+     */
+    public static void setIdentityGovernanceService(IdentityGovernanceService identityGovernanceService) {
+
+        FIDOAuthenticatorServiceDataHolder.identityGovernanceService = identityGovernanceService;
     }
 }

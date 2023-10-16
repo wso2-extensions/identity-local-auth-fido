@@ -49,7 +49,6 @@ public class FIDOAuthenticatorConstants {
     public static final String URI_FIDO2_IDENTIFIER_FIRST = "fido2-identifierfirst.jsp";
 
     public static final String WEBAUTHN_ENABLED = "FIDO.WebAuthn.Enable";
-    public static final String PASSKEY_PROGRESSIVE_ENROLLMENT_ENABLED = "FIDO.PasskeyProgressiveEnrollment.Enable";
     public static final String IS_PASSKEY_CREATION_CONSENT_RECEIVED = "isPasskeyCreationConsentReceived";
     public static final String TOKEN_RESPONSE = "tokenResponse";
     public static final String ERROR_CODE = "errorCode";
@@ -59,7 +58,6 @@ public class FIDOAuthenticatorConstants {
     public static final String FIDO_KEY_DISPLAY_NAME = "displayName";
     public static final String FIDO_KEY_CREDENTIAL = "credential";
     public static final String FIDO_KEY_ID = "id";
-    public static final String LOCAL_AUTHENTICATOR = "LOCAL";
     public static final String IS_IDF_INITIATED_FROM_AUTHENTICATOR = "isIdfInitiatedFromAuthenticator";
 
     public static class SQLQueries {
@@ -92,6 +90,15 @@ public class FIDOAuthenticatorConstants {
         public static final String INIT_FIDO_ENROL = "INIT_FIDO_ENROL";
         public static final String FINISH_FIDO_ENROL = "FINISH_FIDO_ENROL";
         public static final String CANCEL_FIDO_ENROL = "CANCEL_FIDO_ENROL";
+    }
+
+    /**
+     * Authenticator config related configurations.
+     */
+    public static class ConnectorConfig {
+
+        public static final String ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT = "FIDO.EnablePasskeyProgressiveEnrollment";
+        public static final String ENABLE_USERNAMELESS_AUTHENTICATION = "FIDO.EnableUsernamelessAuthentication";
     }
 
     /**
