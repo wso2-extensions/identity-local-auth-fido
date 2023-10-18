@@ -58,7 +58,6 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.user.core.UserCoreConstants;
-import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -110,11 +109,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                            AuthenticationContext context)
             throws AuthenticationFailedException, LogoutFailedException {
 
-        // Extract the configurations
-        boolean enablePasskeyProgressiveEnrollment = isPasskeyProgressiveEnrollmentEnabled(context.getTenantDomain());
-        boolean enableUsernamelessAuthentication = isUsernamelessAuthenticationEnabled(context.getTenantDomain());
-        addPasskeyEnrollmentConfigToEndpointParams(context, enablePasskeyProgressiveEnrollment);
-
         // If the logout request comes, then no need to go through and complete the flow.
         if (context.isLogoutRequest()) {
             return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
@@ -127,6 +121,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             processAuthenticationResponse(request, response, context);
             return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
         }
+
+        // Extract the configurations
+        boolean enablePasskeyProgressiveEnrollment = isPasskeyProgressiveEnrollmentEnabled(context.getTenantDomain());
+        boolean enableUsernamelessAuthentication = isUsernamelessAuthenticationEnabled(context.getTenantDomain());
+        addPasskeyEnrollmentConfigToEndpointParams(context, enablePasskeyProgressiveEnrollment);
 
         // If a passkey enrollment request comes set a property to the context mentioning the user consent is received.
         if (enablePasskeyProgressiveEnrollment && !StringUtils.isEmpty(request.getParameter(SCENARIO)) &&
@@ -209,7 +208,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
     private static boolean isPasskeyCreationConsentReceived(AuthenticationContext context) {
 
-        return Boolean.parseBoolean((String) context.getProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED));
+        return Boolean.TRUE.equals(context.getProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED));
     }
 
     private AuthenticatorFlowStatus handlePasskeyEnrollmentScenarios(HttpServletRequest request,
@@ -552,8 +551,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if ((user == null) && isFidoAsFirstFactor(context) && isIDFInitiatedFromAuthenticator(context)) {
             String username = retrievePersistedUsername(context);
             user = resolveUserFromUsername(username, context);
-            user = resolveUserFromUserStore(user);
         }
+
         // Retrieving AppID
         // Origin as appID eg: https://example.com:8080
         String appID = resolveAppId(request);
@@ -580,8 +579,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
     private boolean isIDFInitiatedFromAuthenticator(AuthenticationContext context) {
 
-        return Boolean.parseBoolean(
-                (String) context.getProperty(FIDOAuthenticatorConstants.IS_IDF_INITIATED_FROM_AUTHENTICATOR));
+        return Boolean.TRUE.equals(context.getProperty(FIDOAuthenticatorConstants.IS_IDF_INITIATED_FROM_AUTHENTICATOR));
     }
 
     @Override
@@ -712,7 +710,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             }
         }
 
-        if (user == null) {
+        //Initiate the usernameless authentication process when either the user is unidentified or the identified user
+        // lacks an enrolled passkey.
+        if (user == null || !hasUserSetPasskeys(user.getUserName())) {
             return webAuthnService.startUsernamelessAuthentication(appID);
         }
 
@@ -762,28 +762,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return webAuthnService.isFidoKeyRegistered(username);
     }
 
-    private String getRedirectUrl(boolean isDataNull, String loginPage, String urlEncodedData,
-            HttpServletResponse response, AuthenticatedUser user, AuthenticationContext context)
-            throws UnsupportedEncodingException, URLBuilderException, URISyntaxException,
-            AuthenticationFailedException {
-
-        String redirectURL;
-        if (!isDataNull) {
-            redirectURL = loginPage + ("?") +
-                    "&authenticators=" + getName() + ":" + "LOCAL" + "&type=fido&sessionDataKey=" +
-                    context.getContextIdentifier() + "&data=" + urlEncodedData;
-        } else {
-            redirectURL = ConfigurationFacade.getInstance().getAuthenticationEndpointRetryURL();
-            redirectURL = response.encodeRedirectURL(redirectURL + ("?")) + "&failedUsername=" +
-                    URLEncoder.encode(user.getUserName(), IdentityCoreConstants.UTF_8) +
-                    "&statusMsg=" + URLEncoder.encode(FIDOAuthenticatorConstants.AUTHENTICATION_ERROR_MESSAGE,
-                    IdentityCoreConstants.UTF_8) + "&status=" + URLEncoder.encode(FIDOAuthenticatorConstants
-                    .AUTHENTICATION_STATUS, IdentityCoreConstants.UTF_8);
-        }
-
-        return buildAbsoluteURL(redirectURL);
-    }
-
     private String buildAbsoluteURL(String redirectUrl) throws URISyntaxException, URLBuilderException {
 
         URI uri = new URI(redirectUrl);
@@ -810,30 +788,25 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throws AuthenticationFailedException, UnsupportedEncodingException, URLBuilderException,
             URISyntaxException {
 
-        String redirectUrl;
         if (isWebAuthnEnabled()) {
-            if (user != null && !hasUserSetPasskeys(user.getUserName())) {
-                user = null;
-            }
             String data = initiateFido2AuthenticationRequest(user, appID, context);
             context.setProperty(FIDOAuthenticatorConstants.AUTHENTICATOR_NAME +
                     FIDOAuthenticatorConstants.CHALLENGE_DATA_SUFFIX, data);
-            boolean isDataNull = StringUtils.isBlank(data);
-            String urlEncodedData = null;
-            if (!isDataNull) {
-                urlEncodedData = URLEncoder.encode(data, IdentityCoreConstants.UTF_8);
+            if (StringUtils.isNotBlank(data)) {
+                String urlEncodedData = URLEncoder.encode(data, IdentityCoreConstants.UTF_8);
+                return loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
+                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData;
             }
-            redirectUrl = getRedirectUrl(isDataNull, loginPage, urlEncodedData, response, user, context);
         } else {
             AuthenticateRequestData data = initiateFidoAuthenticationRequest(user, appID);
-            boolean isDataNull = (data == null);
-            String encodedData = null;
-            if (!isDataNull) {
-                encodedData = URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
+            if (data != null) {
+                String encodedData = URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
+                return loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
+                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + encodedData;
             }
-            redirectUrl = getRedirectUrl(isDataNull, loginPage, encodedData, response, user, context);
         }
-        return redirectUrl;
+        throw new AuthenticationFailedException("The failure occurred while initiating the authentication request " +
+                "to create the public key credentials.");
     }
 
     private String resolveAppId(HttpServletRequest request) {
@@ -963,25 +936,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         user.setUserStoreDomain(userStoreDomain);
         user.setTenantDomain(tenantDomain);
         return user;
-    }
-
-    /**
-     * This method is used to resolve an authenticated user from the user stores.
-     *
-     * @param authenticatedUser The authenticated user.
-     * @return Authenticated user retrieved from the user store.
-     * @throws AuthenticationFailedException In occasions of failing.
-     */
-    private AuthenticatedUser resolveUserFromUserStore(AuthenticatedUser authenticatedUser)
-            throws AuthenticationFailedException {
-
-        User user = getUser(authenticatedUser);
-        if (user == null) {
-            return null;
-        }
-        authenticatedUser = new AuthenticatedUser(user);
-        authenticatedUser.setAuthenticatedSubjectIdentifier(user.getUsername());
-        return authenticatedUser;
     }
 
     /**
