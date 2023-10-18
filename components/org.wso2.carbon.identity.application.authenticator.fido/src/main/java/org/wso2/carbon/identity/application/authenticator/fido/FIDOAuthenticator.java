@@ -86,7 +86,6 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_ID;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.IS_PASSKEY_CREATION_CONSENT_RECEIVED;
-import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.FIDO_AUTH_SERVICE;
@@ -95,6 +94,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.ScenarioTypes;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.USER_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil.writeJson;
 
 /**
  * FIDO U2F Specification based authenticator.
@@ -123,15 +123,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         // If an authentication complete request comes go through this flow.
         if (StringUtils.isNotEmpty(request.getParameter(TOKEN_RESPONSE)) &&
-                !(!StringUtils.isEmpty(request.getParameter(SCENARIO)) && request.getParameter(SCENARIO).equals(
-                                ScenarioTypes.INIT_FIDO_ENROL))) {
+                !(StringUtils.isNotEmpty(request.getParameter(SCENARIO)) &&
+                        ScenarioTypes.INIT_FIDO_ENROL.equals(request.getParameter(SCENARIO)))) {
             processAuthenticationResponse(request, response, context);
             return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
         }
 
         // If a passkey enrollment request comes set a property to the context mentioning the user consent is received.
         if (enablePasskeyProgressiveEnrollment && !StringUtils.isEmpty(request.getParameter(SCENARIO)) &&
-                request.getParameter(SCENARIO).equals(ScenarioTypes.INIT_FIDO_ENROL)) {
+                ScenarioTypes.INIT_FIDO_ENROL.equals(request.getParameter(SCENARIO))) {
             context.setProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED, true);
         }
 
@@ -171,7 +171,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     redirectToPasskeysExistenceStatusPage(response, context, false);
                     return AuthenticatorFlowStatus.INCOMPLETE;
                 }
-
             }
         } else {
 
@@ -197,7 +196,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
                 // If an authentication request initiated from the custom FIDO identifier page, go through this flow.
                 if (!StringUtils.isEmpty(request.getParameter(SCENARIO)) &&
-                        request.getParameter(SCENARIO).equals(ScenarioTypes.INIT_FIDO_AUTH)) {
+                        ScenarioTypes.INIT_FIDO_AUTH.equals(request.getParameter(SCENARIO))) {
                     persistUsername(context, request.getParameter(USER_NAME));
                     initiateAuthenticationRequest(request, response, context);
                     return AuthenticatorFlowStatus.INCOMPLETE;
@@ -211,16 +210,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
     private static boolean isPasskeyCreationConsentReceived(AuthenticationContext context) {
 
-        return context.getProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED) != null &&
-                context.getProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED).equals(true);
+        return Boolean.parseBoolean((String) context.getProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED));
     }
 
-    private AuthenticatorFlowStatus handlePasskeyEnrollmentScenarios(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationContext context) throws AuthenticationFailedException {
+    private AuthenticatorFlowStatus handlePasskeyEnrollmentScenarios(HttpServletRequest request,
+                                                                     HttpServletResponse response,
+                                                                     AuthenticationContext context)
+            throws AuthenticationFailedException {
 
-        if (request.getParameter(SCENARIO) != null && !request.getParameter(SCENARIO).isEmpty()) {
+        if (StringUtils.isNotBlank(request.getParameter(SCENARIO))) {
             String scenario = request.getParameter(SCENARIO);
             switch (scenario) {
                 case ScenarioTypes.INIT_FIDO_ENROL:
@@ -275,9 +273,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         }
     }
 
-    private void redirectToPasskeysExistenceStatusPage(
-            HttpServletResponse response, AuthenticationContext context, boolean isPasskeysExist)
-            throws AuthenticationFailedException {
+    private void redirectToPasskeysExistenceStatusPage(HttpServletResponse response, AuthenticationContext context,
+                                                       boolean isPasskeysExist) throws AuthenticationFailedException {
 
         AuthenticatedUser user = getUsername(context);
         if (user == null) {
@@ -293,8 +290,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throw new AuthenticationFailedException(
                     "Could not redirect the user to passkeys existence status display page", e);
         } catch (URLBuilderException | URISyntaxException e) {
-            throw new AuthenticationFailedException(
-                    "Error while building passkeys existence status display page URL.", e);
+            throw new AuthenticationFailedException("Error while building passkeys existence status display page URL.",
+                    e);
         }
     }
 
@@ -325,24 +322,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throws AuthenticationFailedException, UnsupportedEncodingException, URLBuilderException,
             URISyntaxException {
 
-        String passkeyEnrollmentPageURL;
-
         String data = initiateFido2PasskeyEnrollmentRequest(appID, user);
-        boolean isDataNull = StringUtils.isBlank(data);
-        String urlEncodedData = null;
-        if (!isDataNull) {
-            urlEncodedData = URLEncoder.encode(data, IdentityCoreConstants.UTF_8);
-        }
+        String urlEncodedData =
+                StringUtils.isNotBlank(data) ? URLEncoder.encode(data, IdentityCoreConstants.UTF_8) : null;
 
-        if (StringUtils.isNotBlank(getAuthenticatorConfig().getParameterMap()
-                .get(FIDOAuthenticatorConstants.FIDO2_ENROL))) {
-            passkeyEnrollmentPageURL =
-                    getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO2_ENROL);
-        } else {
+        String passkeyEnrollmentPageURL =
+                getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO2_ENROL);
+        if (StringUtils.isBlank(passkeyEnrollmentPageURL)) {
             passkeyEnrollmentPageURL = ConfigurationFacade.getInstance().getAuthenticationEndpointURL()
                     .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO2_ENROL);
         }
-
         passkeyEnrollmentPageURL = passkeyEnrollmentPageURL + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
                 "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData;
 
@@ -390,8 +379,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return buildAbsoluteURL(fidoIdentifierAuthPageURL);
     }
 
-    protected void processPasskeyEnrollmentResponse(HttpServletRequest request,
-                                                    HttpServletResponse response,
+    protected void processPasskeyEnrollmentResponse(HttpServletRequest request, HttpServletResponse response,
                                                     AuthenticationContext context)
             throws AuthenticationFailedException {
 
@@ -424,10 +412,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             context.setProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED, false);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Passkey enrollment failed : " + challengeResponse);
+                log.debug("Passkey enrollment failed: " + challengeResponse);
             }
-            throw new InvalidCredentialsException("Passkey enrollment failed : ",
-                    getMaskedUsername(user.getUserName()));
+            throw new InvalidCredentialsException("Passkey enrollment failed: ", getMaskedUsername(user.getUserName()));
         }
     }
 
@@ -497,13 +484,13 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     log.debug("Client error while updating the display name of passkey with credentialId: " +
                             credentialId, e);
                 }
-
-                throw new AuthenticationFailedException("Error while updating display name of passkey. Passkey " +
-                        "enrollment is not available with credentialId : " + credentialId, e);
-
+                throw new AuthenticationFailedException(
+                        "Error while updating display name of passkey. Passkey enrollment is not available with " +
+                                "credentialId : " + credentialId, e);
             } catch (FIDO2AuthenticatorServerException e) {
-                throw new AuthenticationFailedException("A system error occurred while updating display name of " +
-                        "passkey with credentialId : " + credentialId, e);
+                throw new AuthenticationFailedException(
+                        "A system error occurred while updating display name of passkey with credentialId : " +
+                                credentialId, e);
             }
         }
     }
@@ -593,8 +580,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     }
 
     private boolean isIDFInitiatedFromAuthenticator(AuthenticationContext context) {
-        return context.getProperty(FIDOAuthenticatorConstants.IS_IDF_INITIATED_FROM_AUTHENTICATOR) != null && (boolean)
-                context.getProperty(FIDOAuthenticatorConstants.IS_IDF_INITIATED_FROM_AUTHENTICATOR);
+
+        return Boolean.parseBoolean(
+                (String) context.getProperty(FIDOAuthenticatorConstants.IS_IDF_INITIATED_FROM_AUTHENTICATOR));
     }
 
     @Override
@@ -742,8 +730,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     webAuthnService.startFIDO2UsernamelessRegistration(appID, user.getUserName());
 
             if (result.isRight()) {
-                return org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil.writeJson(
-                        result.right().get());
+                return writeJson(result.right().get());
             } else {
                 throw new AuthenticationFailedException("A system error occurred while serializing start " +
                         "passkey enrollment response for the appId :" + appID);
@@ -934,6 +921,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         }
         return Optional.empty();
     }
+
     /**
      * Returns AuthenticatedUser object from context.
      *
@@ -961,7 +949,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      * This method is used to resolve the user from authentication request from identifier handler.
      *
      * @param username The username of the user.
-     * @param context The authentication context.
+     * @param context  The authentication context.
      */
     private AuthenticatedUser resolveUserFromUsername(String username, AuthenticationContext context) {
 
@@ -987,6 +975,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      */
     private AuthenticatedUser resolveUserFromUserStore(AuthenticatedUser authenticatedUser)
             throws AuthenticationFailedException {
+
         User user = getUser(authenticatedUser);
         if (user == null) {
             return null;
@@ -999,7 +988,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     /**
      * This method is used to check whether FIDO is configured as the first factor.
      *
-     * @param context           The authentication context.
+     * @param context The authentication context.
      */
     private boolean isFidoAsFirstFactor(AuthenticationContext context) {
 
@@ -1009,9 +998,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     /**
      * This method is used to persist the username in the context.
      *
-     * @param context           The authentication context.
-     * @param username          The username provided by the user.
-     * */
+     * @param context  The authentication context.
+     * @param username The username provided by the user.
+     */
     private void persistUsername(AuthenticationContext context, String username) {
 
         Map<String, String> identifierParams = new HashMap<>();
@@ -1024,8 +1013,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     /**
      * This method is used to retrieve the persisted username in the context.
      *
-     * @param context           The authentication context.
-     * */
+     * @param context The authentication context.
+     */
     public String retrievePersistedUsername(AuthenticationContext context) {
 
         Map<String, Map<String, Object>> contextRuntimeParams =
@@ -1044,18 +1033,19 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         try {
             return Boolean.parseBoolean(
-                    FIDOUtil.getFIDOAuthenticatorConfig(
-                            ConnectorConfig.ENABLE_USERNAMELESS_AUTHENTICATION, tenantDomain));
+                    FIDOUtil.getFIDOAuthenticatorConfig(ConnectorConfig.ENABLE_USERNAMELESS_AUTHENTICATION,
+                            tenantDomain));
         } catch (FIDOAuthenticatorServerException exception) {
             throw new AuthenticationFailedException("Error occurred while getting the authenticator configuration");
         }
     }
+
     private boolean isPasskeyProgressiveEnrollmentEnabled(String tenantDomain) throws AuthenticationFailedException {
 
         try {
             return Boolean.parseBoolean(
-                    FIDOUtil.getFIDOAuthenticatorConfig(
-                            ConnectorConfig.ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT, tenantDomain));
+                    FIDOUtil.getFIDOAuthenticatorConfig(ConnectorConfig.ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT,
+                            tenantDomain));
         } catch (FIDOAuthenticatorServerException exception) {
             throw new AuthenticationFailedException("Error occurred while getting the authenticator configuration");
         }
@@ -1064,8 +1054,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     /**
      * This method is used to mask the username.
      *
-     * @param username           The username to be masked.
-     * */
+     * @param username The username to be masked.
+     */
     private String getMaskedUsername(String username) {
 
         if (LoggerUtils.isLogMaskingEnable) {
@@ -1074,8 +1064,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         return username;
     }
 
-    private void addPasskeyEnrollmentConfigToEndpointParams (AuthenticationContext context,
-                                                             boolean enablePasskeyProgressiveEnrollment) {
+    private void addPasskeyEnrollmentConfigToEndpointParams(AuthenticationContext context,
+                                                            boolean enablePasskeyProgressiveEnrollment) {
+
         if (!context.getEndpointParams().containsKey(ConnectorConfig.ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT)) {
             context.addEndpointParam(ConnectorConfig.ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT,
                     enablePasskeyProgressiveEnrollment);
