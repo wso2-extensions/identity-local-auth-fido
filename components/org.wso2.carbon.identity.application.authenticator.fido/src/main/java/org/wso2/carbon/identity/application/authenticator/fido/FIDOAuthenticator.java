@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.A
 import org.wso2.carbon.identity.application.authentication.framework.exception.InvalidCredentialsException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AdditionalData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -85,6 +86,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_ID;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.IS_PASSKEY_CREATION_CONSENT_RECEIVED;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.FIDO_AUTH_SERVICE;
@@ -622,14 +624,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         List<String> requiredParameterList = new ArrayList<>();
         requiredParameterList.add(TOKEN_RESPONSE);
-
-        Map<String, String> additionalData = new HashMap<>();
-        additionalData.put(CHALLENGE_DATA,
-                (String) context.getProperty(FIDOAuthenticatorConstants.AUTHENTICATOR_NAME +
-                        FIDOAuthenticatorConstants.CHALLENGE_DATA_SUFFIX));
-        additionalData.put(FIDOAuthenticatorConstants.PROMPT_TYPE, INTERNAL_PROMPT);
+        // Set Additional Data
+        AdditionalData additionalData = new AdditionalData();
+        Map<String, String> additionalAuthenticationParam = new HashMap<>();
+        additionalAuthenticationParam.put(CHALLENGE_DATA, (String) context.getProperty(FIDOAuthenticatorConstants.
+                AUTHENTICATOR_NAME + FIDOAuthenticatorConstants.CHALLENGE_DATA_SUFFIX));
+        additionalData.setAdditionalAuthenticationParams(additionalAuthenticationParam);
+        additionalData.setRequiredParams(requiredParameterList);
+        additionalData.setPromptType(INTERNAL_PROMPT);
         authenticatorData.setAdditionalData(additionalData);
-        additionalData.put(REQUIRED_PARAMS, requiredParameterList.toString());
+
         return Optional.of(authenticatorData);
     }
 
