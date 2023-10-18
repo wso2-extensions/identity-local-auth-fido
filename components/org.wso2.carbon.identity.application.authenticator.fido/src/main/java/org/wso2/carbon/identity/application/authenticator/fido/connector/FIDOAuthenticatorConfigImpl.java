@@ -36,31 +36,37 @@ import java.util.Properties;
 public class FIDOAuthenticatorConfigImpl implements IdentityConnectorConfig {
     @Override
     public String getName() {
+
         return FIDOAuthenticatorConstants.AUTHENTICATOR_NAME;
     }
 
     @Override
     public String getFriendlyName() {
+
         return FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME;
     }
 
     @Override
     public String getCategory() {
+
         return "Multi Factor Authenticators";
     }
 
     @Override
     public String getSubCategory() {
+
         return "DEFAULT";
     }
 
     @Override
     public int getOrder() {
+
         return 0;
     }
 
     @Override
     public Map<String, String> getPropertyNameMapping() {
+
         Map<String, String> nameMapping = new HashMap<>();
         nameMapping.put(FIDOAuthenticatorConstants.ConnectorConfig.ENABLE_USERNAMELESS_AUTHENTICATION,
                 "Enable usernameless authentication");
@@ -71,6 +77,7 @@ public class FIDOAuthenticatorConfigImpl implements IdentityConnectorConfig {
 
     @Override
     public Map<String, String> getPropertyDescriptionMapping() {
+
         Map<String, String> descriptionMapping = new HashMap<>();
         descriptionMapping.put(FIDOAuthenticatorConstants.ConnectorConfig.ENABLE_USERNAMELESS_AUTHENTICATION,
                 "Allow users to login without a username");
@@ -81,6 +88,7 @@ public class FIDOAuthenticatorConfigImpl implements IdentityConnectorConfig {
 
     @Override
     public String[] getPropertyNames() {
+
         List<String> properties = new ArrayList<>();
         properties.add(FIDOAuthenticatorConstants.ConnectorConfig.ENABLE_USERNAMELESS_AUTHENTICATION);
         properties.add(FIDOAuthenticatorConstants.ConnectorConfig.ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT);
@@ -118,6 +126,7 @@ public class FIDOAuthenticatorConfigImpl implements IdentityConnectorConfig {
 
     @Override
     public Map<String, String> getDefaultPropertyValues(String[] strings, String s) throws IdentityGovernanceException {
+
         return null;
     }
 }

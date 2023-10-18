@@ -37,7 +37,6 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.L
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorParamMetadata;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
@@ -68,18 +67,32 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.*;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.CHALLENGE_DATA;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.CHALLENGE_RESPONSE;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.ConnectorConfig;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.ERROR_CODE;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_CREDENTIAL;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_DISPLAY_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_ID;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.IS_PASSKEY_CREATION_CONSENT_RECEIVED;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.FIDO_AUTH_SERVICE;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.REQUIRED_PARAMS;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.SCENARIO;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.ScenarioTypes;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.USER_NAME;
 
 /**
  * FIDO U2F Specification based authenticator.
@@ -108,8 +121,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         // If an authentication complete request comes go through this flow.
         if (StringUtils.isNotEmpty(request.getParameter(TOKEN_RESPONSE)) &&
-                !(!StringUtils.isEmpty(request.getParameter(SCENARIO)) &&
-                        request.getParameter(SCENARIO).equals(ScenarioTypes.INIT_FIDO_ENROL))) {
+                !(!StringUtils.isEmpty(request.getParameter(SCENARIO)) && request.getParameter(SCENARIO).equals(
+                                ScenarioTypes.INIT_FIDO_ENROL))) {
             processAuthenticationResponse(request, response, context);
             return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
         }
