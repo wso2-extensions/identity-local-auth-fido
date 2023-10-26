@@ -67,8 +67,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -85,7 +85,6 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_CREDENTIAL;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_DISPLAY_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_ID;
-import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.IS_PASSKEY_CREATION_CONSENT_RECEIVED;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
@@ -1031,6 +1030,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             context.addEndpointParam(ConnectorConfig.ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT,
                     enablePasskeyProgressiveEnrollment);
         }
+    }
 
     private String base64URLDecode(String value) {
 
