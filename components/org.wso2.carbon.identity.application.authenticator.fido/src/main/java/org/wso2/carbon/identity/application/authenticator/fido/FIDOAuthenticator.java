@@ -117,7 +117,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         // If an authentication complete request comes go through this flow.
         if (StringUtils.isNotEmpty(request.getParameter(TOKEN_RESPONSE)) &&
                 !(StringUtils.isNotEmpty(request.getParameter(SCENARIO)) &&
-                        ScenarioTypes.INIT_FIDO_ENROL.equals(request.getParameter(SCENARIO)))) {
+                        ScenarioTypes.INIT_FIDO_ENROLL.equals(request.getParameter(SCENARIO)))) {
             processAuthenticationResponse(request, response, context);
             return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
         }
@@ -129,7 +129,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         // If a passkey enrollment request comes set a property to the context mentioning the user consent is received.
         if (enablePasskeyProgressiveEnrollment && !StringUtils.isEmpty(request.getParameter(SCENARIO)) &&
-                ScenarioTypes.INIT_FIDO_ENROL.equals(request.getParameter(SCENARIO))) {
+                ScenarioTypes.INIT_FIDO_ENROLL.equals(request.getParameter(SCENARIO))) {
             context.setProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED, true);
         }
 
@@ -219,15 +219,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if (StringUtils.isNotBlank(request.getParameter(SCENARIO))) {
             String scenario = request.getParameter(SCENARIO);
             switch (scenario) {
-                case ScenarioTypes.INIT_FIDO_ENROL:
+                case ScenarioTypes.INIT_FIDO_ENROLL:
                     // Redirect the user in this flow upon user initiating the passkey enrollment request
                     initiatePasskeyEnrollmentRequest(request, response, context);
                     return AuthenticatorFlowStatus.INCOMPLETE;
-                case ScenarioTypes.FINISH_FIDO_ENROL:
+                case ScenarioTypes.FINISH_FIDO_ENROLL:
                     // Redirect the user in this flow upon user requesting to finish the passkey enrollment
                     processPasskeyEnrollmentResponse(request, response, context);
                     return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
-                case ScenarioTypes.CANCEL_FIDO_ENROL:
+                case ScenarioTypes.CANCEL_FIDO_ENROLL:
                     // Redirect the user in this flow upon user cancelling the passkey enrollment
                     processPasskeyEnrollmentResponse(request, response, context);
                     return AuthenticatorFlowStatus.INCOMPLETE;
@@ -325,10 +325,10 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 StringUtils.isNotBlank(data) ? URLEncoder.encode(data, IdentityCoreConstants.UTF_8) : null;
 
         String passkeyEnrollmentPageURL =
-                getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO2_ENROL);
+                getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.FIDO2_ENROLL);
         if (StringUtils.isBlank(passkeyEnrollmentPageURL)) {
             passkeyEnrollmentPageURL = ConfigurationFacade.getInstance().getAuthenticationEndpointURL()
-                    .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO2_ENROL);
+                    .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO2_ENROLL);
         }
         passkeyEnrollmentPageURL = passkeyEnrollmentPageURL + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
                 "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData;

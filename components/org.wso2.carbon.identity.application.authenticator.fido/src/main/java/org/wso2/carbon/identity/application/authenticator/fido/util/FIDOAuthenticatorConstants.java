@@ -37,14 +37,14 @@ public class FIDOAuthenticatorConstants {
 
     public static final String FIDO_AUTH = "FidoAuth";
     public static final String FIDO2_AUTH = "Fido2Auth";
-    public static final String FIDO2_ENROL = "Fido2Enrol";
+    public static final String FIDO2_ENROLL = "Fido2Enroll";
     public static final String FIDO2_PASSKEY_STATUS = "Fido2PasskeyStatus";
     public static final String FIDO2_IDENTIFIER_FIRST = "Fido2IdentifierFirst";
     public static final String APP_ID = "AppID";
 
     public static final String URI_LOGIN = "login.do";
     public static final String URI_FIDO_LOGIN = "fido-auth.jsp";
-    public static final String URI_FIDO2_ENROL = "fido2-enrol.jsp";
+    public static final String URI_FIDO2_ENROLL = "fido2-enroll.jsp";
     public static final String URI_FIDO2_PASSKEY_STATUS = "fido2-passkey-status.jsp";
     public static final String URI_FIDO2_IDENTIFIER_FIRST = "fido2-identifierfirst.jsp";
 
@@ -92,9 +92,9 @@ public class FIDOAuthenticatorConstants {
         }
 
         public static final String INIT_FIDO_AUTH = "INIT_FIDO_AUTH";
-        public static final String INIT_FIDO_ENROL = "INIT_FIDO_ENROL";
-        public static final String FINISH_FIDO_ENROL = "FINISH_FIDO_ENROL";
-        public static final String CANCEL_FIDO_ENROL = "CANCEL_FIDO_ENROL";
+        public static final String INIT_FIDO_ENROLL = "INIT_FIDO_ENROLL";
+        public static final String FINISH_FIDO_ENROLL = "FINISH_FIDO_ENROLL";
+        public static final String CANCEL_FIDO_ENROLL = "CANCEL_FIDO_ENROLL";
     }
 
     /**
