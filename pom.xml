@@ -336,7 +336,7 @@
 
     <properties>
         <carbon.kernel.package.import.version.range>[4.4.0, 5.0.0)</carbon.kernel.package.import.version.range>
-        <identity.framework.version>5.25.400</identity.framework.version>
+        <identity.framework.version>5.25.446</identity.framework.version>
         <carbon.identity.governance.version>1.8.40</carbon.identity.governance.version>
         <identity.governance.imp.pkg.version.range>[1.3.0, 3.0.0)</identity.governance.imp.pkg.version.range>
         <carbon.identity.package.import.version.range>[5.0.0, 7.0.0)</carbon.identity.package.import.version.range>
