@@ -61,6 +61,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
@@ -69,7 +71,6 @@ import java.util.Optional;
 
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.CHALLENGE_DATA;
-import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
@@ -109,7 +110,10 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         AuthenticatedUser user = getUsername(context);
-        String tokenResponse = request.getParameter("tokenResponse");
+        String tokenResponse = request.getParameter(TOKEN_RESPONSE);
+        if (isAPIBasedAuthRequest(request)) {
+            tokenResponse = base64URLDecode(request.getParameter(TOKEN_RESPONSE));
+        }
         if (tokenResponse != null && !tokenResponse.contains("errorCode")) {
             String appID = FIDOUtil.getOrigin(request);
             if (isWebAuthnEnabled()) {
@@ -247,17 +251,18 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         String idpName = context.getExternalIdP().getIdPName();
         authenticatorData.setIdp(idpName);
         authenticatorData.setI18nKey(getI18nKey());
+        authenticatorData.setPromptType(FrameworkConstants.AuthenticatorPromptType.INTERNAL_PROMPT);
 
         List<String> requiredParameterList = new ArrayList<>();
         requiredParameterList.add(TOKEN_RESPONSE);
+        authenticatorData.setRequiredParams(requiredParameterList);
         // Set Additional Data
         AdditionalData additionalData = new AdditionalData();
         Map<String, String> additionalAuthenticationParam = new HashMap<>();
-        additionalAuthenticationParam.put(CHALLENGE_DATA, (String) context.getProperty(FIDOAuthenticatorConstants.
+        String encodedChallengeData = base64URLEncode((String) context.getProperty(FIDOAuthenticatorConstants.
                 AUTHENTICATOR_NAME + FIDOAuthenticatorConstants.CHALLENGE_DATA_SUFFIX));
+        additionalAuthenticationParam.put(CHALLENGE_DATA, encodedChallengeData);
         additionalData.setAdditionalAuthenticationParams(additionalAuthenticationParam);
-        additionalData.setRequiredParams(requiredParameterList);
-        additionalData.setPromptType(INTERNAL_PROMPT);
         authenticatorData.setAdditionalData(additionalData);
 
         return Optional.of(authenticatorData);
@@ -512,5 +517,24 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             }
         }
         return Optional.empty();
+    }
+
+    private String base64URLDecode(String value) {
+
+        return new String(
+                Base64.getUrlDecoder().decode(value),
+                StandardCharsets.UTF_8);
+    }
+
+    private String base64URLEncode(String value) {
+
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean isAPIBasedAuthRequest(HttpServletRequest request) {
+
+        return Boolean.TRUE.equals(request.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW));
     }
 }
