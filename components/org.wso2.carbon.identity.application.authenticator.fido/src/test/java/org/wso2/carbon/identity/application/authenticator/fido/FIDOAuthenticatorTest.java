@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
@@ -71,7 +72,6 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME;
-import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.INTERNAL_PROMPT;
 
 @PrepareForTest({FIDOAuthenticator.class, IdentityUtil.class, MultitenantUtils.class, IdentityTenantUtil.class,
     U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
@@ -81,6 +81,7 @@ public class FIDOAuthenticatorTest {
     private static final String USER_STORE_DOMAIN = "PRIMARY";
     private static final String SUPER_TENANT_DOMAIN = "carbon.super";
     private final String USERNAME = "admin";
+    private final String SAMPLE_TOKEN_CHALLENGE = "sample_token_challenge";
     private FIDOAuthenticator fidoAuthenticator;
 
     @Mock
@@ -473,15 +474,22 @@ public class FIDOAuthenticatorTest {
 
         PowerMockito.when(authenticationContext.getExternalIdP()).thenReturn(externalIdPConfig);
         PowerMockito.when(externalIdPConfig.getIdPName()).thenReturn("LOCAL");
+        PowerMockito.when(authenticationContext.getProperty(anyString())).thenReturn(SAMPLE_TOKEN_CHALLENGE);
         Optional<AuthenticatorData> authenticatorData = fidoAuthenticator.getAuthInitiationData
                 (authenticationContext);
         Assert.assertTrue(authenticatorData.isPresent());
         AuthenticatorData authenticatorDataObj = authenticatorData.get();
 
-        Assert.assertEquals(authenticatorDataObj.getAdditionalDataObj().getPromptType(), INTERNAL_PROMPT);
-        Assert.assertEquals(authenticatorDataObj.getAdditionalDataObj().getRequiredParams().size() ,1);
+        Assert.assertEquals(authenticatorDataObj.getPromptType(),
+                FrameworkConstants.AuthenticatorPromptType.INTERNAL_PROMPT);
+        Assert.assertEquals(authenticatorDataObj.getRequiredParams().size() ,1);
         Assert.assertEquals(authenticatorDataObj.getI18nKey(), AUTHENTICATOR_FIDO);
         Assert.assertEquals(authenticatorDataObj.getDisplayName(), AUTHENTICATOR_FRIENDLY_NAME);
+
+        Assert.assertNotNull(authenticatorDataObj.getAdditionalData());
+        Map<String, String> additionalData = authenticatorDataObj.getAdditionalData()
+                .getAdditionalAuthenticationParams();
+        Assert.assertTrue(additionalData.containsKey(FIDOAuthenticatorConstants.CHALLENGE_DATA));
     }
 
     @Test

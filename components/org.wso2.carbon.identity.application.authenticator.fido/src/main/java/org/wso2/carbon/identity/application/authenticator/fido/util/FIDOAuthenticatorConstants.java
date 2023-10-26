@@ -46,8 +46,6 @@ public class FIDOAuthenticatorConstants {
     public static final String AUTHENTICATOR_FIDO = "authenticator.Fido";
     public static final String TOKEN_RESPONSE = "tokenResponse";
     public static final String CHALLENGE_DATA = "challengeData";
-    public static final String INTERNAL_PROMPT = "INTERNAL_PROMPT";
-    public static final String REQUIRED_PARAMS = "requiredParams";
     public static final String CHALLENGE_DATA_SUFFIX = "_challengeData";
 
     public static class SQLQueries {
