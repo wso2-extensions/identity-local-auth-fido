@@ -26,7 +26,7 @@ public class FIDOAuthenticatorConstants {
     }
 
     public static final String AUTHENTICATOR_NAME = "FIDOAuthenticator";
-    public static final String AUTHENTICATOR_FRIENDLY_NAME = "Security Key/Biometrics";
+    public static final String AUTHENTICATOR_FRIENDLY_NAME = "Passkey";
     public static final String UNUSED = "unused";
     public static final String AUTHENTICATION_STATUS = "authentication.failed";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "no.registered.device.found";
@@ -37,14 +37,29 @@ public class FIDOAuthenticatorConstants {
 
     public static final String FIDO_AUTH = "FidoAuth";
     public static final String FIDO2_AUTH = "Fido2Auth";
+    public static final String FIDO2_ENROLL = "Fido2Enroll";
+    public static final String FIDO2_PASSKEY_STATUS = "Fido2PasskeyStatus";
+    public static final String FIDO2_IDENTIFIER_FIRST = "Fido2IdentifierFirst";
     public static final String APP_ID = "AppID";
 
     public static final String URI_LOGIN = "login.do";
     public static final String URI_FIDO_LOGIN = "fido-auth.jsp";
+    public static final String URI_FIDO2_ENROLL = "fido2-enroll.jsp";
+    public static final String URI_FIDO2_PASSKEY_STATUS = "fido2-passkey-status.jsp";
+    public static final String URI_FIDO2_IDENTIFIER_FIRST = "fido2-identifierfirst.jsp";
 
     public static final String WEBAUTHN_ENABLED = "FIDO.WebAuthn.Enable";
-    public static final String AUTHENTICATOR_FIDO = "authenticator.Fido";
+    public static final String IS_PASSKEY_CREATION_CONSENT_RECEIVED = "isPasskeyCreationConsentReceived";
     public static final String TOKEN_RESPONSE = "tokenResponse";
+    public static final String ERROR_CODE = "errorCode";
+    public static final String CHALLENGE_RESPONSE = "challengeResponse";
+    public static final String SCENARIO = "scenario";
+    public static final String USER_NAME = "username";
+    public static final String FIDO_KEY_DISPLAY_NAME = "displayName";
+    public static final String FIDO_KEY_CREDENTIAL = "credential";
+    public static final String FIDO_KEY_ID = "id";
+    public static final String IS_IDF_INITIATED_FROM_AUTHENTICATOR = "isIdfInitiatedFromAuthenticator";
+    public static final String AUTHENTICATOR_FIDO = "authenticator.Fido";
     public static final String CHALLENGE_DATA = "challengeData";
     public static final String CHALLENGE_DATA_SUFFIX = "_challengeData";
 
@@ -68,6 +83,28 @@ public class FIDOAuthenticatorConstants {
     }
 
     /**
+     * Constants related to FIDO authentication and registration scenarios.
+     */
+    public static class ScenarioTypes {
+        private ScenarioTypes() {
+        }
+
+        public static final String INIT_FIDO_AUTH = "INIT_FIDO_AUTH";
+        public static final String INIT_FIDO_ENROLL = "INIT_FIDO_ENROLL";
+        public static final String FINISH_FIDO_ENROLL = "FINISH_FIDO_ENROLL";
+        public static final String CANCEL_FIDO_ENROLL = "CANCEL_FIDO_ENROLL";
+    }
+
+    /**
+     * Authenticator config related configurations.
+     */
+    public static class ConnectorConfig {
+
+        public static final String ENABLE_PASSKEY_PROGRESSIVE_ENROLLMENT = "FIDO.EnablePasskeyProgressiveEnrollment";
+        public static final String ENABLE_USERNAMELESS_AUTHENTICATION = "FIDO.EnableUsernamelessAuthentication";
+    }
+
+    /**
      * Constants related to log management.
      */
     public static class LogConstants {
@@ -84,4 +121,3 @@ public class FIDOAuthenticatorConstants {
         }
     }
 }
-

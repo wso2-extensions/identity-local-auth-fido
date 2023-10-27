@@ -18,9 +18,9 @@
 
 package org.wso2.carbon.identity.application.authenticator.fido.internal;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.lang.StringUtils;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -32,7 +32,10 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authenticator.fido.FIDOAuthenticator;
+import org.wso2.carbon.identity.application.authenticator.fido.connector.FIDOAuthenticatorConfigImpl;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
+import org.wso2.carbon.identity.governance.IdentityGovernanceService;
+import org.wso2.carbon.identity.governance.common.IdentityConnectorConfig;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.ServerConstants;
@@ -57,6 +60,8 @@ public class FIDOAuthenticatorServiceComponent {
         FIDOAuthenticator fidoAuthenticator = FIDOAuthenticator.getInstance();
 
         try {
+            bundleContext.registerService(IdentityConnectorConfig.class.getName(),
+                    new FIDOAuthenticatorConfigImpl(), null);
             bundleContext.registerService(ApplicationAuthenticator.class.getName(), fidoAuthenticator, null);
             if (log.isDebugEnabled()) {
                 log.debug("FIDOAuthenticator service is registered.");
@@ -124,5 +129,21 @@ public class FIDOAuthenticatorServiceComponent {
             log.debug("UnSetting the Realm Service in FIDO authenticator bundle.");
         }
         FIDOAuthenticatorServiceDataHolder.getInstance().setRealmService(null);
+    }
+
+    @Reference(
+            name = "IdentityGovernanceService",
+            service = org.wso2.carbon.identity.governance.IdentityGovernanceService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityGovernanceService")
+    protected void setIdentityGovernanceService(IdentityGovernanceService idpManager) {
+
+        FIDOAuthenticatorServiceDataHolder.setIdentityGovernanceService(idpManager);
+    }
+
+    protected void unsetIdentityGovernanceService(IdentityGovernanceService idpManager) {
+
+        FIDOAuthenticatorServiceDataHolder.setIdentityGovernanceService(null);
     }
 }

@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.StepConfig;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -376,6 +377,7 @@ public class FIDOAuthenticatorTest {
         whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
         when(webAuthnService.startAuthentication(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(startAuthenticationResponse);
+        when(webAuthnService.startUsernamelessAuthentication(anyString())).thenReturn(startAuthenticationResponse);
 
         Map<String, String> parameterMap = new HashMap<>();
         parameterMap.put(FIDOAuthenticatorConstants.APP_ID, "https://localhost:9443");
@@ -390,7 +392,15 @@ public class FIDOAuthenticatorTest {
         when(URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
         mockServiceURLBuilder();
 
-        fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+        try {
+            fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+        }catch (Exception e) {
+            if (startAuthenticationResponse == null) {
+                Assert.assertEquals(e.getClass(), AuthenticationFailedException.class);
+            } else {
+                Assert.fail("Unexpected exception occurred.");
+            }
+        }
     }
 
     @DataProvider(name = "initiateAuthenticationRequestU2FDataProvider")
@@ -460,7 +470,15 @@ public class FIDOAuthenticatorTest {
         when(URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
         mockServiceURLBuilder();
 
-        fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+        try {
+            fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+        }catch (Exception e) {
+            if (isU2FNullResponse) {
+                Assert.assertEquals(e.getClass(), AuthenticationFailedException.class);
+            } else {
+                Assert.fail("Unexpected exception occurred.");
+            }
+        }
     }
 
     @Test(description = "Test case for retryAuthenticationEnabled() method", priority = 13)
