@@ -616,7 +616,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         List<String> requiredParameterList = new ArrayList<>();
         requiredParameterList.add(TOKEN_RESPONSE);
         authenticatorData.setRequiredParams(requiredParameterList);
-        // Set Additional Data
+        // Set Additional Data.
         AdditionalData additionalData = new AdditionalData();
         Map<String, String> additionalAuthenticationParam = new HashMap<>();
         String encodedChallengeData = base64URLEncode((String) context.getProperty(FIDOAuthenticatorConstants.
