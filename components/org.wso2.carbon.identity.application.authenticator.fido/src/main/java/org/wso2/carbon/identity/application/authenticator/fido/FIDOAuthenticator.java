@@ -123,6 +123,12 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
         }
 
+        // If an authentication flow cancellation request received from the user, go through this flow.
+        if (StringUtils.isNotEmpty(request.getParameter(SCENARIO)) &&
+                        ScenarioTypes.CANCEL_FIDO_AUTH.equals(request.getParameter(SCENARIO))) {
+            return AuthenticatorFlowStatus.FAIL_COMPLETED;
+        }
+
         // Extract the configurations
         boolean enablePasskeyProgressiveEnrollment = isPasskeyProgressiveEnrollmentEnabled(context.getTenantDomain());
         boolean enableUsernamelessAuthentication = isUsernamelessAuthenticationEnabled(context.getTenantDomain());
