@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
+import org.wso2.carbon.extension.identity.helper.FederatedAuthenticatorUtil;
 import org.wso2.carbon.identity.application.authentication.framework.AbstractApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.LocalApplicationAuthenticator;
@@ -42,6 +43,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
 import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAuthenticatorServerException;
+import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
@@ -50,6 +52,8 @@ import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2Registr
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.JustInTimeProvisioningConfig;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -57,6 +61,7 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -143,7 +148,18 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(context);
 
         if (authenticatedUser != null) {
-            boolean enrolledPasskeysExist = hasUserSetPasskeys(authenticatedUser.getUserName());
+
+            // We need to identify the username that the server is using to identify the user. This is needed to handle
+            // federated scenarios, since for federated users, the username in the authentication context is not same
+            // as the username when the user is provisioned to the server.
+            String mappedLocalUsername = getMappedLocalUsername(authenticatedUser, context);
+            if (StringUtils.isBlank(mappedLocalUsername)) {
+                // If the mappedLocalUsername is blank, that means this is an initial login attempt by an unprovisioned
+                // federated user.
+                handleUnProvisionedFederatedUser(response);
+                return AuthenticatorFlowStatus.INCOMPLETE;
+            }
+            boolean enrolledPasskeysExist = hasUserSetPasskeys(mappedLocalUsername);
             if (enrolledPasskeysExist) {
                 // If the user have already enrolled passkeys and if the user initiated a passkey enrollment request,
                 // then inform the user that passkeys already exist and disregard the enrollment request.
@@ -309,6 +325,17 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     "identifying the user");
         }
 
+        //If the user is federated, retrieve the just-in-time provisioned federated user.
+        if ((user != null) && user.isFederatedUser()) {
+            AuthenticatedUser provisionedFederateUser = getProvisionedFederatedUser(user, context);
+            if (provisionedFederateUser == null) {
+                // If the provisionedFederateUser is blank, that means this is a login attempt by an unprovisioned
+                // federated user.
+                handleUnProvisionedFederatedUser(response);
+            }
+            user = provisionedFederateUser;
+        }
+
         // Retrieving AppID
         // Origin as appID eg: https://example.com:8080
         String appID = resolveAppId(request);
@@ -393,6 +420,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throw new AuthenticationFailedException("Passkey enrollment failed! Cannot proceed further without " +
                     "identifying the user");
         }
+        //If the user is federated, retrieve the just-in-time provisioned federated user.
+        if (user.isFederatedUser()) {
+            AuthenticatedUser provisionedFederateUser = getProvisionedFederatedUser(user, context);
+            if (provisionedFederateUser == null) {
+                // If the provisionedFederateUser is blank, that means this is a login attempt by an unprovisioned
+                // federated user.
+                handleUnProvisionedFederatedUser(response);
+            }
+            user = provisionedFederateUser;
+        }
 
         String challengeResponse = request.getParameter(CHALLENGE_RESPONSE);
         String displayName = request.getParameter(FIDO_KEY_DISPLAY_NAME);
@@ -440,6 +477,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         AuthenticatedUser user = getUsername(context);
+        //If the user is federated, retrieve the just-in-time provisioned federated user.
+        if ((user != null) && user.isFederatedUser()) {
+            AuthenticatedUser provisionedFederateUser = getProvisionedFederatedUser(user, context);
+            if (provisionedFederateUser == null) {
+                // If the provisionedFederateUser is blank, that means this is a login attempt by an unprovisioned
+                // federated user.
+                handleUnProvisionedFederatedUser(response);
+            }
+            user = provisionedFederateUser;
+        }
         String tokenResponse = request.getParameter(TOKEN_RESPONSE);
 
         if (isAPIBasedAuthRequest(request)) {
@@ -559,9 +606,22 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         }
         AuthenticatedUser user = getUsername(context);
 
+        // If the username was initially obtained through the passkey identifier first page, the user needs to be
+        // resolved by retrieving the collected username.
         if ((user == null) && isFidoAsFirstFactor(context) && isIDFInitiatedFromAuthenticator(context)) {
             String username = retrievePersistedUsername(context);
             user = resolveUserFromUsername(username, context);
+        }
+
+        //If the user is federated, retrieve the just-in-time provisioned federated user.
+        if ((user != null) && user.isFederatedUser()) {
+            AuthenticatedUser provisionedFederateUser = getProvisionedFederatedUser(user, context);
+            if (provisionedFederateUser == null) {
+                // If the provisionedFederateUser is blank, that means this is a login attempt by an unprovisioned
+                // federated user.
+                handleUnProvisionedFederatedUser(response);
+            }
+            user = provisionedFederateUser;
         }
 
         // Retrieving AppID
@@ -605,8 +665,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      *
      * @param context The authentication context containing information about the current authentication attempt.
      * @return An {@code Optional} containing an {@code AuthenticatorData} object representing the initiation data.
-     *         If the initiation data is available, it is encapsulated within the {@code Optional}; otherwise,
-     *         an empty {@code Optional} is returned.
+     * If the initiation data is available, it is encapsulated within the {@code Optional}; otherwise,
+     * an empty {@code Optional} is returned.
      */
     @Override
     public Optional<AuthenticatorData> getAuthInitiationData(AuthenticationContext context) {
@@ -989,7 +1049,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     contextRuntimeParams.get(FrameworkConstants.JSAttributes.JS_COMMON_OPTIONS);
             if (identifierParams != null) {
                 return (String) identifierParams.get(FrameworkConstants.JSAttributes.JS_OPTIONS_USERNAME);
-            }
+        }
         }
         return null; // Return null if not found.
     }
@@ -1055,5 +1115,140 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private boolean isAPIBasedAuthRequest(HttpServletRequest request) {
 
         return Boolean.TRUE.equals(request.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW));
+    }
+
+    /**
+     * Retrieve the provisioned username of the authenticated user. If this is a federated scenario, the
+     * authenticated username will be same as the username in context. If the flow is for a JIT provisioned user, the
+     * provisioned username will be returned.
+     *
+     * @param authenticatedUser AuthenticatedUser.
+     * @param context           AuthenticationContext.
+     * @return Provisioned username
+     * @throws AuthenticationFailedException If an error occurred while getting the provisioned username.
+     */
+    private String getMappedLocalUsername(AuthenticatedUser authenticatedUser, AuthenticationContext context)
+            throws AuthenticationFailedException {
+
+        if (!authenticatedUser.isFederatedUser()) {
+            return authenticatedUser.getUserName();
+        }
+        // If the user is federated, we need to check whether the user is already jit provisioned to the organization.
+        String federatedUsername = FederatedAuthenticatorUtil.getLoggedInFederatedUser(context);
+        if (StringUtils.isBlank(federatedUsername)) {
+            throw new AuthenticationFailedException("No federated user found");
+        }
+        String associatedLocalUsername =
+                FederatedAuthenticatorUtil.getLocalUsernameAssociatedWithFederatedUser(MultitenantUtils.
+                        getTenantAwareUsername(federatedUsername), context);
+        if (StringUtils.isNotBlank(associatedLocalUsername)) {
+            return associatedLocalUsername;
+        }
+        return null;
+    }
+
+    /**
+     * Get the locally mapped user for federated authentication scenarios.
+     *
+     * @param authenticatedUserInContext AuthenticatedUser retrieved from context.
+     * @param context                    AuthenticationContext
+     * @throws AuthenticationFailedException If an error occurred.
+     */
+    private AuthenticatedUser getProvisionedFederatedUser(AuthenticatedUser authenticatedUserInContext,
+                                                          AuthenticationContext context)
+            throws AuthenticationFailedException {
+
+        // We need to identify the username that the server is using to identify the user. This is needed to handle
+        // federated scenarios, since for federated users, the username in the authentication context is not same as
+        // the username when the user is provisioned to the server.
+        String mappedLocalUsername = getMappedLocalUsername(authenticatedUserInContext, context);
+
+        // If the mappedLocalUsername is blank, that means this is an initial login attempt by an unprovisioned
+        // federated user.
+        boolean isInitialFederationAttempt = StringUtils.isBlank(mappedLocalUsername);
+
+        if (authenticatedUserInContext.isFederatedUser() && !isInitialFederationAttempt) {
+            // At this point, the authenticating user is in our system but has a different mapped username compared
+            // to the identifier that is in the authentication context. Therefore, we need to have a new
+            // AuthenticatedUser object with the mapped local username to identify the user.
+            AuthenticatedUser authenticatingUser = new AuthenticatedUser(authenticatedUserInContext);
+            authenticatingUser.setUserName(mappedLocalUsername);
+            authenticatingUser.setUserStoreDomain(getFederatedUserstoreDomain(authenticatedUserInContext,
+                    context.getTenantDomain()));
+            return authenticatingUser;
+        }
+        return null;
+    }
+
+    /**
+     * Get the JIT provisioning userstore domain of the authenticated user.
+     *
+     * @param user         AuthenticatedUser.
+     * @param tenantDomain Tenant domain.
+     * @return JIT provisioning userstore domain.
+     * @throws AuthenticationFailedException If an error occurred.
+     */
+    private String getFederatedUserstoreDomain(AuthenticatedUser user, String tenantDomain)
+            throws AuthenticationFailedException {
+
+        String federatedIdp = user.getFederatedIdPName();
+        IdentityProvider idp = getIdentityProvider(federatedIdp, tenantDomain);
+        JustInTimeProvisioningConfig provisioningConfig = idp.getJustInTimeProvisioningConfig();
+        if (provisioningConfig == null) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("No JIT provisioning configs for idp: %s in tenant: %s", federatedIdp,
+                        tenantDomain));
+            }
+            return null;
+        }
+        String provisionedUserstore = provisioningConfig.getProvisioningUserStore();
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Setting userstore: %s as the provisioning userstore for user: %s in tenant: %s",
+                    provisionedUserstore, user.getUserName(), tenantDomain));
+        }
+        return provisionedUserstore;
+    }
+
+    private void handleUnProvisionedFederatedUser(HttpServletResponse response) throws AuthenticationFailedException {
+
+        try {
+            response.sendRedirect(getProvisionedUserNotFoundRedirectUrl(response));
+        } catch (URLBuilderException | URISyntaxException | UnsupportedEncodingException e) {
+            throw new AuthenticationFailedException("Error while building provisioned user not found redirect URL.", e);
+        } catch (IOException e) {
+            throw new AuthenticationFailedException("Could not initiate provisioned user not found redirect request",
+                    e);
+        }
+    }
+
+    private String getProvisionedUserNotFoundRedirectUrl(HttpServletResponse response)
+            throws UnsupportedEncodingException, URLBuilderException, URISyntaxException {
+
+        String redirectURL = ConfigurationFacade.getInstance().getAuthenticationEndpointErrorURL();
+
+        redirectURL = response.encodeRedirectURL(redirectURL + ("?")) +
+                "&statusMsg=" + URLEncoder.encode(
+                FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_PROVISIONED_USER_NOT_FOUND_ERROR_MESSAGE,
+                IdentityCoreConstants.UTF_8) + "&status=" + URLEncoder.encode(FIDOAuthenticatorConstants
+                .AUTHENTICATION_FAILED_STATUS, IdentityCoreConstants.UTF_8);
+
+        return buildAbsoluteURL(redirectURL);
+    }
+
+    private IdentityProvider getIdentityProvider(String idpName, String tenantDomain) throws
+            AuthenticationFailedException {
+
+        try {
+            IdentityProvider idp =
+                    FIDOAuthenticatorServiceDataHolder.getIdpManager().getIdPByName(idpName, tenantDomain);
+            if (idp == null) {
+                throw new AuthenticationFailedException(
+                        String.format("No IDP found with the name IDP: %s in tenant: %s", idpName, tenantDomain));
+            }
+            return idp;
+        } catch (IdentityProviderManagementException e) {
+            throw new AuthenticationFailedException(
+                    String.format("Error occurred while getting IDP: %s from tenant: %s", idpName, tenantDomain));
+        }
     }
 }

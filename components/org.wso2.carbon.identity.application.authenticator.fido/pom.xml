@@ -5,7 +5,7 @@
         <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
         <artifactId>identity-application-auth-fido</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.4.1-SNAPSHOT</version>
+        <version>5.4.0</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -36,6 +36,24 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
             <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.extension.identity.authenticator.utils</groupId>
+            <artifactId>org.wso2.carbon.extension.identity.helper</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.wso2.carbon.identity</groupId>
+                    <artifactId>org.wso2.carbon.identity.application.authenticator.oidc</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.wso2.carbon.identity</groupId>
+                    <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon</groupId>
@@ -118,6 +136,8 @@
                             org.wso2.carbon.context; version="${carbon.kernel.package.import.version.range}",
                             org.wso2.carbon.identity.application.common.*;
                             version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.extension.identity.helper.*;
+                            version="${identity.extension.utils.import.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.central.log.mgt.utils; version="${carbon.identity.package.import.version.range}",

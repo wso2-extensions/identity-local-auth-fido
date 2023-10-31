@@ -30,6 +30,9 @@ public class FIDOAuthenticatorConstants {
     public static final String UNUSED = "unused";
     public static final String AUTHENTICATION_STATUS = "authentication.failed";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "no.registered.device.found";
+    public static final String AUTHENTICATION_FAILED_STATUS = "authentication.attempt.failed";
+    public static final String AUTHENTICATION_FAILED_PROVISIONED_USER_NOT_FOUND_ERROR_MESSAGE =
+            "provisioned.user.not.found";
 
     public static final String U2F_KEY_HANDLE = "KEY_HANDLE";
     public static final String U2F_DEVICE_DATA = "DEVICE_DATA";

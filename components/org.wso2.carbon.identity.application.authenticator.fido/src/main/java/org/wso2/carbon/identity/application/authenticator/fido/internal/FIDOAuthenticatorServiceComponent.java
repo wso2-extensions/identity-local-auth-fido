@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.identity.governance.common.IdentityConnectorConfig;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.ServerConstants;
 
@@ -145,5 +146,22 @@ public class FIDOAuthenticatorServiceComponent {
     protected void unsetIdentityGovernanceService(IdentityGovernanceService idpManager) {
 
         FIDOAuthenticatorServiceDataHolder.setIdentityGovernanceService(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.idp.mgt.IdpManager",
+            service = IdpManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityProviderManagementService"
+    )
+    protected void setIdentityProviderManagementService(IdpManager idpManager) {
+
+        FIDOAuthenticatorServiceDataHolder.setIdpManager(idpManager);
+    }
+
+    protected void unsetIdentityProviderManagementService(IdpManager idpManager) {
+
+        FIDOAuthenticatorServiceDataHolder.setIdpManager(null);
     }
 }
