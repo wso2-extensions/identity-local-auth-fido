@@ -197,6 +197,21 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.extension.identity.authenticator.utils</groupId>
+                <artifactId>org.wso2.carbon.extension.identity.helper</artifactId>
+                <version>${carbon.extension.identity.helper.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.wso2.carbon.identity</groupId>
+                        <artifactId>org.wso2.carbon.identity.application.authenticator.oidc</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.wso2.carbon.identity</groupId>
+                        <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.api.version}</version>
@@ -340,6 +355,8 @@
         <carbon.identity.governance.version>1.8.40</carbon.identity.governance.version>
         <identity.governance.imp.pkg.version.range>[1.3.0, 3.0.0)</identity.governance.imp.pkg.version.range>
         <carbon.identity.package.import.version.range>[5.0.0, 7.0.0)</carbon.identity.package.import.version.range>
+        <carbon.extension.identity.helper.version>1.0.13</carbon.extension.identity.helper.version>
+        <identity.extension.utils.import.version.range>[1.0.8,2.0.0)</identity.extension.utils.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>32.1.1-jre</google.guava.version>
         <fasterxml.jackson.version>2.13.2</fasterxml.jackson.version>
