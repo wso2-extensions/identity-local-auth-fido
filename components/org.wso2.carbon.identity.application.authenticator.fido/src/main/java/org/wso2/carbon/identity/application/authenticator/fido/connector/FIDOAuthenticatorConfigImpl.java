@@ -98,8 +98,8 @@ public class FIDOAuthenticatorConfigImpl implements IdentityConnectorConfig {
     @Override
     public Properties getDefaultPropertyValues(String tenantDomain) throws IdentityGovernanceException {
 
-        String enableUsernamelessAuthentication = "false";
-        String enablePasskeyProgressiveEnrollment = "true";
+        String enableUsernamelessAuthentication = "true";
+        String enablePasskeyProgressiveEnrollment = "false";
 
         String enableUsernamelessAuthenticationProperty =
                 IdentityUtil.getProperty(FIDOAuthenticatorConstants.ConnectorConfig.ENABLE_USERNAMELESS_AUTHENTICATION);

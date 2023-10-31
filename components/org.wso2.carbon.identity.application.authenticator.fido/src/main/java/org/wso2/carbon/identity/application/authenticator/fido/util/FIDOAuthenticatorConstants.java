@@ -90,6 +90,7 @@ public class FIDOAuthenticatorConstants {
         }
 
         public static final String INIT_FIDO_AUTH = "INIT_FIDO_AUTH";
+        public static final String CANCEL_FIDO_AUTH = "CANCEL_FIDO_AUTH";
         public static final String INIT_FIDO_ENROLL = "INIT_FIDO_ENROLL";
         public static final String FINISH_FIDO_ENROLL = "FINISH_FIDO_ENROLL";
         public static final String CANCEL_FIDO_ENROLL = "CANCEL_FIDO_ENROLL";
