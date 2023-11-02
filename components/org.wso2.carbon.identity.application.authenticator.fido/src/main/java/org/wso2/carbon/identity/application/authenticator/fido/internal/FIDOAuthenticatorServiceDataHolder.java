@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.wso2.carbon.identity.governance.IdentityGovernanceService;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
 
 
@@ -35,6 +36,7 @@ public class FIDOAuthenticatorServiceDataHolder {
     private BundleContext bundleContext = null;
     private RealmService realmService = null;
     private static IdentityGovernanceService identityGovernanceService;
+    private static IdpManager idpManager;
 
     private FIDOAuthenticatorServiceDataHolder() {
     }
@@ -80,5 +82,28 @@ public class FIDOAuthenticatorServiceDataHolder {
     public static void setIdentityGovernanceService(IdentityGovernanceService identityGovernanceService) {
 
         FIDOAuthenticatorServiceDataHolder.identityGovernanceService = identityGovernanceService;
+    }
+
+    /**
+     * Get IdpManager.
+     *
+     * @return IdpManager.
+     */
+    public static IdpManager getIdpManager() {
+
+        if (idpManager == null) {
+            throw new RuntimeException("IdpManager not available. Component is not started properly.");
+        }
+        return idpManager;
+    }
+
+    /**
+     * Set IdpManager.
+     *
+     * @param idpManager IdpManager.
+     */
+    public static void setIdpManager(IdpManager idpManager) {
+
+        FIDOAuthenticatorServiceDataHolder.idpManager = idpManager;
     }
 }
