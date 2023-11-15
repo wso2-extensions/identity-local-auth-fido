@@ -844,7 +844,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throw new AuthenticationFailedException("A system error occurred while finishing passkey enrollment.");
         } catch (FIDO2AuthenticatorClientException e) {
             String message = "Client error while finishing passkey enrollment.";
-            setAuthenticatorMessageToContext(message, e.getErrorCode(), null, context);
+            setAuthenticatorMessageToContext(message, e.getErrorCode(), context);
             throw new AuthenticationFailedException("Client error while finishing passkey enrollment.");
         }
     }
