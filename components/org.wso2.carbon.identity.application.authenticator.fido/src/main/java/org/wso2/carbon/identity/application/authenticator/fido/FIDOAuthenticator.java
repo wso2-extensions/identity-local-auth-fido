@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AdditionalData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorMessage;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
@@ -110,6 +111,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private static final Log log = LogFactory.getLog(FIDOAuthenticator.class);
 
     private static FIDOAuthenticator instance = new FIDOAuthenticator();
+    private static final String AUTHENTICATOR_MESSAGE = "authenticatorMessage";
 
     @Override
     public AuthenticatorFlowStatus process(HttpServletRequest request, HttpServletResponse response,
@@ -355,7 +357,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throws AuthenticationFailedException, UnsupportedEncodingException, URLBuilderException,
             URISyntaxException {
 
-        String data = initiateFido2PasskeyEnrollmentRequest(appID, user);
+        String data = initiateFido2PasskeyEnrollmentRequest(appID, user, context);
         String urlEncodedData =
                 StringUtils.isNotBlank(data) ? URLEncoder.encode(data, IdentityCoreConstants.UTF_8) : null;
 
@@ -437,7 +439,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         if (challengeResponse != null && !challengeResponse.contains(ERROR_CODE)) {
 
-            processFido2PasskeyEnrollmentResponse(challengeResponse, user.getUserName());
+            processFido2PasskeyEnrollmentResponse(challengeResponse, user.getUserName(), context);
 
             // Parse the JSON string into a JSONObject
             JSONObject json = new JSONObject(challengeResponse);
@@ -449,7 +451,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             String credentialId = credentialObject.getString(FIDO_KEY_ID);
 
             // Set the key name
-            setPasskeyDisplayName(credentialId, displayName, user.getUserName());
+            setPasskeyDisplayName(credentialId, displayName, user.getUserName(), context);
 
             context.setSubject(user);
             context.setProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED, false);
@@ -529,7 +531,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
     }
 
-    private void setPasskeyDisplayName(String credentialId, String displayName, String username)
+    private void setPasskeyDisplayName(String credentialId, String displayName, String username,
+                                       AuthenticationContext context)
             throws AuthenticationFailedException {
 
         WebAuthnService webAuthnService = new WebAuthnService();
@@ -537,9 +540,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             try {
                 webAuthnService.updateFIDO2DeviceDisplayName(credentialId, displayName, username);
             } catch (FIDO2AuthenticatorClientException e) {
+                String message = "Client error while updating the display name of passkey with credentialId: "
+                        + credentialId;
+                setAuthenticatorMessageToContext(message, e.getErrorCode(), context);
                 if (log.isDebugEnabled()) {
-                    log.debug("Client error while updating the display name of passkey with credentialId: " +
-                            credentialId, e);
+                    log.debug(message, e);
                 }
                 throw new AuthenticationFailedException(
                         "Error while updating display name of passkey. Passkey enrollment is not available with " +
@@ -550,6 +555,14 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                 credentialId, e);
             }
         }
+    }
+
+    private static void setAuthenticatorMessageToContext(String errorMessage, String errorCode,
+                                                         AuthenticationContext context) {
+
+        AuthenticatorMessage authenticatorMessage = new AuthenticatorMessage(FrameworkConstants.
+                AuthenticatorMessageType.ERROR, errorCode, errorMessage, null);
+        context.setProperty(AUTHENTICATOR_MESSAGE, authenticatorMessage);
     }
 
     @Override
@@ -793,7 +806,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 user.getTenantDomain(), user.getUserStoreDomain(), appID);
     }
 
-    private String initiateFido2PasskeyEnrollmentRequest(String appID, AuthenticatedUser user)
+    private String initiateFido2PasskeyEnrollmentRequest(String appID, AuthenticatedUser user,
+                                                         AuthenticationContext context)
             throws AuthenticationFailedException {
 
         try {
@@ -811,12 +825,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throw new AuthenticationFailedException("A system error occurred while serializing start passkey " +
                     "enrollment response for the appId :" + appID);
         } catch (FIDO2AuthenticatorClientException e) {
+            String message = "FIDO2 trusted origin: " + appID + " sent in the request is invalid.";
+            setAuthenticatorMessageToContext(message, e.getErrorCode(), context);
             throw new AuthenticationFailedException("FIDO2 trusted origin: " + appID + " sent in the request is " +
                     "invalid.");
         }
     }
 
-    private void processFido2PasskeyEnrollmentResponse(String challengeResponse, String username)
+    private void processFido2PasskeyEnrollmentResponse(String challengeResponse, String username,
+                                                       AuthenticationContext context)
             throws AuthenticationFailedException {
 
         WebAuthnService webAuthnService = new WebAuthnService();
@@ -825,6 +842,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         } catch (FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException("A system error occurred while finishing passkey enrollment.");
         } catch (FIDO2AuthenticatorClientException e) {
+            String message = "Client error while finishing passkey enrollment.";
+            setAuthenticatorMessageToContext(message, e.getErrorCode(), null, context);
             throw new AuthenticationFailedException("Client error while finishing passkey enrollment.");
         }
     }
