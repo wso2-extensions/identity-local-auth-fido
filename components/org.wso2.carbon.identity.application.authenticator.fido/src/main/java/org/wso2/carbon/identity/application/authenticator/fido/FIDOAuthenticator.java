@@ -439,8 +439,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         if (challengeResponse != null && !challengeResponse.contains(ERROR_CODE)) {
 
-            processFido2PasskeyEnrollmentResponse(challengeResponse, user.getUserName(), context);
-
+            processFido2PasskeyEnrollmentResponse(challengeResponse, user.getUsernameAsSubjectIdentifier(true, true),
+                    context);
             // Parse the JSON string into a JSONObject
             JSONObject json = new JSONObject(challengeResponse);
 
@@ -451,7 +451,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             String credentialId = credentialObject.getString(FIDO_KEY_ID);
 
             // Set the key name
-            setPasskeyDisplayName(credentialId, displayName, user.getUserName(), context);
+            setPasskeyDisplayName(credentialId, displayName, user.getUsernameAsSubjectIdentifier(true, true), context);
 
             context.setSubject(user);
             context.setProperty(IS_PASSKEY_CREATION_CONSENT_RECEIVED, false);
@@ -506,6 +506,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             } else {
                 processFidoAuthenticationResponse(user, appID, tokenResponse);
             }
+            user.setAuthenticatedSubjectIdentifier(user.getUsernameAsSubjectIdentifier(true, true));
             context.setSubject(user);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -788,7 +789,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                         processMultiAttributeLoginIdentification(tenantAwareUsername, tenantDomain);
                 if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS
                         .equals(resolvedUserResult.getResolvedStatus())) {
-                    tenantAwareUsername = resolvedUserResult.getUser().getUsername();
                     user.setUserName(resolvedUserResult.getUser().getUsername());
                     user.setUserId(resolvedUserResult.getUser().getUserID());
                     user.setUserStoreDomain(resolvedUserResult.getUser().getUserStoreDomain());
@@ -798,7 +798,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         //Initiate the usernameless authentication process when either the user is unidentified or the identified user
         // lacks an enrolled passkey.
-        if (user == null || !hasUserSetPasskeys(user.getUserName())) {
+        if (user == null || !hasUserSetPasskeys(user.getUsernameAsSubjectIdentifier(true, true))) {
             return webAuthnService.startUsernamelessAuthentication(appID);
         }
 
@@ -813,7 +813,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         try {
             WebAuthnService webAuthnService = new WebAuthnService();
             Either<String, FIDO2RegistrationRequest> result =
-                    webAuthnService.startFIDO2UsernamelessRegistration(appID, user.getUserName());
+                    webAuthnService.startFIDO2UsernamelessRegistration(appID,
+                            user.getUsernameAsSubjectIdentifier(true, true));
 
             if (result.isRight()) {
                 return writeJson(result.right().get());
@@ -886,15 +887,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     FIDOAuthenticatorConstants.CHALLENGE_DATA_SUFFIX, data);
             if (StringUtils.isNotBlank(data)) {
                 String urlEncodedData = URLEncoder.encode(data, IdentityCoreConstants.UTF_8);
-                return loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
-                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData;
+                return buildAbsoluteURL(loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
+                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData);
             }
         } else {
             AuthenticateRequestData data = initiateFidoAuthenticationRequest(user, appID);
             if (data != null) {
                 String encodedData = URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
-                return loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
-                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + encodedData;
+                return buildAbsoluteURL(loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
+                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + encodedData);
             }
         }
         throw new AuthenticationFailedException("The failure occurred while initiating the authentication request " +
@@ -1023,10 +1024,10 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         String userStoreDomain = UserCoreUtil.extractDomainFromName(username);
         String tenantDomain = MultitenantUtils.getTenantDomain(username);
 
-        user.setAuthenticatedSubjectIdentifier(tenantAwareUsername);
         user.setUserName(tenantAwareUsername);
         user.setUserStoreDomain(userStoreDomain);
         user.setTenantDomain(tenantDomain);
+        user.setAuthenticatedSubjectIdentifier(user.getUsernameAsSubjectIdentifier(true, true));
         return user;
     }
 
@@ -1151,7 +1152,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throws AuthenticationFailedException {
 
         if (!authenticatedUser.isFederatedUser()) {
-            return authenticatedUser.getUserName();
+            return authenticatedUser.getUsernameAsSubjectIdentifier(true, true);
         }
         // If the user is federated, we need to check whether the user is already jit provisioned to the organization.
         String federatedUsername = FederatedAuthenticatorUtil.getLoggedInFederatedUser(context);
@@ -1162,7 +1163,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 FederatedAuthenticatorUtil.getLocalUsernameAssociatedWithFederatedUser(MultitenantUtils.
                         getTenantAwareUsername(federatedUsername), context);
         if (StringUtils.isNotBlank(associatedLocalUsername)) {
-            return associatedLocalUsername;
+            return FrameworkUtils.preprocessUsername(associatedLocalUsername, context);
         }
         return null;
     }
