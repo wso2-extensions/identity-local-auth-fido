@@ -693,8 +693,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         authenticatorData.setIdp(idpName);
         authenticatorData.setI18nKey(getI18nKey());
         authenticatorData.setPromptType(FrameworkConstants.AuthenticatorPromptType.INTERNAL_PROMPT);
-        if (context.getProperty(AUTHENTICATOR_MESSAGE) != null) {
-            authenticatorData.setMessage((AuthenticatorMessage) context.getProperty(AUTHENTICATOR_MESSAGE));
+        Object propertyValue = context.getProperty(AUTHENTICATOR_MESSAGE);
+        if (propertyValue instanceof AuthenticatorMessage) {
+            authenticatorData.setMessage((AuthenticatorMessage) propertyValue);
         }
 
         List<String> requiredParameterList = new ArrayList<>();
