@@ -110,6 +110,8 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.text.MessageFormat;
@@ -212,8 +214,8 @@ public class WebAuthnService {
     public Either<String, FIDO2RegistrationRequest> startFIDO2Registration(@NonNull String origin)
             throws JsonProcessingException, FIDO2AuthenticatorClientException {
 
-        validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
+        validateFIDO2TrustedOrigin(originUrl);
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
@@ -252,8 +254,8 @@ public class WebAuthnService {
                                                                                        String username)
             throws JsonProcessingException, FIDO2AuthenticatorClientException {
 
-        validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
+        validateFIDO2TrustedOrigin(originUrl);
         RelyingParty relyingParty = buildRelyingParty(originUrl);
 
         if (username == null) {
@@ -1084,12 +1086,25 @@ public class WebAuthnService {
         return request;
     }
 
-    private void validateFIDO2TrustedOrigin(String origin) throws FIDO2AuthenticatorClientException {
+    private void validateFIDO2TrustedOrigin(URL origin) throws FIDO2AuthenticatorClientException {
 
+        String normalizedOrigin = normalizeOrigin(origin);
         readTrustedOrigins();
-        if (!origins.contains(origin.trim())) {
+        if (!origins.contains(normalizedOrigin)) {
             throw new FIDO2AuthenticatorClientException(INVALID_ORIGIN_MESSAGE,
                     ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN.getErrorCode());
+        }
+    }
+
+    private String normalizeOrigin(URL origin) throws FIDO2AuthenticatorClientException {
+
+        try {
+            return new URI(origin.getProtocol(), null, origin.getHost(),
+                    origin.getPort() == -1 ? origin.getDefaultPort() : origin.getPort(),
+                    null, null, null).toString();
+        } catch (URISyntaxException e) {
+            throw new FIDO2AuthenticatorClientException(INVALID_ORIGIN_MESSAGE,
+                    ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN.getErrorCode(), e);
         }
     }
 
@@ -1102,7 +1117,6 @@ public class WebAuthnService {
             throw new FIDO2AuthenticatorClientException(INVALID_ORIGIN_MESSAGE,
                     ERROR_CODE_START_REGISTRATION_INVALID_ORIGIN.getErrorCode(), e);
         }
-
         return originUrl;
     }
 
