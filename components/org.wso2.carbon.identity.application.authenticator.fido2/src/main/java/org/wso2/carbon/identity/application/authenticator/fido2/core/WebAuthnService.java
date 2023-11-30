@@ -124,6 +124,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.yubico.webauthn.data.UserVerificationRequirement.PREFERRED;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.APPLICATION_NAME;
@@ -163,7 +164,7 @@ public class WebAuthnService {
     private static final SecureRandom random = new SecureRandom();
     private final ObjectMapper jsonMapper = JacksonCodecs.json();
     private static final FIDO2DeviceStoreDAO userStorage = FIDO2DeviceStoreDAO.getInstance();
-    private static ArrayList origins = null;
+    private static List<String> origins = null;
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
 
     private static volatile WebAuthnManager webAuthnManager;
@@ -992,16 +993,46 @@ public class WebAuthnService {
     private void readTrustedOrigins() {
 
         if (origins == null) {
+            origins = new ArrayList<>();
             Object value = IdentityConfigParser.getInstance().getConfiguration().get(TRUSTED_ORIGINS);
-            if (value == null) {
-                origins = new ArrayList<>();
-            } else if (value instanceof ArrayList) {
-                origins = (ArrayList) value;
-            } else {
-                origins = new ArrayList<>(Arrays.asList((String) value));
+            if (value instanceof ArrayList) {
+                origins.addAll((ArrayList) value);
+            } else if (value instanceof String) {
+                origins.add((String) value);
             }
-            origins.replaceAll(i -> IdentityUtil.fillURLPlaceholders((String) i));
+            origins.replaceAll(IdentityUtil::fillURLPlaceholders);
+
+            /*
+             * Process the list of origins to ensure all variations are covered:
+             * 1. For each origin, remove the default ports (443 for HTTPS and 80 for HTTP) if they are explicitly
+             *    specified.
+             * 2. Then, for each origin, add variations with the default ports explicitly appended.
+             * 3. This ensures that the list contains both versions of each origin (with and without default ports),
+             *    accommodating scenarios where the default port might be omitted or explicitly included in the origin
+             * string.
+             */
+            List<String> updatedOrigins = origins.stream()
+                    .flatMap(url -> Stream.of(removeDefaultPort(url), appendDefaultPortIfAbsent(url))).distinct()
+                    .collect(Collectors.toList());
+
+            origins.clear();
+            origins.addAll(updatedOrigins);
         }
+    }
+
+    private String removeDefaultPort(String url) {
+
+        return url.replaceAll(":(443|80)(/|$)", "$2");
+    }
+
+    private String appendDefaultPortIfAbsent(String url) {
+
+        if (url.matches("^https://[^/:]+($|/)")) {
+            return url + ":443";
+        } else if (url.matches("^http://[^/:]+($|/)")) {
+            return url + ":80";
+        }
+        return url;
     }
 
     private AssertionResult getAssertionResult(AssertionRequest request, AssertionResponse response,
