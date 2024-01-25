@@ -107,6 +107,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -948,7 +949,10 @@ public class WebAuthnService {
         String claimValue;
         try {
             UserStoreManager userStoreManager = getUserStoreManager(user);
-            claimValue = userStoreManager.getUserClaimValue(user.getUserName(), claimURL, null);
+            // When use Google federated progressive enrollment email type user name become tenant qualified username.
+            // So adding MultitenantUtils.getTenantAwareUsername to pass tenantAwareUsername
+            claimValue = userStoreManager.getUserClaimValue(MultitenantUtils.getTenantAwareUsername(user.getUserName())
+                    , claimURL, null);
         } catch (UserStoreException e) {
             throw new FIDO2AuthenticatorServerException(
                     "Failed retrieving user claim: " + claimURL + " for the user: " + user, e);
