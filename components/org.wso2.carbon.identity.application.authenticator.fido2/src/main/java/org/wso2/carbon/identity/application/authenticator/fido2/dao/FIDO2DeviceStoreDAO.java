@@ -487,9 +487,8 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                 credentialRegistrations.add(registration);
             }
         } catch (SQLException | IOException e) {
-            //TODO possible to log PII
             throw new FIDO2AuthenticatorServerException("Server error occurred while retrieving FIDO2 device " +
-                    "registration for username: " + user.getUserName(), e);
+                    "registration for username: " + user.getLoggableMaskedUserId(), e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
