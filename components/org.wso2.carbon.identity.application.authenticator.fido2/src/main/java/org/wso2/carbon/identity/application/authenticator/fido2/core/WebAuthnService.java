@@ -496,7 +496,7 @@ public class WebAuthnService {
             user.setUserName(username);
             user.setTenantDomain(tenantDomain);
             user.setUserStoreDomain(storeDomain);
-            if (userStorage.getFIDO2RegistrationsByUsername(user.toString()).isEmpty()) {
+            if (userStorage.getFIDO2RegistrationsByUser(user).isEmpty()) {
                 if (log.isDebugEnabled()) {
                     log.debug("No registered device found for user :" + user.toString());
                 }
@@ -644,7 +644,7 @@ public class WebAuthnService {
                 userStorage.updateFIDO2SignatureCount(result);
 
                 new SuccessfulAuthenticationResult(request, response,
-                        userStorage.getFIDO2RegistrationsByUsername(result.getUsername()), null);
+                        userStorage.getFIDO2RegistrationsByUser(authenticatedUser), null);
             } catch (FIDO2AuthenticatorServerException e) {
                 throw new AuthenticationFailedException("Error in usernameless authentication flow.", e);
             }
@@ -672,7 +672,7 @@ public class WebAuthnService {
     public Collection<FIDO2CredentialRegistration> getFIDO2DeviceMetaData(String username) throws
             FIDO2AuthenticatorServerException {
 
-        return userStorage.getFIDO2RegistrationsByUsername(User.getUserFromUserName(username).toString());
+        return userStorage.getFIDO2RegistrationsByUsername(username);
     }
 
     @Deprecated
@@ -1274,6 +1274,14 @@ public class WebAuthnService {
     public boolean isFidoKeyRegistered (String username) throws AuthenticationFailedException {
         try {
             return !userStorage.getFIDO2RegistrationsByUsername(username).isEmpty();
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException(e.getMessage());
+        }
+    }
+
+    public boolean isFidoKeyRegistered (AuthenticatedUser authenticatedUser) throws AuthenticationFailedException {
+        try {
+            return !userStorage.getFIDO2RegistrationsByUser(authenticatedUser).isEmpty();
         } catch (FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException(e.getMessage());
         }

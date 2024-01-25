@@ -162,7 +162,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 handleUnProvisionedFederatedUser(response);
                 return AuthenticatorFlowStatus.INCOMPLETE;
             }
-            boolean enrolledPasskeysExist = hasUserSetPasskeys(mappedLocalUsername);
+            authenticatedUser.setUserName(mappedLocalUsername);
+            boolean enrolledPasskeysExist = hasUserSetPasskeys(authenticatedUser);
             if (enrolledPasskeysExist) {
                 // If the user have already enrolled passkeys and if the user initiated a passkey enrollment request,
                 // then inform the user that passkeys already exist and disregard the enrollment request.
@@ -802,7 +803,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         //Initiate the usernameless authentication process when either the user is unidentified or the identified user
         // lacks an enrolled passkey.
-        if (user == null || !hasUserSetPasskeys(user.getUsernameAsSubjectIdentifier(true, true))) {
+        if (user == null || !hasUserSetPasskeys(user)) {
             return webAuthnService.startUsernamelessAuthentication(appID);
         }
 
@@ -853,10 +854,10 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         }
     }
 
-    private boolean hasUserSetPasskeys(String username) throws AuthenticationFailedException {
+    private boolean hasUserSetPasskeys(AuthenticatedUser authenticatedUser) throws AuthenticationFailedException {
 
         WebAuthnService webAuthnService = new WebAuthnService();
-        return webAuthnService.isFidoKeyRegistered(username);
+        return webAuthnService.isFidoKeyRegistered(authenticatedUser);
     }
 
     private String buildAbsoluteURL(String redirectUrl) throws URISyntaxException, URLBuilderException {
@@ -1156,18 +1157,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throws AuthenticationFailedException {
 
         if (!authenticatedUser.isFederatedUser()) {
-            return authenticatedUser.getUsernameAsSubjectIdentifier(true, true);
+            return authenticatedUser.getUsernameAsSubjectIdentifier(false, false);
         }
-        // If the user is federated, we need to check whether the user is already jit provisioned to the organization.
-        String federatedUsername = FederatedAuthenticatorUtil.getLoggedInFederatedUser(context);
-        if (StringUtils.isBlank(federatedUsername)) {
-            throw new AuthenticationFailedException("No federated user found");
-        }
+        // Have to set idpName to the context since
+        // the FederatedAuthenticatorUtil.getLocalUsernameAssociatedWithFederatedUser is expecting it.
+        context.setProperty("idpName", authenticatedUser.getFederatedIdPName());
         String associatedLocalUsername =
                 FederatedAuthenticatorUtil.getLocalUsernameAssociatedWithFederatedUser(MultitenantUtils.
-                        getTenantAwareUsername(federatedUsername), context);
+                        getTenantAwareUsername(authenticatedUser.toString()), context);
         if (StringUtils.isNotBlank(associatedLocalUsername)) {
-            return FrameworkUtils.preprocessUsername(associatedLocalUsername, context);
+            return associatedLocalUsername;
         }
         return null;
     }

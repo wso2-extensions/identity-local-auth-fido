@@ -422,6 +422,19 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             FIDO2AuthenticatorServerException {
 
         User user = User.getUserFromUserName(username);
+        return getFIDO2RegistrationsByUser(user);
+    }
+
+    /**
+     * Retrieve FIDO2 registration details.
+     *
+     * @param user User.
+     * @return A collection of FIDO2 registrations available for a user.
+     * @throws FIDO2AuthenticatorServerException
+     */
+    public Collection<FIDO2CredentialRegistration> getFIDO2RegistrationsByUser(User user) throws
+            FIDO2AuthenticatorServerException {
+
         List<FIDO2CredentialRegistration> credentialRegistrations = new ArrayList<>();
 
         if (log.isDebugEnabled()) {
@@ -474,8 +487,9 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
                 credentialRegistrations.add(registration);
             }
         } catch (SQLException | IOException e) {
+            //TODO possible to log PII
             throw new FIDO2AuthenticatorServerException("Server error occurred while retrieving FIDO2 device " +
-                    "registration for username: " + username, e);
+                    "registration for username: " + user.getUserName(), e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
