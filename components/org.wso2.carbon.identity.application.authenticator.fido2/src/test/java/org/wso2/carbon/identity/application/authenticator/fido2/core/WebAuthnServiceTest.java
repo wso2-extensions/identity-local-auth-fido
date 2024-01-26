@@ -222,6 +222,7 @@ public class WebAuthnServiceTest {
         when(FIDO2DeviceStoreDAO.getInstance()).thenReturn(userStorageMock);
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getProperty("FIDO.UserResponseTimeout")).thenReturn("300");
+        when(IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
         mockStatic(JacksonCodecs.class);
         when(JacksonCodecs.json()).thenReturn(objectMapperMock);
         webAuthnService = new WebAuthnService();
@@ -240,7 +241,7 @@ public class WebAuthnServiceTest {
 
         mockStatic(User.class);
         user = new User();
-        user.setUserName(TENANT_QUALIFIED_USERNAME);
+        user.setUserName(USERNAME);
         user.setTenantDomain(TENANT_DOMAIN);
         user.setUserStoreDomain(USER_STORE_DOMAIN);
         when(User.getUserFromUserName(TENANT_QUALIFIED_USERNAME)).thenReturn(user);
@@ -285,6 +286,7 @@ public class WebAuthnServiceTest {
         List<FIDO2CredentialRegistration> credentialRegistrations = new ArrayList<>();
         credentialRegistrations.add(fido2CredentialRegistration);
         when(userStorageMock.getFIDO2RegistrationsByUsername(anyString())).thenReturn(credentialRegistrations);
+        when(userStorageMock.getFIDO2RegistrationsByUser(any(User.class))).thenReturn(credentialRegistrations);
         FIDO2CredentialRegistration fido2CredentialRegistration = mock(FIDO2CredentialRegistration.class);
         when(userStorageMock.getFIDO2RegistrationByUsernameAndCredentialId(anyString(), any(ByteArray.class)))
                 .thenReturn(Optional.of(fido2CredentialRegistration));
