@@ -625,7 +625,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         // resolved by retrieving the collected username.
         if ((user == null) && isFidoAsFirstFactor(context) && isIDFInitiatedFromAuthenticator(context)) {
             String username = retrievePersistedUsername(context);
-            user = resolveUserFromUsername(username, context);
+            // Users have the option to restart the flow from the 1st step by choosing a different option.
+            // In such cases, user name will be null, hence the process is directed to query username.
+            if (StringUtils.isNotBlank(username)) {
+                user = resolveUserFromUsername(username, context);
+            }
         }
 
         //If the user is federated, retrieve the just-in-time provisioned federated user.
