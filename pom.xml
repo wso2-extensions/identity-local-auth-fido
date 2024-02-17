@@ -358,7 +358,7 @@
         <carbon.extension.identity.helper.version>1.0.13</carbon.extension.identity.helper.version>
         <identity.extension.utils.import.version.range>[1.0.8,2.0.0)</identity.extension.utils.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
-        <google.guava.version>32.1.1-jre</google.guava.version>
+        <google.guava.version>33.0.0-jre</google.guava.version>
         <fasterxml.jackson.version>2.16.1</fasterxml.jackson.version>
         <jackson-databind.version>2.16.1</jackson-databind.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
