@@ -1,0 +1,14 @@
+{
+    "name": "FIDO Authenticator",
+    "owner": "WSO2",
+    "category": "Local authenticator",
+    "documentationUrl": "https://docs.wso2.com/display/IS530/Multi-factor+Authentication+using+FIDO",
+    "description": "The Fast IDentity Online (FIDO) attempts to change the nature of authentication by developing specifications that define an open, scalable, interoperable set of mechanisms that supplant reliance on passwords to securely authenticate users of online services. In short, FIDO U2F can make it easy for you to authenticate users while also ensuring that security is enhanced.\r\rFIDO provides the users with a passwordless and second-factor experience. FIDO protocols are based on public key cryptography and are strongly resistant to phishing.",
+    "status": "Active",
+    "labels": [
+        "Twofactor",
+        "HardwareToken",
+        "Token"
+    ],
+    "releases": []
+}
