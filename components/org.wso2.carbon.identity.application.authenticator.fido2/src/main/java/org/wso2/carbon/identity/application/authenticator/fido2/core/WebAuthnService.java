@@ -143,6 +143,8 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_USER;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIRST_NAME_CLAIM_URL;
@@ -992,32 +994,40 @@ public class WebAuthnService {
 
     private void readTrustedOrigins() {
 
-        if (origins == null) {
-            origins = new ArrayList<>();
+        origins = new ArrayList<>();
+        String[] trustedOriginsFromDB = null;
+        try {
+            trustedOriginsFromDB = getFIDO2TrustedOrigins();
+        } catch (FIDO2AuthenticatorServerException e) {
+            log.error("Error when retrieving FIDO trusted origins from DB. Using the default values from files.");
+        }
+        if (trustedOriginsFromDB != null) {
+            origins.addAll(Arrays.asList(trustedOriginsFromDB));
+        } else {
             Object value = IdentityConfigParser.getInstance().getConfiguration().get(TRUSTED_ORIGINS);
             if (value instanceof ArrayList) {
                 origins.addAll((ArrayList) value);
             } else if (value instanceof String) {
                 origins.add((String) value);
             }
-            origins.replaceAll(IdentityUtil::fillURLPlaceholders);
-
-            /*
-             * Process the list of origins to ensure all variations are covered:
-             * 1. For each origin, remove the default ports (443 for HTTPS and 80 for HTTP) if they are explicitly
-             *    specified.
-             * 2. Then, for each origin, add variations with the default ports explicitly appended.
-             * 3. This ensures that the list contains both versions of each origin (with and without default ports),
-             *    accommodating scenarios where the default port might be omitted or explicitly included in the origin
-             * string.
-             */
-            List<String> updatedOrigins = origins.stream()
-                    .flatMap(url -> Stream.of(removeDefaultPort(url), appendDefaultPortIfAbsent(url))).distinct()
-                    .collect(Collectors.toList());
-
-            origins.clear();
-            origins.addAll(updatedOrigins);
         }
+        origins.replaceAll(IdentityUtil::fillURLPlaceholders);
+
+        /*
+         * Process the list of origins to ensure all variations are covered:
+         * 1. For each origin, remove the default ports (443 for HTTPS and 80 for HTTP) if they are explicitly
+         *    specified.
+         * 2. Then, for each origin, add variations with the default ports explicitly appended.
+         * 3. This ensures that the list contains both versions of each origin (with and without default ports),
+         *    accommodating scenarios where the default port might be omitted or explicitly included in the origin
+         * string.
+         */
+        List<String> updatedOrigins = origins.stream()
+                .flatMap(url -> Stream.of(removeDefaultPort(url), appendDefaultPortIfAbsent(url))).distinct()
+                .collect(Collectors.toList());
+
+        origins.clear();
+        origins.addAll(updatedOrigins);
     }
 
     private String removeDefaultPort(String url) {
@@ -1269,6 +1279,37 @@ public class WebAuthnService {
         }
 
         return new FIDO2Configuration(attestationValidationEnabled, mdsValidationEnabled);
+    }
+
+    private String[] getFIDO2TrustedOrigins() throws FIDO2AuthenticatorServerException {
+
+        String[] fidoTrustedOrigins = null;
+        try {
+            fidoTrustedOrigins = FIDO2AuthenticatorServiceDataHolder.getInstance().getConfigurationManager()
+                    .getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
+                            FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME).getValue().split(",");
+        } catch (ConfigurationManagementException e) {
+            if (Objects.equals(e.getErrorCode(), ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
+                if (log.isDebugEnabled()) {
+                    log.debug(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME
+                            + " attribute doesn't exist for the tenant: "
+                            + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
+                            + ". Using the default configuration value from files.");
+                }
+            } else if (Objects.equals(e.getErrorCode(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode())) {
+                if (log.isDebugEnabled()) {
+                    log.debug(FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME + " resource doesn't exist for the tenant: "
+                            + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()
+                            + ". Using the default configuration value from files for the attribute: "
+                            + FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME + ".");
+                }
+            } else {
+                throw new FIDO2AuthenticatorServerException("Error in retrieving "
+                        + FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME + " configuration for the tenant: "
+                        + PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId(), e);
+            }
+        }
+        return fidoTrustedOrigins;
     }
 
     public boolean isFidoKeyRegistered (String username) throws AuthenticationFailedException {

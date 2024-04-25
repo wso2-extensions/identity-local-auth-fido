@@ -62,10 +62,12 @@ public class FIDO2AuthenticatorConstants {
 
     public static final String FIDO_CONFIG_RESOURCE_TYPE_NAME = "fido-config";
     public static final String FIDO2_CONFIG_RESOURCE_NAME = "fido2-validations";
+    public static final String FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME = "fido-connector";
     public static final String FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME = "AttestationValidation.Enable";
     public static final boolean FIDO2_CONFIG_ATTESTATION_VALIDATION_DEFAULT_VALUE = true;
     public static final String FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME = "MDSValidation.Enable";
     public static final boolean FIDO2_CONFIG_MDS_VALIDATION_DEFAULT_VALUE = false;
+    public static final String FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME = "FIDO2TrustedOrigins";
 
     /**
      * SQL Queries class for FIDO2 Authenticator Constants Util class.

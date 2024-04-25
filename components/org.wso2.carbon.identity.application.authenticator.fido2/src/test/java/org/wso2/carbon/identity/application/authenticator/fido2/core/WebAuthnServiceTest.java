@@ -81,6 +81,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2Authen
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -121,8 +122,10 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
@@ -214,7 +217,7 @@ public class WebAuthnServiceTest {
     private AssertionResult assertionResult;
 
     @BeforeMethod
-    public void setUp() throws UserStoreException, IOException, FIDO2AuthenticatorServerException {
+    public void setUp() throws UserStoreException, IOException, FIDO2AuthenticatorServerException, ConfigurationManagementException {
 
         prepareResources();
         initMocks(this);
@@ -230,6 +233,9 @@ public class WebAuthnServiceTest {
         when(FIDO2DeviceStoreDAO.getInstance()).thenReturn(fido2DeviceStoreDAO);
         trustedOrigins.add(ORIGIN);
         identityConfig.put(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS, trustedOrigins);
+        when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
+                FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
+                new Attribute(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME, (String.join(",",trustedOrigins))));
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
         when(identityConfigParser.getConfiguration()).thenReturn(identityConfig);
