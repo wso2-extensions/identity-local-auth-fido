@@ -631,7 +631,8 @@ public class WebAuthnServiceTest {
 
     @Test(description = "Test case for validateFIDO2TrustedOrigin() method",
             dataProvider = "validateFIDO2TrustedOriginDataProvider")
-    public void testValidateFIDO2TrustedOrigin(String origin, String trustedOrigins, boolean validationSuccess) throws Exception {
+    public void testValidateFIDO2TrustedOrigin(String origin, String trustedOrigins, boolean validationSuccess)
+            throws Exception {
 
         when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
                 FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
