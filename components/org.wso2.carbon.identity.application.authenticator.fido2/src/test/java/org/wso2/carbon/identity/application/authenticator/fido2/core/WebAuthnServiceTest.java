@@ -51,6 +51,7 @@ import com.yubico.webauthn.exception.AssertionFailedException;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
@@ -81,6 +82,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2Authen
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -121,8 +123,10 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_CONFIG_RESOURCE_TYPE_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
@@ -214,7 +218,7 @@ public class WebAuthnServiceTest {
     private AssertionResult assertionResult;
 
     @BeforeMethod
-    public void setUp() throws UserStoreException, IOException, FIDO2AuthenticatorServerException {
+    public void setUp() throws UserStoreException, IOException, FIDO2AuthenticatorServerException, ConfigurationManagementException {
 
         prepareResources();
         initMocks(this);
@@ -230,6 +234,9 @@ public class WebAuthnServiceTest {
         when(FIDO2DeviceStoreDAO.getInstance()).thenReturn(fido2DeviceStoreDAO);
         trustedOrigins.add(ORIGIN);
         identityConfig.put(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS, trustedOrigins);
+        when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
+                FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
+                new Attribute(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME, ""));
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
         when(identityConfigParser.getConfiguration()).thenReturn(identityConfig);
@@ -295,7 +302,8 @@ public class WebAuthnServiceTest {
     }
 
     @Test(description = "Test case for startFIDO2Registration() method", priority = 1)
-    public void testStartFIDO2Registration() throws JsonProcessingException, FIDO2AuthenticatorClientException {
+    public void testStartFIDO2Registration() throws JsonProcessingException, FIDO2AuthenticatorClientException,
+            FIDO2AuthenticatorServerException {
 
         mockStatic(StartRegistrationOptions.class);
         StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
@@ -323,7 +331,7 @@ public class WebAuthnServiceTest {
 
     @Test(description = "Test case for startFIDO2UsernamelessRegistration() method", priority = 2)
     public void testStartFIDO2UsernamelessRegistration() throws JsonProcessingException,
-            FIDO2AuthenticatorClientException {
+            FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
 
         mockStatic(StartRegistrationOptions.class);
         StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
@@ -609,6 +617,33 @@ public class WebAuthnServiceTest {
             FIDO2AuthenticatorClientException {
 
         webAuthnService.updateFIDO2DeviceDisplayName(CREDENTIAL_ID, "Updated display name");
+    }
+
+    @DataProvider(name = "validateFIDO2TrustedOriginDataProvider")
+    public static Object[][] validateFIDO2TrustedOriginDataProvider() {
+
+        return new Object[][] {
+                {"https://localhost:9443", "", true},
+                {"https://dummy/domain", "", false},
+                {"https://dummy/domain", "https://dummy/domain", true}
+        };
+    }
+
+    @Test(description = "Test case for validateFIDO2TrustedOrigin() method",
+            dataProvider = "validateFIDO2TrustedOriginDataProvider")
+    public void testValidateFIDO2TrustedOrigin(String origin, String trustedOrigins, boolean validationSuccess)
+            throws Exception {
+
+        when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
+                FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
+                new Attribute(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME, trustedOrigins));
+        when(IdentityUtil.fillURLPlaceholders(anyString())).thenCallRealMethod();
+        try {
+            WhiteboxImpl.invokeMethod(webAuthnService, "validateFIDO2TrustedOrigin", origin);
+            Assert.assertTrue(validationSuccess, "Trusted origin validation successful.");
+        } catch (FIDO2AuthenticatorClientException e) {
+            Assert.assertFalse(validationSuccess, "Trusted origin validation should pass.");
+        }
     }
 
     @ObjectFactory

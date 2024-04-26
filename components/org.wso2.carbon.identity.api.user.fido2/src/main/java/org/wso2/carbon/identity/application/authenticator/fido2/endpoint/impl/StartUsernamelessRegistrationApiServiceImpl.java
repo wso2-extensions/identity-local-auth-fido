@@ -87,6 +87,11 @@ public class StartUsernamelessRegistrationApiServiceImpl extends StartUsernamele
                     appId, e);
             return Response.serverError().entity(Util.getErrorDTO
                     (FIDO2Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION, appId)).build();
+        } catch (FIDO2AuthenticatorServerException e) {
+            LOG.error("Server error while starting FIDO2 usernameless device registration with appId: " +
+                    appId, e);
+            return Response.serverError().entity(Util.getErrorDTO
+                    (FIDO2Constants.ErrorMessages.ERROR_CODE_START_REGISTRATION, appId)).build();
         }
     }
 }

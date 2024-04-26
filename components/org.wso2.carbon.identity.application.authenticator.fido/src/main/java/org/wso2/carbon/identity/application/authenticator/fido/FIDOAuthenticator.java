@@ -839,6 +839,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             setAuthenticatorMessageToContext(message, e.getErrorCode(), context);
             throw new AuthenticationFailedException("FIDO2 trusted origin: " + appID + " sent in the request is " +
                     "invalid.");
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException("A system error occurred while starting fido registration for " +
+                    "the appId :" + appID);
         }
     }
 
