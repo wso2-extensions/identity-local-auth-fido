@@ -582,8 +582,7 @@ public class WebAuthnService {
         } catch (IOException e) {
             throw new AuthenticationFailedException("Assertion failed! Failed to decode response object.", e);
         } catch (FIDO2AuthenticatorServerException e) {
-            throw new AuthenticationFailedException("Server error when building relying party for authentication " +
-                    "of username: ", username, e);
+            throw new AuthenticationFailedException("Server error when building relying party for authentication.", e);
         }
         if (request == null) {
             throw new AuthenticationFailedException("Assertion failed! No such assertion in progress.");
@@ -1294,9 +1293,12 @@ public class WebAuthnService {
 
         String[] fidoTrustedOrigins = null;
         try {
-            fidoTrustedOrigins = FIDO2AuthenticatorServiceDataHolder.getInstance().getConfigurationManager()
+            String trustedOriginsFromDB = FIDO2AuthenticatorServiceDataHolder.getInstance().getConfigurationManager()
                     .getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
-                            FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME).getValue().split(",");
+                            FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME).getValue();
+            if (StringUtils.isNotBlank(trustedOriginsFromDB)) {
+                fidoTrustedOrigins = trustedOriginsFromDB.split(",");
+            }
         } catch (ConfigurationManagementException e) {
             if (Objects.equals(e.getErrorCode(), ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS.getCode())) {
                 if (log.isDebugEnabled()) {
