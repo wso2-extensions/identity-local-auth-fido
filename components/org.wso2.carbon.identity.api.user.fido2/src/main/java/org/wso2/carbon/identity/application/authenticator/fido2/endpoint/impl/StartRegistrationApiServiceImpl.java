@@ -90,6 +90,10 @@ public class StartRegistrationApiServiceImpl extends StartRegistrationApiService
             LOG.error("JsonProcessingException while starting FIDO2 device registration with appId: " + appId, e);
             return Response.serverError().entity(Util.getErrorDTO(FIDO2Constants.ErrorMessages
                             .ERROR_CODE_START_REGISTRATION, appId)).build();
+        } catch (FIDO2AuthenticatorServerException e) {
+            LOG.error("Server error while starting FIDO2 device registration with appId: " + appId, e);
+            return Response.serverError().entity(Util.getErrorDTO(FIDO2Constants.ErrorMessages
+                    .ERROR_CODE_START_REGISTRATION, appId)).build();
         }
     }
 }

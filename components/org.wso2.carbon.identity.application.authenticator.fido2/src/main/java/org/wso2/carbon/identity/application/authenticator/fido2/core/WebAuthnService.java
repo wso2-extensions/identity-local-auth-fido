@@ -166,7 +166,7 @@ public class WebAuthnService {
     private static final SecureRandom random = new SecureRandom();
     private final ObjectMapper jsonMapper = JacksonCodecs.json();
     private static final FIDO2DeviceStoreDAO userStorage = FIDO2DeviceStoreDAO.getInstance();
-    private static List<String> origins = null;
+    private List<String> origins = null;
     private static final String userResponseTimeout = IdentityUtil.getProperty("FIDO.UserResponseTimeout");
 
     private static volatile WebAuthnManager webAuthnManager;
@@ -213,7 +213,7 @@ public class WebAuthnService {
      * @throws FIDO2AuthenticatorClientException
      */
     public Either<String, FIDO2RegistrationRequest> startFIDO2Registration(@NonNull String origin)
-            throws JsonProcessingException, FIDO2AuthenticatorClientException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
 
         validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
@@ -246,14 +246,14 @@ public class WebAuthnService {
      * @throws FIDO2AuthenticatorClientException
      */
     public Either<String, FIDO2RegistrationRequest> startFIDO2UsernamelessRegistration(@NonNull String origin)
-            throws JsonProcessingException, FIDO2AuthenticatorClientException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
 
         return this.startFIDO2UsernamelessRegistration(origin, null);
     }
 
     public Either<String, FIDO2RegistrationRequest> startFIDO2UsernamelessRegistration(@NonNull String origin,
                                                                                        String username)
-            throws JsonProcessingException, FIDO2AuthenticatorClientException {
+            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
 
         validateFIDO2TrustedOrigin(origin);
         URL originUrl = getOriginUrl(origin);
@@ -541,7 +541,7 @@ public class WebAuthnService {
                             .getRequest()), originUrl)
             );
             return FIDOUtil.writeJson(request);
-        } catch (MalformedURLException | JsonProcessingException e) {
+        } catch (MalformedURLException | JsonProcessingException | FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException("Usernameless authentication initialization failed for the " +
                     "application with app id: " + appId, e);
         }
@@ -581,6 +581,9 @@ public class WebAuthnService {
             }
         } catch (IOException e) {
             throw new AuthenticationFailedException("Assertion failed! Failed to decode response object.", e);
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException("Server error when building relying party for authentication " +
+                    "of username: ", username, e);
         }
         if (request == null) {
             throw new AuthenticationFailedException("Assertion failed! No such assertion in progress.");
@@ -633,7 +636,13 @@ public class WebAuthnService {
                     requestId);
         }
         AssertionRequest request = getAssertionRequest(cacheEntry);
-        RelyingParty relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+        RelyingParty relyingParty = null;
+        try {
+            relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException("Server error when building relying party for request ID: ",
+                    requestId, e);
+        }
         FIDO2Cache.getInstance().clearCacheEntryByRequestId(new FIDO2CacheKey(requestId));
 
         AssertionResult result = getAssertionResult(request, response, relyingParty);
@@ -801,7 +810,7 @@ public class WebAuthnService {
         userStorage.updateFIDO2DeviceDisplayName(user, credentialRegistration.get(), newDisplayName);
     }
 
-    private RelyingParty buildRelyingParty(URL originUrl) {
+    private RelyingParty buildRelyingParty(URL originUrl) throws FIDO2AuthenticatorServerException {
 
         readTrustedOrigins();
         String rpId;
@@ -992,24 +1001,23 @@ public class WebAuthnService {
         return user;
     }
 
-    private void readTrustedOrigins() {
+    private void readTrustedOrigins() throws FIDO2AuthenticatorServerException {
 
         origins = new ArrayList<>();
         String[] trustedOriginsFromDB = null;
         try {
             trustedOriginsFromDB = getFIDO2TrustedOrigins();
         } catch (FIDO2AuthenticatorServerException e) {
-            log.error("Error when retrieving FIDO trusted origins from DB. Using the default values from files.");
+            throw new FIDO2AuthenticatorServerException("Error when retrieving trusted origins from DB.", e);
         }
         if (trustedOriginsFromDB != null) {
             origins.addAll(Arrays.asList(trustedOriginsFromDB));
-        } else {
-            Object value = IdentityConfigParser.getInstance().getConfiguration().get(TRUSTED_ORIGINS);
-            if (value instanceof ArrayList) {
-                origins.addAll((ArrayList) value);
-            } else if (value instanceof String) {
-                origins.add((String) value);
-            }
+        }
+        Object value = IdentityConfigParser.getInstance().getConfiguration().get(TRUSTED_ORIGINS);
+        if (value instanceof ArrayList) {
+            origins.addAll((ArrayList) value);
+        } else if (value instanceof String) {
+            origins.add((String) value);
         }
         origins.replaceAll(IdentityUtil::fillURLPlaceholders);
 
@@ -1125,7 +1133,8 @@ public class WebAuthnService {
         return request;
     }
 
-    private void validateFIDO2TrustedOrigin(String origin) throws FIDO2AuthenticatorClientException {
+    private void validateFIDO2TrustedOrigin(String origin) throws FIDO2AuthenticatorClientException,
+            FIDO2AuthenticatorServerException {
 
         readTrustedOrigins();
         if (!origins.contains(origin.trim())) {
