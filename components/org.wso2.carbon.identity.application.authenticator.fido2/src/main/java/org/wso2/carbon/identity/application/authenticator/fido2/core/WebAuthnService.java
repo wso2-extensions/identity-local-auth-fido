@@ -1062,6 +1062,9 @@ public class WebAuthnService {
             return relyingParty.finishAssertion(FinishAssertionOptions.builder()
                     .request(request).response(credential).build());
         } catch (AssertionFailedException e) {
+            if(log.isDebugEnabled()) {
+                log.debug("Assertion failure exception.", e);
+            }
             throw new AuthenticationFailedException("Assertion failed while finishing the assertion to retrieve the " +
                     "assertion result.", e);
         } catch (Exception e) {
