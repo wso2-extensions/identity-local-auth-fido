@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.local.auth.fido</groupId>
     <artifactId>identity-application-auth-fido</artifactId>
-    <version>5.4.14</version>
+    <version>5.4.15-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon - FIDO Identity Application Authenticator</name>
     <description>
@@ -39,7 +39,7 @@
         <url>https://github.com/wso2-extensions/identity-local-auth-fido.git</url>
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-local-auth-fido.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-local-auth-fido.git</connection>
-        <tag>v5.4.14</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <build>
