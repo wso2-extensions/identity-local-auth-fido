@@ -339,11 +339,6 @@
                 <version>${orbit.yubico.webauthn.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-web</artifactId>
-                <version>${springframework.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>com.fasterxml.jackson.jaxrs</groupId>
                 <artifactId>jackson-jaxrs-json-provider</artifactId>
                 <version>${jackson-jaxrs-json-provider.version}</version>
@@ -448,7 +443,6 @@
         <jackson-jaxrs-json-provider.version>2.16.1</jackson-jaxrs-json-provider.version>
         <jackson-dataformat-xml.version>2.16.1</jackson-dataformat-xml.version>
         <guava.osgi.version.range>[18.0.0,34.0.0]</guava.osgi.version.range>
-        <springframework.version>4.3.29.RELEASE</springframework.version>
         <org.apache.cxf.version>3.5.9</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
