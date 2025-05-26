@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.application.authenticator.fido2.core;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.InternetDomainName;
@@ -56,9 +57,11 @@ import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.StartRegistrationOptions;
 import com.yubico.webauthn.data.AttestationConveyancePreference;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.AuthenticatorAttestationResponse;
 import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
+import com.yubico.webauthn.data.ClientRegistrationExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
 import com.yubico.webauthn.data.PublicKeyCredentialParameters;
@@ -809,6 +812,46 @@ public class WebAuthnService {
         userStorage.updateFIDO2DeviceDisplayName(user, credentialRegistration.get(), newDisplayName);
     }
 
+    /**
+     * Initiate FIDO2 registration flow.
+     *
+     * @param origin      FIDO2 trusted origin.
+     * @param username    Username of the user to be registered.
+     * @param displayName Display name of the user to be registered.
+     * @return FIDO2 registration request.
+     * @throws JsonProcessingException           if an error occurs while processing JSON.
+     * @throws FIDO2AuthenticatorServerException if an error occurs in the server.
+     * @throws FIDO2AuthenticatorClientException if an error occurs in the client.
+     */
+    public Either<String, FIDO2RegistrationRequest> initiateFIDO2Registration(String origin, String username,
+                                                                              String displayName)
+            throws JsonProcessingException, FIDO2AuthenticatorServerException, FIDO2AuthenticatorClientException {
+
+        validateFIDO2TrustedOrigin(origin);
+
+        User user = User.getUserFromUserName(username);
+        URL originUrl = getOriginUrl(origin);
+        RelyingParty relyingParty = buildRelyingParty(originUrl);
+
+        PublicKeyCredentialCreationOptions options;
+        try {
+            IdentityUtil.threadLocalProperties.get().put(FIDO2_USER, user);
+            options = relyingParty.startRegistration(buildStartRegistrationOptions(user, displayName, false));
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(FIDO2_USER);
+        }
+
+        ByteArray requestId = generateRandom();
+        FIDO2RegistrationRequest request = new FIDO2RegistrationRequest(requestId, options);
+
+        FIDO2Cache.getInstance().addToCacheByRequestId(
+                new FIDO2CacheKey(requestId.getBase64()),
+                new FIDO2CacheEntry(jsonMapper.writeValueAsString(options), null, originUrl)
+        );
+
+        return Either.right(request);
+    }
+
     private RelyingParty buildRelyingParty(URL originUrl) throws FIDO2AuthenticatorServerException {
 
         readTrustedOrigins();
@@ -925,6 +968,17 @@ public class WebAuthnService {
 
     }
 
+    private StartRegistrationOptions buildStartRegistrationOptions(User user, String displayName,
+                                                                   Boolean requireResidentKey) {
+
+        return StartRegistrationOptions.builder()
+                .user(buildUserIdentity(user, displayName))
+                .timeout(Integer.parseInt(userResponseTimeout))
+                .authenticatorSelection(buildAuthenticatorSelection(requireResidentKey))
+                .extensions(RegistrationExtensionInputs.builder().build())
+                .build();
+    }
+
     private AuthenticatorSelectionCriteria buildAuthenticatorSelection(boolean requireResidentKey) {
 
         if (requireResidentKey) {
@@ -944,7 +998,7 @@ public class WebAuthnService {
             String firstName = getUserClaimValue(user, FIRST_NAME_CLAIM_URL);
             String lastName = getUserClaimValue(user, LAST_NAME_CLAIM_URL);
             if (StringUtils.isNotBlank(firstName) || StringUtils.isNotBlank(lastName)) {
-                displayName = StringUtils.join(new String[] { firstName, lastName }, " ");
+                displayName = StringUtils.join(new String[]{firstName, lastName}, " ");
             } else {
                 // If the firstName or the lastName is not available, set the username as the displayName.
                 displayName = user.getUserName();
@@ -992,6 +1046,17 @@ public class WebAuthnService {
                 .orElseGet(WebAuthnService::generateRandom);
         return UserIdentity.builder().name(user.getUserName()).displayName(getUserDisplayName(user))
                 .id(userHandle).build();
+    }
+
+    private UserIdentity buildUserIdentity(User user, String displayName) {
+
+        ByteArray userHandle = userStorage.getUserHandleForUsername(user.toString())
+                .orElseGet(WebAuthnService::generateRandom);
+        return UserIdentity.builder()
+                .name(user.getUserName())
+                .displayName(displayName)
+                .id(userHandle)
+                .build();
     }
 
     private User getPrivilegedUser() {
@@ -1062,7 +1127,7 @@ public class WebAuthnService {
             return relyingParty.finishAssertion(FinishAssertionOptions.builder()
                     .request(request).response(credential).build());
         } catch (AssertionFailedException e) {
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Assertion failure exception.", e);
             }
             throw new AuthenticationFailedException("Assertion failed while finishing the assertion to retrieve the " +
@@ -1165,6 +1230,7 @@ public class WebAuthnService {
     }
 
     private WebAuthnManager getWebAuthnManager() throws FIDO2AuthenticatorServerException {
+
         if (FIDOUtil.isMetadataValidationsEnabled() && getAuthenticatorConfigs().isMdsValidationEnabled()) {
             if (webAuthnManagerMDSEnabled == null) {
                 synchronized (lock) {
@@ -1326,7 +1392,8 @@ public class WebAuthnService {
         return fidoTrustedOrigins;
     }
 
-    public boolean isFidoKeyRegistered (String username) throws AuthenticationFailedException {
+    public boolean isFidoKeyRegistered(String username) throws AuthenticationFailedException {
+
         try {
             return !userStorage.getFIDO2RegistrationsByUsername(username).isEmpty();
         } catch (FIDO2AuthenticatorServerException e) {
@@ -1334,7 +1401,8 @@ public class WebAuthnService {
         }
     }
 
-    public boolean isFidoKeyRegistered (AuthenticatedUser authenticatedUser) throws AuthenticationFailedException {
+    public boolean isFidoKeyRegistered(AuthenticatedUser authenticatedUser) throws AuthenticationFailedException {
+
         try {
             return !userStorage.getFIDO2RegistrationsByUser(authenticatedUser).isEmpty();
         } catch (FIDO2AuthenticatorServerException e) {

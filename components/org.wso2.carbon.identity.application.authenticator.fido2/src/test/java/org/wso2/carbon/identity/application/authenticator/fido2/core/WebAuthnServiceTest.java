@@ -227,6 +227,7 @@ public class WebAuthnServiceTest {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getProperty("FIDO.UserResponseTimeout")).thenReturn("300");
         when(IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
+        when(IdentityUtil.replacePortNumberPlaceholder(anyString(), anyBoolean())).thenCallRealMethod();
         mockStatic(JacksonCodecs.class);
         when(JacksonCodecs.json()).thenReturn(objectMapperMock);
         webAuthnService = new WebAuthnService();
