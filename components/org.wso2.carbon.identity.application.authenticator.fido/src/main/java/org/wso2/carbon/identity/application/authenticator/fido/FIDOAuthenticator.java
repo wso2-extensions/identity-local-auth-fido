@@ -280,7 +280,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private void redirectToPasskeyEnrollmentConsentPage(HttpServletResponse response, AuthenticationContext context)
             throws AuthenticationFailedException {
 
-        AuthenticatedUser user = getUsername(context);
+        AuthenticatedUser user = getAuthenticatedUser(context);
         if (user == null) {
             throw new AuthenticationFailedException("Passkey enrollment failed!. Cannot proceed further without " +
                     "identifying the user");
@@ -301,7 +301,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private void redirectToPasskeysExistenceStatusPage(HttpServletResponse response, AuthenticationContext context,
                                                        boolean isPasskeysExist) throws AuthenticationFailedException {
 
-        AuthenticatedUser user = getUsername(context);
+        AuthenticatedUser user = getAuthenticatedUser(context);
         if (user == null) {
             throw new AuthenticationFailedException("Passkeys existence status display failed!. Cannot redirect the " +
                     "user to the passkeys existence status display page without identifying the user.");
@@ -323,7 +323,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private void initiatePasskeyEnrollmentRequest(HttpServletRequest request, HttpServletResponse response,
                                                   AuthenticationContext context) throws AuthenticationFailedException {
 
-        AuthenticatedUser user = getUsername(context);
+        AuthenticatedUser user = getAuthenticatedUser(context);
         if (user == null) {
             throw new AuthenticationFailedException("Passkey enrollment failed!. Cannot proceed further without " +
                     "identifying the user");
@@ -419,7 +419,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                                     AuthenticationContext context)
             throws AuthenticationFailedException {
 
-        AuthenticatedUser user = getUsername(context);
+        AuthenticatedUser user = getAuthenticatedUser(context);
         if (user == null) {
             throw new AuthenticationFailedException("Passkey enrollment failed! Cannot proceed further without " +
                     "identifying the user");
@@ -480,7 +480,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     .inputParams(getApplicationDetails(context));
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-        AuthenticatedUser user = getUsername(context);
+        AuthenticatedUser user = getAuthenticatedUser(context);
         //If the user is federated, retrieve the just-in-time provisioned federated user.
         if ((user != null) && user.isFederatedUser()) {
             AuthenticatedUser provisionedFederateUser = getProvisionedFederatedUser(user, context);
@@ -620,7 +620,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     .inputParams(getApplicationDetails(context));
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-        AuthenticatedUser user = getUsername(context);
+        AuthenticatedUser user = getAuthenticatedUser(context);
 
         // If the username was initially obtained through the passkey identifier first page, the user needs to be
         // resolved by retrieving the collected username.
@@ -922,28 +922,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             appID = getAuthenticatorConfig().getParameterMap().get(FIDOAuthenticatorConstants.APP_ID);
         }
         return appID;
-    }
-
-    private AuthenticatedUser getUsername(AuthenticationContext context) {
-
-        //username from authentication context.
-        AuthenticatedUser authenticatedUser = null;
-        for (int i = 1; i <= context.getSequenceConfig().getStepMap().size(); i++) {
-            StepConfig stepConfig = context.getSequenceConfig().getStepMap().get(i);
-            if (stepConfig.getAuthenticatedUser() != null) {
-                authenticatedUser = stepConfig.getAuthenticatedUser();
-                if (authenticatedUser.getUserStoreDomain() == null) {
-                    authenticatedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
-                }
-
-                if (log.isDebugEnabled()) {
-                    log.debug("username :" + authenticatedUser.toString());
-                }
-                break;
-            }
-        }
-
-        return authenticatedUser;
     }
 
     private String getLoginPage() {
