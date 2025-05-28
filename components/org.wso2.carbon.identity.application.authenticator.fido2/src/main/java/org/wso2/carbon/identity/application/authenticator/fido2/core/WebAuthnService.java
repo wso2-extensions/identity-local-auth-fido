@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.application.authenticator.fido2.core;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.InternetDomainName;
@@ -57,11 +56,9 @@ import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.StartRegistrationOptions;
 import com.yubico.webauthn.data.AttestationConveyancePreference;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
-import com.yubico.webauthn.data.AuthenticatorAttestationResponse;
 import com.yubico.webauthn.data.AuthenticatorSelectionCriteria;
 import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
-import com.yubico.webauthn.data.ClientRegistrationExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
 import com.yubico.webauthn.data.PublicKeyCredentialParameters;
@@ -739,6 +736,42 @@ public class WebAuthnService {
         }
 
         User user = User.getUserFromUserName(getTenantQualifiedUsername());
+        Optional<FIDO2CredentialRegistration> credReg = userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user
+                .toString(), identifier);
+
+        if (credReg.isPresent()) {
+            userStorage.removeFIDO2RegistrationByUsername(user.toString(), credReg.get());
+        } else {
+            throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
+                    ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
+        }
+    }
+
+    /**
+     * Removes the FIDO2 device registration via the credential ID and username.
+     *
+     * @param credentialId Credential ID.
+     * @param username     Username of the user who registered the credential.
+     * @throws FIDO2AuthenticatorServerException if an error occurs in the server.
+     * @throws FIDO2AuthenticatorClientException if an error occurs from the client.
+     */
+    public void deregisterFIDO2Credential(String credentialId, String username)
+            throws FIDO2AuthenticatorServerException, FIDO2AuthenticatorClientException {
+
+        if (StringUtils.isBlank(credentialId)) {
+            throw new FIDO2AuthenticatorClientException("Credential ID must not be empty.",
+                    ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode());
+        }
+
+        final ByteArray identifier;
+        try {
+            identifier = ByteArray.fromBase64Url(credentialId);
+        } catch (Base64UrlException e) {
+            throw new FIDO2AuthenticatorClientException("Credential ID is not valid Base64Url data: " + credentialId,
+                    ERROR_CODE_DELETE_REGISTRATION_INVALID_CREDENTIAL.getErrorCode(), e);
+        }
+
+        User user = User.getUserFromUserName(username);
         Optional<FIDO2CredentialRegistration> credReg = userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user
                 .toString(), identifier);
 

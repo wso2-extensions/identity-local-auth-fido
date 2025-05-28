@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.executor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.lang.StringUtils;
@@ -51,6 +50,7 @@ public class FIDO2Executor implements Executor {
     public static final String REQUEST_ID = "requestId";
     public static final String CREDENTIAL = "credential";
     public static final String CREDENTIAL_ID = "credentialId";
+    public static final String ID = "id";
 
     @Override
     public String getName() {
@@ -96,9 +96,13 @@ public class FIDO2Executor implements Executor {
         try {
             if (StringUtils.isNotBlank(requestId) && StringUtils.isNotBlank(credential)) {
                 JsonObject challengeResponse = new JsonObject();
+                JsonObject credentialObject = (JsonObject) JsonParser.parseString(credential);
                 challengeResponse.add(REQUEST_ID, JsonParser.parseString(requestId));
-                challengeResponse.add(CREDENTIAL, JsonParser.parseString(credential));
+                challengeResponse.add(CREDENTIAL, credentialObject);
                 webAuthnService.finishFIDO2Registration(challengeResponse.toString(), username);
+
+                String credentialId = credentialObject.getAsJsonPrimitive(ID).getAsString();
+                response.getContextProperties().put(CREDENTIAL_ID, credentialId);
                 response.setResult(Constants.ExecutorStatus.STATUS_COMPLETE);
             }
         } catch (FIDO2AuthenticatorServerException | FIDO2AuthenticatorClientException e) {
@@ -174,9 +178,10 @@ public class FIDO2Executor implements Executor {
 
         String credentialId = (String) context.getProperties().get(CREDENTIAL_ID);
         ExecutorResponse response = new ExecutorResponse();
-        if (StringUtils.isNotBlank(credentialId)) {
+        if (StringUtils.isNotBlank(credentialId) &&
+                StringUtils.isNotBlank(context.getRegisteringUser().getUsername())) {
             try {
-                webAuthnService.deregisterFIDO2Credential(credentialId);
+                webAuthnService.deregisterFIDO2Credential(credentialId, context.getRegisteringUser().getUsername());
             } catch (FIDO2AuthenticatorServerException | FIDO2AuthenticatorClientException e) {
                 return errorResponse(new ExecutorResponse(), e.getMessage());
             }
