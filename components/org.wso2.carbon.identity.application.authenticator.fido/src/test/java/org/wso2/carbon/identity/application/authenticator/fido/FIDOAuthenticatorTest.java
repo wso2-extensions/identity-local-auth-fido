@@ -249,10 +249,13 @@ public class FIDOAuthenticatorTest {
                 .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
         authenticatedUser.setFederatedUser(false);
         authenticatedUser.setUserName(USERNAME);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
 
         StepConfig stepConfig = new StepConfig();
         stepConfig.setAuthenticatorList(authenticatorList);
         stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
         Map<Integer, StepConfig> stepMap = new HashMap<>();
         stepMap.put(1, stepConfig);
         SequenceConfig sequenceConfig = new SequenceConfig();
@@ -285,10 +288,12 @@ public class FIDOAuthenticatorTest {
         authenticatedUser.setFederatedUser(false);
         authenticatedUser.setUserName(USERNAME);
         authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
 
         StepConfig stepConfig = new StepConfig();
         stepConfig.setAuthenticatorList(authenticatorList);
         stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
         Map<Integer, StepConfig> stepMap = new HashMap<>();
         stepMap.put(1, stepConfig);
         SequenceConfig sequenceConfig = new SequenceConfig();
@@ -430,10 +435,12 @@ public class FIDOAuthenticatorTest {
         authenticatedUser.setFederatedUser(false);
         authenticatedUser.setUserName(USERNAME);
         authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
 
         StepConfig stepConfig = new StepConfig();
         stepConfig.setAuthenticatorList(authenticatorList);
         stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
         Map<Integer, StepConfig> stepMap = new HashMap<>();
         stepMap.put(1, stepConfig);
         SequenceConfig sequenceConfig = new SequenceConfig();

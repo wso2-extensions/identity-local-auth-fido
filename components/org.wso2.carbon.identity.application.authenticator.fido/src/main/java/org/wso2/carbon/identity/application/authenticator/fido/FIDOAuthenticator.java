@@ -985,7 +985,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      */
     private AuthenticatedUser getAuthenticatedUser(AuthenticationContext context) {
 
-        AuthenticatedUser authenticatedUser = null;
         Map<Integer, StepConfig> stepConfigMap = context.getSequenceConfig().getStepMap();
         for (StepConfig stepConfig : stepConfigMap.values()) {
             AuthenticatedUser authenticatedUserInStepConfig = stepConfig.getAuthenticatedUser();
@@ -994,9 +993,9 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             }
         }
         if (context.getLastAuthenticatedUser() != null && context.getLastAuthenticatedUser().getUserName() != null) {
-            authenticatedUser = context.getLastAuthenticatedUser();
+            return context.getLastAuthenticatedUser();
         }
-        return authenticatedUser;
+        return null;
     }
 
     /**
