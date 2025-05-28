@@ -792,8 +792,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if (FrameworkUtils.isPreviousIdPAuthenticationFlowHandler(context)) {
             boolean isUserResolved = FrameworkUtils.getIsUserResolved(context);
             if (!isUserResolved && user != null) {
-                String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(user.getUserName());
-                String tenantDomain = MultitenantUtils.getTenantDomain(user.getUserName());
+                String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(user.toFullQualifiedUsername());
+                String tenantDomain = MultitenantUtils.getTenantDomain(user.toFullQualifiedUsername());
                 ResolvedUserResult resolvedUserResult = FrameworkUtils.
                         processMultiAttributeLoginIdentification(tenantAwareUsername, tenantDomain);
                 if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS
