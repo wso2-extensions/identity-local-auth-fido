@@ -21,7 +21,8 @@
 <suite name="Suite1" verbose="1">
     <test name="FIDO-Authenticator-Unit-Tests">
         <classes>
-            <class name="org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnServiceTest" />
+            <class name="org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnServiceTest"/>
+            <class name="org.wso2.carbon.identity.application.authenticator.fido2.executor.FIDO2ExecutorTest"/>
         </classes>
     </test>
 </suite>
