@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.flow.execution.engine.Constants;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -96,8 +97,9 @@ public class FIDO2Executor implements Executor {
                 JsonObject credentialObject = (JsonObject) JsonParser.parseString(credential);
                 challengeResponse.add(FIDO2ExecutorConstants.REQUEST_ID, JsonParser.parseString(requestId));
                 challengeResponse.add(FIDO2ExecutorConstants.CREDENTIAL, credentialObject);
+                // Add tenant domain to the username.
+                username = UserCoreUtil.addTenantDomainToEntry(username, context.getTenantDomain());
                 webAuthnService.finishFIDO2Registration(challengeResponse.toString(), username);
-
                 String credentialId = credentialObject.getAsJsonPrimitive(FIDO2ExecutorConstants.ID).getAsString();
                 response.getContextProperties().put(FIDO2ExecutorConstants.CREDENTIAL_ID, credentialId);
                 response.setResult(Constants.ExecutorStatus.STATUS_COMPLETE);
