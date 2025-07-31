@@ -29,11 +29,13 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authenticator.fido2.executor.FIDO2Executor;
+import org.wso2.carbon.identity.application.authenticator.fido2.executor.RegistrationFlowCompletionListener;
 import org.wso2.carbon.identity.application.authenticator.fido2.listener.FIDO2DeviceAssociatedUserOperationsListener;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
+import org.wso2.carbon.identity.flow.execution.engine.listener.FlowExecutionListener;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -63,6 +65,7 @@ public class FIDO2AuthenticatorServiceComponent {
             bundleContext.registerService(UserOperationEventListener.class.getName(),
                     new FIDO2DeviceAssociatedUserOperationsListener(), null);
             bundleContext.registerService(Executor.class.getName(), new FIDO2Executor(), null);
+            bundleContext.registerService(FlowExecutionListener.class, new RegistrationFlowCompletionListener(), null);
         } catch (Exception e) {
             log.error("Error registering UserStoreConfigListener ", e);
         }

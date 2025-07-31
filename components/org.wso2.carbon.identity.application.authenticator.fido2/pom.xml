@@ -95,6 +95,10 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.flow.execution.engine</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.flow.mgt</artifactId>
+        </dependency>
 
         <!--Test Dependencies-->
         <dependency>
@@ -179,6 +183,8 @@
                             org.wso2.carbon.identity.configuration.mgt.core.*;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.flow.execution.engine.*;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.flow.mgt;
                             version="${carbon.identity.package.import.version.range}",
                         </Import-Package>
                         <Export-Package>

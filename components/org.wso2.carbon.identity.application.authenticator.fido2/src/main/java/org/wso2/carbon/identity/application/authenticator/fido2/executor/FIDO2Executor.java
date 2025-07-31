@@ -19,11 +19,15 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.executor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.yubico.internal.util.JacksonCodecs;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
+import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2CredentialRegistration;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2RegistrationRequest;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
@@ -46,6 +50,9 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIRST_NAME_CLAIM_URL;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL;
 
+/**
+ * FIDO2 Executor for handling FIDO2 registration and authentication flows.
+ */
 public class FIDO2Executor implements Executor {
 
     private static final WebAuthnService webAuthnService = new WebAuthnService();
@@ -99,9 +106,14 @@ public class FIDO2Executor implements Executor {
                 challengeResponse.add(FIDO2ExecutorConstants.CREDENTIAL, credentialObject);
                 // Add tenant domain to the username.
                 username = UserCoreUtil.addTenantDomainToEntry(username, context.getTenantDomain());
-                webAuthnService.finishFIDO2Registration(challengeResponse.toString(), username);
-                String credentialId = credentialObject.getAsJsonPrimitive(FIDO2ExecutorConstants.ID).getAsString();
-                response.getContextProperties().put(FIDO2ExecutorConstants.CREDENTIAL_ID, credentialId);
+                if (FIDOUtil.isRegistrationFlow(context)) {
+                    FIDO2CredentialRegistration registration = webAuthnService
+                            .createFIDO2Credential(challengeResponse.toString(), username);
+                    response.getContextProperties()
+                            .put(FIDO2ExecutorConstants.CREDENTIAL_REGISTRATION, toMap(registration));
+                } else {
+                    webAuthnService.finishFIDO2Registration(challengeResponse.toString(), username);
+                }
                 response.setResult(Constants.ExecutorStatus.STATUS_COMPLETE);
             }
         } catch (FIDO2AuthenticatorServerException | FIDO2AuthenticatorClientException e) {
@@ -208,5 +220,12 @@ public class FIDO2Executor implements Executor {
         }
         response.setResult(Constants.ExecutorStatus.STATUS_COMPLETE);
         return response;
+    }
+
+    private static Map<String, Object> toMap(FIDO2CredentialRegistration original) {
+
+        ObjectMapper mapper = JacksonCodecs.json();
+        return mapper.convertValue(original, new TypeReference<Map<String, Object>>() {
+        });
     }
 }
