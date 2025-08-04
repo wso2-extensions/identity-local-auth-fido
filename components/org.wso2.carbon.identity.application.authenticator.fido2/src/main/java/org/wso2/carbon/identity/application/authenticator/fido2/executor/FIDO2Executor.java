@@ -151,7 +151,8 @@ public class FIDO2Executor implements Executor {
         return response;
     }
 
-    private String getUserDisplayName(FlowExecutionContext flowExecutionContext) throws FIDO2AuthenticatorServerException {
+    private String getUserDisplayName(FlowExecutionContext flowExecutionContext)
+            throws FIDO2AuthenticatorServerException {
 
         String displayName = (String) flowExecutionContext.getFlowUser().getClaim(DISPLAY_NAME_CLAIM_URL);
         // If the displayName is not available, build the displayName with firstName and lastName.

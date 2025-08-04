@@ -98,17 +98,22 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
         RegisteredCredential credential = mapper.convertValue(credentialObj, RegisteredCredential.class);
         UserIdentity userIdentity = mapper.convertValue(userIdentityObj, UserIdentity.class);
 
-        Optional<String> credentialNickname = Optional.ofNullable((String) map.get(FIDO2ExecutorConstants.RegistrationConstants.CREDENTIAL_NICKNAME));
+        Optional<String> credentialNickname = Optional.ofNullable((String)
+                map.get(FIDO2ExecutorConstants.RegistrationConstants.CREDENTIAL_NICKNAME));
         Optional<MetadataBLOBPayloadEntry> attestationMetadata = Optional.ofNullable(
-                mapper.convertValue(map.get(FIDO2ExecutorConstants.RegistrationConstants.ATTESTATION_METADATA), MetadataBLOBPayloadEntry.class));
+                mapper.convertValue(map.get(FIDO2ExecutorConstants.RegistrationConstants.ATTESTATION_METADATA),
+                        MetadataBLOBPayloadEntry.class));
 
-        long signatureCount = map.get(FIDO2ExecutorConstants.RegistrationConstants.SIGNATURE_COUNT) != null ? ((Number) map.get(FIDO2ExecutorConstants.RegistrationConstants.SIGNATURE_COUNT)).longValue() : 0;
+        long signatureCount = map.get(FIDO2ExecutorConstants.RegistrationConstants.SIGNATURE_COUNT) != null ?
+                ((Number) map.get(FIDO2ExecutorConstants.RegistrationConstants.SIGNATURE_COUNT)).longValue() : 0;
         String displayName = (String) map.get(FIDO2ExecutorConstants.RegistrationConstants.DISPLAY_NAME);
-        boolean isUsernamelessSupported = Boolean.TRUE.equals(map.get(FIDO2ExecutorConstants.RegistrationConstants.IS_USERNAMELESS_SUPPORTED));
+        boolean isUsernamelessSupported = Boolean.TRUE.equals(
+                map.get(FIDO2ExecutorConstants.RegistrationConstants.IS_USERNAMELESS_SUPPORTED));
 
         Instant registrationTime = null;
         if (map.get(FIDO2ExecutorConstants.RegistrationConstants.REGISTRATION_TIME) != null) {
-            registrationTime = Instant.parse((String) map.get(FIDO2ExecutorConstants.RegistrationConstants.REGISTRATION_TIME));
+            registrationTime = Instant.parse((String)
+                    map.get(FIDO2ExecutorConstants.RegistrationConstants.REGISTRATION_TIME));
         }
 
         FIDO2CredentialRegistration registration = FIDO2CredentialRegistration.builder()
