@@ -487,6 +487,161 @@ public class WebAuthnService {
         }
     }
 
+    /**
+     * Creates a FIDO2 credential registration and return it without storing it in the database.
+     *
+     * @param challengeResponse Challenge response.
+     * @param username          Username of the user.
+     * @return FIDO2 credential registration.
+     * @throws FIDO2AuthenticatorServerException if an error occurs while processing the request.
+     * @throws FIDO2AuthenticatorClientException if the request is invalid or if the user is already registered.
+     */
+    public FIDO2CredentialRegistration createFIDO2Credential(String challengeResponse,
+                                                             String username)
+            throws FIDO2AuthenticatorServerException, FIDO2AuthenticatorClientException {
+
+        RegistrationResponse response;
+        try {
+            response = jsonMapper.readValue(challengeResponse, RegistrationResponse.class);
+        } catch (JsonParseException | JsonMappingException e) {
+            throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
+                    ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode(), e);
+        } catch (IOException e) {
+            throw new FIDO2AuthenticatorServerException(DECODING_FAILED_MESSAGE, e);
+        }
+
+        if (username == null) {
+            username = getTenantQualifiedUsername();
+        }
+
+        User user = User.getUserFromUserName(username);
+        if (FIDO2DeviceStoreDAO.getInstance().getFIDO2RegistrationByUsernameAndCredentialId(user.toString(),
+                response.getCredential().getId()).isPresent()) {
+            throw new FIDO2AuthenticatorClientException("The username \"" + user + "\" is already registered.",
+                    ERROR_CODE_FINISH_REGISTRATION_USERNAME_AND_CREDENTIAL_ID_EXISTS.getErrorCode());
+        }
+
+        String requestId = response.getRequestId().getBase64();
+        FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance()
+                .getValueFromCacheByRequestId(new FIDO2CacheKey(requestId));
+
+        PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions = null;
+        RelyingParty relyingParty = null;
+        if (cacheEntry != null) {
+            try {
+                publicKeyCredentialCreationOptions = jsonMapper.readValue(cacheEntry
+                                .getPublicKeyCredentialCreationOptions(),
+                        PublicKeyCredentialCreationOptions.class);
+            } catch (JsonParseException | JsonMappingException e) {
+                throw new FIDO2AuthenticatorClientException("Finish FIDO2 device registration request is invalid.",
+                        ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode(), e);
+            } catch (IOException e) {
+                throw new FIDO2AuthenticatorServerException(DECODING_FAILED_MESSAGE, e);
+            }
+            relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+            FIDO2Cache.getInstance().clearCacheEntryByRequestId(new FIDO2CacheKey(requestId));
+
+        }
+        if (publicKeyCredentialCreationOptions == null || relyingParty == null) {
+            String message = "Registration failed! No such registration in progress";
+            if (log.isDebugEnabled()) {
+                log.debug(MessageFormat.format("Fail finishRegistration challengeResponse: {0}", challengeResponse));
+            }
+            throw new FIDO2AuthenticatorClientException(message,
+                    ERROR_CODE_FINISH_REGISTRATION_INVALID_REQUEST.getErrorCode());
+        } else {
+            if (getAuthenticatorConfigs().isAttestationValidationEnabled()) {
+                Set<String> transports = response.getCredential().getResponse().getTransports().stream().map(
+                        com.yubico.webauthn.data.AuthenticatorTransport::getId).collect(Collectors.toSet()
+                );
+
+                com.webauthn4j.data.RegistrationRequest registrationRequest =
+                        new com.webauthn4j.data.RegistrationRequest(
+                                response.getCredential().getResponse().getAttestationObject().getBytes(),
+                                response.getCredential().getResponse().getClientDataJSON().getBytes(),
+                                transports
+                        );
+
+                Set<Origin> originSet =
+                        relyingParty.getOrigins().stream().map(Origin::new).collect(Collectors.toSet());
+
+                List<com.webauthn4j.data.PublicKeyCredentialParameters> publicKeyCredentialParametersList =
+                        relyingParty.getPreferredPubkeyParams().stream().map(pkcp ->
+                                new com.webauthn4j.data.PublicKeyCredentialParameters(
+                                        PublicKeyCredentialType.create(pkcp.getType().getId()),
+                                        COSEAlgorithmIdentifier.create(pkcp.getAlg().getId())
+                                )
+                        ).collect(Collectors.toList());
+
+                RegistrationParameters registrationParameters = new RegistrationParameters(
+                        new ServerProperty(
+                                originSet,
+                                relyingParty.getIdentity().getId(),
+                                new DefaultChallenge(response.getCredential().getResponse().getClientData()
+                                        .getChallenge().getBytes()),
+                                null
+                        ),
+                        publicKeyCredentialParametersList,
+                        response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UV,
+                        response.getCredential().getResponse().getAttestation().getAuthenticatorData().getFlags().UP
+                );
+
+                RegistrationData registrationData;
+                try {
+                    registrationData = getWebAuthnManager().parse(registrationRequest);
+                    getWebAuthnManager().validate(registrationData, registrationParameters);
+                } catch (DataConversionException e) {
+                    throw new FIDO2AuthenticatorServerException("Attestation data structure parse error", e);
+                } catch (ValidationException e) {
+                    throw new FIDO2AuthenticatorClientException("Validation failed: Invalid attestation!",
+                            ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
+                } catch (MDSException e) {
+                    if (!Objects.equals(e.getMessage(), "MetadataBLOB signature is invalid")) {
+                        throw new FIDO2AuthenticatorClientException("Validation failed: Invalid metadata!",
+                                ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
+                    }
+                }
+            }
+
+            RegistrationResult registration;
+            try {
+                registration = relyingParty.finishRegistration(FinishRegistrationOptions.builder()
+                        .request(publicKeyCredentialCreationOptions)
+                        .response(response.getCredential()).build()
+                );
+            } catch (RegistrationFailedException e) {
+                throw new FIDO2AuthenticatorServerException("Registration failed!", e);
+            }
+
+            UserIdentity userIdentity = publicKeyCredentialCreationOptions.getUser();
+            RegisteredCredential credential = RegisteredCredential.builder()
+                    .credentialId(registration.getKeyId().getId())
+                    .userHandle(userIdentity.getId())
+                    .publicKeyCose(registration.getPublicKeyCose())
+                    .signatureCount(response.getCredential().getResponse().getParsedAuthenticatorData()
+                            .getSignatureCounter())
+                    .build();
+
+            boolean requireResidentKey = false;
+            if ((publicKeyCredentialCreationOptions.getAuthenticatorSelection().isPresent()) &&
+                    (publicKeyCredentialCreationOptions.getAuthenticatorSelection().get().getResidentKey().isPresent()) &&
+                    (publicKeyCredentialCreationOptions.getAuthenticatorSelection().get().getResidentKey().get()) ==
+                            ResidentKeyRequirement.REQUIRED) {
+                requireResidentKey = true;
+            }
+
+            return FIDO2CredentialRegistration.builder()
+                    .userIdentity(userIdentity)
+                    .registrationTime(clock.instant())
+                    .credential(credential)
+                    .signatureCount(response.getCredential().getResponse().getParsedAuthenticatorData()
+                            .getSignatureCounter())
+                    .displayName(null)
+                    .isUsernamelessSupported(requireResidentKey)
+                    .build();
+        }
+    }
+
     public String startAuthentication(String username, String tenantDomain, String storeDomain,
                                       String appId) throws AuthenticationFailedException {
 

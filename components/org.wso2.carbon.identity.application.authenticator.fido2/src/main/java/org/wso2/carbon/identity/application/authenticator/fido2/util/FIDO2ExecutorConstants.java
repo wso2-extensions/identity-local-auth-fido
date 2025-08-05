@@ -32,9 +32,25 @@ public class FIDO2ExecutorConstants {
     public static final String REQUEST_ID_CONTEXT_KEY = "webAuthnRequestId";
     public static final String CREDENTIAL = "credential";
     public static final String CREDENTIAL_ID = "credentialId";
+    public static final String CREDENTIAL_REGISTRATION = "credentialRegistration";
     public static final String ID = "id";
     public static final String ACTION = "action";
     public static final String PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS = "publicKeyCredentialCreationOptions";
+
+    public static class RegistrationConstants {
+
+        private RegistrationConstants() {
+
+        }
+
+        public static final String USER_IDENTITY = "userIdentity";
+        public static final String CREDENTIAL_NICKNAME = "credentialNickname";
+        public static final String ATTESTATION_METADATA = "attestationMetadata";
+        public static final String SIGNATURE_COUNT = "signatureCount";
+        public static final String DISPLAY_NAME = "displayName";
+        public static final String IS_USERNAMELESS_SUPPORTED = "isUsernamelessSupported";
+        public static final String REGISTRATION_TIME = "registrationTime";
+    }
 
     public static class ActionTypes {
 

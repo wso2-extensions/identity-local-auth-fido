@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.internal.util.JacksonCodecs;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -86,5 +87,11 @@ public class FIDOUtil {
         }
 
         return mdsSchedulerInitialDelay;
+    }
+
+    public static boolean isRegistrationFlow(FlowExecutionContext context) {
+
+        return org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes.REGISTRATION.getType()
+                .equals(context.getFlowType());
     }
 }
