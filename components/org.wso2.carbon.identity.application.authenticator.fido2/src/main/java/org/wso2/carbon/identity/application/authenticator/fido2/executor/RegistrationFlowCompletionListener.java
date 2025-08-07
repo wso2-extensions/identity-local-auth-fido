@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.flow.execution.engine.Constants;
 import org.wso2.carbon.identity.flow.execution.engine.listener.AbstractFlowExecutionListener;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionStep;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.time.Instant;
 import java.util.Map;
@@ -79,7 +80,9 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
                     new TypeReference<Map<String, Object>>() {
                     });
             try {
-                FIDO2DeviceStoreDAO.getInstance().addFIDO2RegistrationByUsername(context.getFlowUser().getUsername(),
+                String username = context.getFlowUser().getUsername();
+                username = UserCoreUtil.addTenantDomainToEntry(username, context.getTenantDomain());
+                FIDO2DeviceStoreDAO.getInstance().addFIDO2RegistrationByUsername(username,
                         buildFromMap(credentialRegistration));
             } catch (FIDO2AuthenticatorServerException e) {
                 LOG.error("Error while storing FIDO2 registration for user: " +
