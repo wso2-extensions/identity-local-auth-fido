@@ -36,6 +36,7 @@ public class FIDO2ExecutorConstants {
     public static final String ID = "id";
     public static final String ACTION = "action";
     public static final String PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS = "publicKeyCredentialCreationOptions";
+    public static final String DEFAULT_AMR_VALUE = "FIDOAuthenticator";
 
     public static class RegistrationConstants {
 

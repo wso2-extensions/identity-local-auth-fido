@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2ExecutorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.flow.execution.engine.Constants;
+import org.wso2.carbon.identity.flow.execution.engine.graph.AuthenticationExecutor;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
@@ -53,7 +54,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
 /**
  * FIDO2 Executor for handling FIDO2 registration and authentication flows.
  */
-public class FIDO2Executor implements Executor {
+public class FIDO2Executor extends AuthenticationExecutor {
 
     private static final WebAuthnService webAuthnService = new WebAuthnService();
 
@@ -61,6 +62,12 @@ public class FIDO2Executor implements Executor {
     public String getName() {
 
         return "FIDO2Executor";
+    }
+
+    @Override
+    public String getAMRValue() {
+
+        return FIDO2ExecutorConstants.DEFAULT_AMR_VALUE;
     }
 
     @Override
