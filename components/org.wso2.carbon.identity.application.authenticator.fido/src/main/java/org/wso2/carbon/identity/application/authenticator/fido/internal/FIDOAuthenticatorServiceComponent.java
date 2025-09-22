@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfi
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.ServerConstants;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 
 /**
  * OSGI declarative service component which handles registration and unregistration of FIDOAuthenticatorComponent.
@@ -163,5 +164,28 @@ public class FIDOAuthenticatorServiceComponent {
     protected void unsetIdentityProviderManagementService(IdpManager idpManager) {
 
         FIDOAuthenticatorServiceDataHolder.setIdpManager(null);
+    }
+
+    @Reference(
+            name = "AccountLockService",
+            service = org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAccountLockService"
+    )
+    protected void setAccountLockService(AccountLockService accountLockService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the AccountLockService in FIDO authenticator bundle.");
+        }
+        FIDOAuthenticatorServiceDataHolder.setAccountLockService(accountLockService);
+    }
+
+    protected void unsetAccountLockService(AccountLockService accountLockService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("UnSetting the AccountLockService in FIDO authenticator bundle.");
+        }
+        FIDOAuthenticatorServiceDataHolder.setAccountLockService(null);
     }
 }

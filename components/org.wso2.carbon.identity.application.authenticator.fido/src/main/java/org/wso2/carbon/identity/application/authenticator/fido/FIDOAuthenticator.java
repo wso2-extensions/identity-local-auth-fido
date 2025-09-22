@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuth
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
+import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthUtils;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2RegistrationRequest;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
@@ -127,8 +128,20 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if (StringUtils.isNotEmpty(request.getParameter(TOKEN_RESPONSE)) &&
                 !(StringUtils.isNotEmpty(request.getParameter(SCENARIO)) &&
                         ScenarioTypes.INIT_FIDO_ENROLL.equals(request.getParameter(SCENARIO)))) {
-            processAuthenticationResponse(request, response, context);
-            return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
+            try {
+                processAuthenticationResponse(request, response, context);
+                return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
+            } catch (AuthenticationFailedException e) {
+                if (e.getMessage() != null && e.getMessage().contains(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE)) {
+                    try {
+                        FIDOAuthUtils.redirectToErrorPageForLockedUser(response, context);
+                        return AuthenticatorFlowStatus.INCOMPLETE;
+                    } catch (AuthenticationFailedException redirectException) {
+                        throw e;
+                    }
+                }
+                throw e;
+            }
         }
 
         // If an authentication flow cancellation request received from the user, go through this flow.
@@ -509,6 +522,19 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             }
             user.setAuthenticatedSubjectIdentifier(user.getUsernameAsSubjectIdentifier(true, true));
             context.setSubject(user);
+
+            // Check account lock status before proceeding with authentication
+            try {
+                if (FIDOAuthUtils.isAccountLocked(user)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Account is locked for user: " + user.getUserName());
+                    }
+                    throw new AuthenticationFailedException(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE);
+                }
+            } catch (AuthenticationFailedException e) {
+                throw e;
+            }
+
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         FIDO_AUTH_SERVICE, PROCESS_AUTHENTICATION_RESPONSE);

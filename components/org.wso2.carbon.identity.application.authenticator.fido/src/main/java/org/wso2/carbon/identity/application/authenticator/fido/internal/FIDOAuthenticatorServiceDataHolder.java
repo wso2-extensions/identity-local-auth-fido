@@ -24,6 +24,7 @@ import org.osgi.framework.BundleContext;
 import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 
 
 /**
@@ -37,6 +38,7 @@ public class FIDOAuthenticatorServiceDataHolder {
     private RealmService realmService = null;
     private static IdentityGovernanceService identityGovernanceService;
     private static IdpManager idpManager;
+    private static AccountLockService accountLockService;
 
     private FIDOAuthenticatorServiceDataHolder() {
     }
@@ -105,5 +107,28 @@ public class FIDOAuthenticatorServiceDataHolder {
     public static void setIdpManager(IdpManager idpManager) {
 
         FIDOAuthenticatorServiceDataHolder.idpManager = idpManager;
+    }
+
+    /**
+     * Get AccountLockService.
+     *
+     * @return AccountLockService.
+     */
+    public static AccountLockService getAccountLockService() {
+
+        if (accountLockService == null) {
+            throw new RuntimeException("AccountLockService not available. Component is not started properly.");
+        }
+        return accountLockService;
+    }
+
+    /**
+     * Set AccountLockService.
+     *
+     * @param accountLockService AccountLockService.
+     */
+    public static void setAccountLockService(AccountLockService accountLockService) {
+
+        FIDOAuthenticatorServiceDataHolder.accountLockService = accountLockService;
     }
 }
