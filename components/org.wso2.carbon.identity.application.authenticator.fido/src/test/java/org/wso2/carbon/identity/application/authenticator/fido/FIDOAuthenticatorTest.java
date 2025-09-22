@@ -46,6 +46,8 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
+import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -76,7 +78,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 
 @PrepareForTest({FIDOAuthenticator.class, IdentityUtil.class, MultitenantUtils.class, IdentityTenantUtil.class,
     U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
-    URLEncoder.class, ServiceURLBuilder.class, LoggerUtils.class})
+    URLEncoder.class, ServiceURLBuilder.class, LoggerUtils.class, FIDOAuthenticatorServiceDataHolder.class})
 public class FIDOAuthenticatorTest {
 
     private static final String USER_STORE_DOMAIN = "PRIMARY";
@@ -103,6 +105,8 @@ public class FIDOAuthenticatorTest {
     private AuthenticateRequestData authenticateRequestData;
     @Mock
     private ExternalIdPConfig externalIdPConfig;
+    @Mock
+    private AccountLockService accountLockService;
 
     @BeforeMethod
     public void setUp() {
@@ -113,7 +117,14 @@ public class FIDOAuthenticatorTest {
         mockStatic(MultitenantUtils.class);
         mockStatic(IdentityTenantUtil.class);
         mockStatic(LoggerUtils.class);
+        mockStatic(FIDOAuthenticatorServiceDataHolder.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(FIDOAuthenticatorServiceDataHolder.getAccountLockService()).thenReturn(accountLockService);
+        try {
+            when(accountLockService.isAccountLocked(anyString(), anyString(), anyString())).thenReturn(false);
+        } catch (Exception e) {
+            // Mock the exception handling
+        }
     }
 
     private void mockServiceURLBuilder() {
