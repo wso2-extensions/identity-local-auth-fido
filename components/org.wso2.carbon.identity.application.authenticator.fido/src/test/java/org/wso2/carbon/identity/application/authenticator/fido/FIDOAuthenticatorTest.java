@@ -540,4 +540,52 @@ public class FIDOAuthenticatorTest {
 
         return new PowerMockObjectFactory();
     }
+
+    @Test(description = "Test case for locked user authentication with FIDO2", priority = 11)
+    public void testProcessAuthenticationResponseWithLockedUser() throws Exception {
+        
+        AuthenticationContext context = new AuthenticationContext();
+        List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        authenticatorConfig.setApplicationAuthenticator(fidoAuthenticator);
+        authenticatorList.add(authenticatorConfig);
+
+        StepConfig stepConfig = new StepConfig();
+        stepConfig.setAuthenticatorList(authenticatorList);
+        Map<Integer, StepConfig> stepMap = new HashMap<>();
+        stepMap.put(1, stepConfig);
+
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setStepMap(stepMap);
+        context.setSequenceConfig(sequenceConfig);
+
+        AuthenticatedUser authenticatedUser = AuthenticatedUser
+                .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
+        authenticatedUser.setFederatedUser(false);
+        authenticatedUser.setUserName(USERNAME);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
+        context.setSubject(authenticatedUser);
+
+        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
+
+        try {
+            when(accountLockService.isAccountLocked(anyString(), anyString(), anyString())).thenReturn(true);
+        } catch (Exception e) {
+            // Mock the exception handling
+        }
+
+        when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
+        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
+
+        mockServiceURLBuilder();
+
+        try {
+            fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
+            Assert.fail("Expected AuthenticationFailedException for locked user");
+        } catch (AuthenticationFailedException e) {
+            Assert.assertTrue(e.getMessage().contains("error.user.account.locked"), 
+                    "Exception should contain account locked message");
+        }
+    }
 }
