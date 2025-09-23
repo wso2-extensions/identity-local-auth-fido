@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -48,7 +48,6 @@ import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuth
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
-import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthUtils;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2RegistrationRequest;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorClientException;
@@ -132,13 +131,10 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 processAuthenticationResponse(request, response, context);
                 return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
             } catch (AuthenticationFailedException e) {
+                // If the account is locked, redirect the user to the error page.
                 if (e.getMessage() != null && e.getMessage().contains(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE)) {
-                    try {
-                        FIDOAuthUtils.redirectToErrorPageForLockedUser(response, context);
-                        return AuthenticatorFlowStatus.INCOMPLETE;
-                    } catch (AuthenticationFailedException redirectException) {
-                        throw e;
-                    }
+                    FIDOUtil.redirectToErrorPageForLockedUser(response, context);
+                    return AuthenticatorFlowStatus.INCOMPLETE;
                 }
                 throw e;
             }
@@ -523,16 +519,12 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             user.setAuthenticatedSubjectIdentifier(user.getUsernameAsSubjectIdentifier(true, true));
             context.setSubject(user);
 
-            // Check account lock status before proceeding with authentication
-            try {
-                if (FIDOAuthUtils.isAccountLocked(user)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Account is locked for user: " + user.getUserName());
-                    }
-                    throw new AuthenticationFailedException(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE);
+            // Check account lock status before completing the authentication.
+            if (FIDOUtil.isAccountLocked(user)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Account is locked for user: " + user.getUserName());
                 }
-            } catch (AuthenticationFailedException e) {
-                throw e;
+                throw new AuthenticationFailedException(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE);
             }
 
             if (LoggerUtils.isDiagnosticLogsEnabled()) {

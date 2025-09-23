@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -17,20 +17,37 @@
  */
 package org.wso2.carbon.identity.application.authenticator.fido.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.governance.IdentityGovernanceException;
 import org.wso2.carbon.identity.governance.IdentityGovernanceService;
+import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
+import java.io.IOException;
+
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * FIDOUtil class for FIDO authentication component.
  */
 public class FIDOUtil {
+
+    private static final Log log = LogFactory.getLog(FIDOUtil.class);
+
     private FIDOUtil() {
     }
 
@@ -80,6 +97,75 @@ public class FIDOUtil {
         } catch (IdentityGovernanceException e) {
             throw new FIDOAuthenticatorServerException(
                     "Error occurred while getting the authenticator configuration", e);
+        }
+    }
+
+    /**
+     * Check whether the account is locked.
+     *
+     * @param user AuthenticatedUser.
+     * @return true if the account is locked.
+     * @throws AuthenticationFailedException If an error occurred while checking the account lock status.
+     */
+    public static boolean isAccountLocked(AuthenticatedUser user) throws AuthenticationFailedException {
+
+        try {
+            return FIDOAuthenticatorServiceDataHolder.getInstance().getAccountLockService().isAccountLocked(
+                    user.getUserName(), user.getTenantDomain(), user.getUserStoreDomain());
+        } catch (AccountLockServiceException e) {
+            String error = String.format(FIDOAuthenticatorConstants.ERROR_GETTING_ACCOUNT_LOCKED_STATE_MESSAGE,
+                    FIDOUtil.maskUsernameIfRequired(user.getUserName()));
+            throw new AuthenticationFailedException(error, e);
+        }
+    }
+
+    /**
+     * Mask the given value if it is required.
+     *
+     * @param value Value to be masked.
+     * @return Masked/unmasked value.
+     */
+    public static String maskUsernameIfRequired(String value) {
+
+        return LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(value) : value;
+    }
+
+    /**
+     * To redirect flow to the error page when the user account is locked.
+     *
+     * @param response The httpServletResponse.
+     * @param context  The AuthenticationContext.
+     * @throws AuthenticationFailedException If an error occurred.
+     */
+    public static void redirectToErrorPageForLockedUser(HttpServletResponse response,
+                                                        AuthenticationContext context)
+            throws AuthenticationFailedException {
+
+        try {
+            String queryParams = FrameworkUtils.getQueryStringWithFrameworkContextId(context.getQueryParams(),
+                    context.getCallerSessionKey(), context.getContextIdentifier());
+            queryParams += FIDOAuthenticatorConstants.ACCOUNT_LOCKED_ERROR_QUERY_PARAMS;
+            String errorPage = getErrorPageUrl();
+            String url = FrameworkUtils.appendQueryParamsStringToUrl(errorPage, queryParams);
+            response.sendRedirect(url);
+        } catch (IOException e) {
+            throw new AuthenticationFailedException(FIDOAuthenticatorConstants.ERROR_REDIRECTING_TO_ERROR_PAGE_MESSAGE, e);
+        }
+    }
+
+    /**
+     * Get FIDO error page URL.
+     *
+     * @return URL of the FIDO error page.
+     * @throws AuthenticationFailedException If an error occurred while getting the error page url.
+     */
+    public static String getErrorPageUrl() throws AuthenticationFailedException {
+
+        try {
+            return ServiceURLBuilder.create().addPath("authenticationendpoint/" + FIDOAuthenticatorConstants.URI_ERROR).build(
+                    IdentityUtil.getHostName()).getAbsolutePublicURL();
+        } catch (URLBuilderException e) {
+            throw new AuthenticationFailedException("Error while building FIDO error page URL", e);
         }
     }
 }
