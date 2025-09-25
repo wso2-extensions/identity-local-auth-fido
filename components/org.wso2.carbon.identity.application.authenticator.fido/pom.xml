@@ -38,6 +38,10 @@
             <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
+            <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.extension.identity.authenticator.utils</groupId>
             <artifactId>org.wso2.carbon.extension.identity.helper</artifactId>
             <exclusions>
@@ -169,6 +173,10 @@
                             com.google.common.primitives.*;version="${guava.osgi.version.range}",
                             com.google.common.cache.*;version="${guava.osgi.version.range}",
                             com.google.common.io.*;version="${guava.osgi.version.range}",
+                            org.wso2.carbon.identity.handler.event.account.lock.service;
+                            version="${carbon.identity.account.lock.handler.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.handler.event.account.lock.exception;
+                            version="${carbon.identity.account.lock.handler.imp.pkg.version.range}",
                         </Import-Package>
                         <Embed-Dependency>
                             u2flib-server-core

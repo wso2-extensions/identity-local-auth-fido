@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -127,8 +127,17 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if (StringUtils.isNotEmpty(request.getParameter(TOKEN_RESPONSE)) &&
                 !(StringUtils.isNotEmpty(request.getParameter(SCENARIO)) &&
                         ScenarioTypes.INIT_FIDO_ENROLL.equals(request.getParameter(SCENARIO)))) {
-            processAuthenticationResponse(request, response, context);
-            return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
+            try {
+                processAuthenticationResponse(request, response, context);
+                return AuthenticatorFlowStatus.SUCCESS_COMPLETED;
+            } catch (AuthenticationFailedException e) {
+                // If the account is locked, redirect the user to the error page.
+                if (e.getMessage() != null && e.getMessage().contains(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE)) {
+                    FIDOUtil.redirectToErrorPageForLockedUser(response, context);
+                    return AuthenticatorFlowStatus.INCOMPLETE;
+                }
+                throw e;
+            }
         }
 
         // If an authentication flow cancellation request received from the user, go through this flow.
@@ -509,6 +518,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             }
             user.setAuthenticatedSubjectIdentifier(user.getUsernameAsSubjectIdentifier(true, true));
             context.setSubject(user);
+
+            // Check account lock status before completing the authentication.
+            if (FIDOUtil.isAccountLocked(user)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Account is locked for user: " + user.getUserName());
+                }
+                throw new AuthenticationFailedException(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE);
+            }
+
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         FIDO_AUTH_SERVICE, PROCESS_AUTHENTICATION_RESPONSE);

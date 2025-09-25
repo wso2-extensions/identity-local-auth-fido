@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022, WSO2 Inc. (http://www.wso2.com).
+ * Copyright (c) 2022-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,14 +43,19 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.A
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
+import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
+import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.net.URLEncoder;
@@ -61,12 +66,14 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -75,8 +82,9 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME;
 
 @PrepareForTest({FIDOAuthenticator.class, IdentityUtil.class, MultitenantUtils.class, IdentityTenantUtil.class,
-    U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
-    URLEncoder.class, ServiceURLBuilder.class, LoggerUtils.class})
+        U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
+        URLEncoder.class, ServiceURLBuilder.class, LoggerUtils.class, FIDOAuthenticatorServiceDataHolder.class,
+        FrameworkUtils.class})
 public class FIDOAuthenticatorTest {
 
     private static final String USER_STORE_DOMAIN = "PRIMARY";
@@ -103,9 +111,14 @@ public class FIDOAuthenticatorTest {
     private AuthenticateRequestData authenticateRequestData;
     @Mock
     private ExternalIdPConfig externalIdPConfig;
+    @Mock
+    private AccountLockService mockAccountLockService;
+    @Mock
+    private FIDOAuthenticatorServiceDataHolder mockServiceDataHolder;
 
     @BeforeMethod
     public void setUp() {
+
         fidoAuthenticator = FIDOAuthenticator.getInstance();
         initMocks(this);
         mockStatic(FIDOAuthenticator.class);
@@ -113,7 +126,10 @@ public class FIDOAuthenticatorTest {
         mockStatic(MultitenantUtils.class);
         mockStatic(IdentityTenantUtil.class);
         mockStatic(LoggerUtils.class);
+        mockStatic(FIDOAuthenticatorServiceDataHolder.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        PowerMockito.when(FIDOAuthenticatorServiceDataHolder.getInstance()).thenReturn(mockServiceDataHolder);
+        when(mockServiceDataHolder.getAccountLockService()).thenReturn(mockAccountLockService);
     }
 
     private void mockServiceURLBuilder() {
@@ -343,7 +359,7 @@ public class FIDOAuthenticatorTest {
     @DataProvider(name = "initiateAuthenticationRequestWebauthnDataProvider")
     public static Object[][] initiateAuthenticationRequestWebauthnDataProvider() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"1234"}, {null}
         };
     }
@@ -399,7 +415,7 @@ public class FIDOAuthenticatorTest {
 
         try {
             fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
-        }catch (Exception e) {
+        } catch (Exception e) {
             if (startAuthenticationResponse == null) {
                 Assert.assertEquals(e.getClass(), AuthenticationFailedException.class);
             } else {
@@ -414,7 +430,7 @@ public class FIDOAuthenticatorTest {
         AuthenticateRequestData authenticateRequestData = mock(AuthenticateRequestData.class);
         when(authenticateRequestData.toJson()).thenReturn("1234");
 
-        return new Object[][] {
+        return new Object[][]{
                 {false}, {true}
         };
     }
@@ -479,7 +495,7 @@ public class FIDOAuthenticatorTest {
 
         try {
             fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
-        }catch (Exception e) {
+        } catch (Exception e) {
             if (isU2FNullResponse) {
                 Assert.assertEquals(e.getClass(), AuthenticationFailedException.class);
             } else {
@@ -507,7 +523,7 @@ public class FIDOAuthenticatorTest {
 
         Assert.assertEquals(authenticatorDataObj.getPromptType(),
                 FrameworkConstants.AuthenticatorPromptType.INTERNAL_PROMPT);
-        Assert.assertEquals(authenticatorDataObj.getRequiredParams().size() ,1);
+        Assert.assertEquals(authenticatorDataObj.getRequiredParams().size(), 1);
         Assert.assertEquals(authenticatorDataObj.getI18nKey(), AUTHENTICATOR_FIDO);
         Assert.assertEquals(authenticatorDataObj.getDisplayName(), AUTHENTICATOR_FRIENDLY_NAME);
 
@@ -522,6 +538,105 @@ public class FIDOAuthenticatorTest {
 
         boolean isAPIBasedAuthenticationSupported = fidoAuthenticator.isAPIBasedAuthenticationSupported();
         Assert.assertTrue(isAPIBasedAuthenticationSupported);
+    }
+
+    @Test(description = "Test case for processAuthenticationResponse() method when user account is locked", priority = 14)
+    public void testProcessAuthenticationResponseWithLockedUser() throws Exception {
+
+        AuthenticationContext context = new AuthenticationContext();
+        List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        authenticatorConfig.setApplicationAuthenticator(fidoAuthenticator);
+        authenticatorList.add(authenticatorConfig);
+
+        AuthenticatedUser authenticatedUser = AuthenticatedUser
+                .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
+        authenticatedUser.setFederatedUser(false);
+        authenticatedUser.setUserName(USERNAME);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+
+        StepConfig stepConfig = new StepConfig();
+        stepConfig.setAuthenticatorList(authenticatorList);
+        stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
+        Map<Integer, StepConfig> stepMap = new HashMap<>();
+        stepMap.put(1, stepConfig);
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setStepMap(stepMap);
+        context.setSequenceConfig(sequenceConfig);
+
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        context.setProperty("username", USERNAME);
+        context.setProperty("authenticatedUser", authenticatedUser);
+        context.setContextIdentifier(UUID.randomUUID().toString());
+
+        when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
+        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
+        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
+
+        PowerMockito.doNothing().when(webAuthnService)
+                .finishAuthentication(anyString(), anyString(), anyString(), anyString());
+
+        when(mockAccountLockService.isAccountLocked(USERNAME, SUPER_TENANT_DOMAIN, USER_STORE_DOMAIN))
+                .thenReturn(true);
+
+        try {
+            fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
+            Assert.fail("Expected AuthenticationFailedException was not thrown");
+        } catch (AuthenticationFailedException e) {
+            Assert.assertTrue(e.getMessage()
+                    .contains(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE));
+        }
+    }
+
+    @Test(description = "Test case for processAuthenticationResponse() method when account lock check throws exception", priority = 15)
+    public void testProcessAuthenticationResponseWithAccountLockException() throws Exception {
+
+        AuthenticationContext context = new AuthenticationContext();
+        List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        authenticatorConfig.setApplicationAuthenticator(fidoAuthenticator);
+        authenticatorList.add(authenticatorConfig);
+
+        AuthenticatedUser authenticatedUser = AuthenticatedUser
+                .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
+        authenticatedUser.setFederatedUser(false);
+        authenticatedUser.setUserName(USERNAME);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+
+        StepConfig stepConfig = new StepConfig();
+        stepConfig.setAuthenticatorList(authenticatorList);
+        stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
+        Map<Integer, StepConfig> stepMap = new HashMap<>();
+        stepMap.put(1, stepConfig);
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setStepMap(stepMap);
+        context.setSequenceConfig(sequenceConfig);
+
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        context.setProperty("username", USERNAME);
+        context.setProperty("authenticatedUser", authenticatedUser);
+        context.setContextIdentifier(UUID.randomUUID().toString());
+
+        when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
+        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
+        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
+
+        PowerMockito.doNothing().when(webAuthnService)
+                .finishAuthentication(anyString(), anyString(), anyString(), anyString());
+
+        when(mockAccountLockService.isAccountLocked(USERNAME, SUPER_TENANT_DOMAIN, USER_STORE_DOMAIN))
+                .thenThrow(new AccountLockServiceException("Account lock service error"));
+
+        try {
+            fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
+            Assert.fail("Expected AuthenticationFailedException was not thrown");
+        } catch (AuthenticationFailedException e) {
+            Assert.assertTrue(e.getMessage().contains("Error occurred while checking account lock status for user"));
+        }
     }
 
     @ObjectFactory

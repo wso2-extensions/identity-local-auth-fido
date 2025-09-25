@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022, WSO2 Inc. (http://www.wso2.com).
+ * Copyright (c) 2022-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,6 +24,7 @@ import org.osgi.framework.BundleContext;
 import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 
 
 /**
@@ -37,6 +38,7 @@ public class FIDOAuthenticatorServiceDataHolder {
     private RealmService realmService = null;
     private static IdentityGovernanceService identityGovernanceService;
     private static IdpManager idpManager;
+    private static AccountLockService accountLockService;
 
     private FIDOAuthenticatorServiceDataHolder() {
     }
@@ -105,5 +107,28 @@ public class FIDOAuthenticatorServiceDataHolder {
     public static void setIdpManager(IdpManager idpManager) {
 
         FIDOAuthenticatorServiceDataHolder.idpManager = idpManager;
+    }
+
+    /**
+     * Get AccountLockService.
+     *
+     * @return AccountLockService.
+     */
+    public static AccountLockService getAccountLockService() {
+
+        if (accountLockService == null) {
+            throw new RuntimeException("AccountLockService not available. Component is not started properly.");
+        }
+        return accountLockService;
+    }
+
+    /**
+     * Set AccountLockService.
+     *
+     * @param accountLockService AccountLockService.
+     */
+    public static void setAccountLockService(AccountLockService accountLockService) {
+
+        FIDOAuthenticatorServiceDataHolder.accountLockService = accountLockService;
     }
 }
