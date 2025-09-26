@@ -388,6 +388,11 @@
                 <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
                 <version>${carbon.identity.handler.event.account.lock.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.org.owasp.encoder</groupId>
+                <artifactId>encoder</artifactId>
+                <version>${encoder.wso2.version}</version>
+            </dependency>
 
             <!--Test Dependencies-->
             <dependency>
@@ -448,6 +453,7 @@
         <osgi.service.component.imp.pkg.version.range>[1.2.0, 2.0.0)</osgi.service.component.imp.pkg.version.range>
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
         <identity.application.auth.fido.package.export.version>${project.version}</identity.application.auth.fido.package.export.version>
+        <identity.application.auth.fido.package.export.version.range>[5.2.0, 6.0.0)</identity.application.auth.fido.package.export.version.range>
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
         <carbon.kernel.version>4.9.10</carbon.kernel.version>
@@ -469,6 +475,8 @@
         <org.wso2.carbon.identity.organization.management.core.version>1.0.0
         </org.wso2.carbon.identity.organization.management.core.version>
         <carbon.identity.handler.event.account.lock.version>1.9.12</carbon.identity.handler.event.account.lock.version>
+        <encoder.wso2.version>1.2.0.wso2v2</encoder.wso2.version>
+        <encoder.wso2.import.version.range>[1.2.0,2.0.0)</encoder.wso2.import.version.range>
         <!--Test Dependencies-->
         <testng.version>6.9.10</testng.version>
         <powermock.version>1.6.5</powermock.version>

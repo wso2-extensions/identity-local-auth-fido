@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
+import org.owasp.encoder.Encode;
 import org.wso2.carbon.extension.identity.helper.FederatedAuthenticatorUtil;
 import org.wso2.carbon.identity.application.authentication.framework.AbstractApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
@@ -63,7 +64,6 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
-import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -378,7 +378,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     .replace(FIDOAuthenticatorConstants.URI_LOGIN, FIDOAuthenticatorConstants.URI_FIDO2_ENROLL);
         }
         passkeyEnrollmentPageURL = passkeyEnrollmentPageURL + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
-                "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData;
+                "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData +
+                "&sp=" + Encode.forUriComponent(context.getServiceProviderName());
 
         return buildAbsoluteURL(passkeyEnrollmentPageURL);
     }
@@ -399,7 +400,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         passkeysEnrollmentStatusRedirectUrl = passkeysEnrollmentStatusRedirectUrl + ("?") + "&authenticators=" +
                 getName() + ":" + "LOCAL" + "&type=fido&sessionDataKey=" + context.getContextIdentifier() +
-                "&keyExist=" + isKeyExist;
+                "&keyExist=" + isKeyExist + "&sp=" + Encode.forUriComponent(context.getServiceProviderName());
 
         return buildAbsoluteURL(passkeysEnrollmentStatusRedirectUrl);
     }
@@ -419,7 +420,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         }
 
         fidoIdentifierAuthPageURL = fidoIdentifierAuthPageURL + ("?") + "&authenticators=" + getName() + ":" +
-                "LOCAL" + "&type=fido&sessionDataKey=" + context.getContextIdentifier();
+                "LOCAL" + "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&sp=" +
+                Encode.forUriComponent(context.getServiceProviderName());;
 
         return buildAbsoluteURL(fidoIdentifierAuthPageURL);
     }
@@ -918,14 +920,16 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             if (StringUtils.isNotBlank(data)) {
                 String urlEncodedData = URLEncoder.encode(data, IdentityCoreConstants.UTF_8);
                 return buildAbsoluteURL(loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
-                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData);
+                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + urlEncodedData) +
+                        "&sp=" + Encode.forUriComponent(context.getServiceProviderName());
             }
         } else {
             AuthenticateRequestData data = initiateFidoAuthenticationRequest(user, appID);
             if (data != null) {
                 String encodedData = URLEncoder.encode(data.toJson(), IdentityCoreConstants.UTF_8);
                 return buildAbsoluteURL(loginPage + ("?") + "&authenticators=" + getName() + ":" + "LOCAL" +
-                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + encodedData);
+                        "&type=fido&sessionDataKey=" + context.getContextIdentifier() + "&data=" + encodedData) +
+                        "&sp=" + Encode.forUriComponent(context.getServiceProviderName());
             }
         }
         throw new AuthenticationFailedException("The failure occurred while initiating the authentication request " +

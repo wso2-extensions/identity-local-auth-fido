@@ -87,6 +87,10 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.org.owasp.encoder</groupId>
+            <artifactId>encoder</artifactId>
+        </dependency>
 
         <!--Test Dependencies-->
         <dependency>
@@ -133,7 +137,7 @@
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Import-Package>
                             org.wso2.carbon.identity.application.authenticator.fido2.*;
-                            version="${identity.application.auth.fido.package.export.version}",
+                            version="${identity.application.auth.fido.package.export.version.range}",
                             org.wso2.carbon.identity.user.store.configuration.*;
                             version="${carbon.identity.package.import.version.range}",
                             !org.wso2.carbon.identity.application.authenticator.fido,
@@ -141,6 +145,7 @@
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
+                            org.owasp.encoder; version="${encoder.wso2.import.version.range}",
                             org.w3c.dom.*,
                             org.wso2.carbon.context; version="${carbon.kernel.package.import.version.range}",
                             org.wso2.carbon.identity.application.common.*;
