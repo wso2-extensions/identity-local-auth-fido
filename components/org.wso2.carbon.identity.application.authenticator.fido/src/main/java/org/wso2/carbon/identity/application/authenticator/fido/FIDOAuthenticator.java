@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.extension.identity.helper.FederatedAuthenticatorUtil;
 import org.wso2.carbon.identity.application.authentication.framework.AbstractApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
@@ -107,7 +108,6 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.USER_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil.writeJson;
-import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
 import static org.wso2.carbon.user.core.UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME;
 
 /**
@@ -1016,28 +1016,19 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      */
     private AuthenticatedUser getAuthenticatedUser(AuthenticationContext context) throws AuthenticationFailedException {
 
-        AuthenticatedUser authenticatedUser = null;
         Map<Integer, StepConfig> stepConfigMap = context.getSequenceConfig().getStepMap();
         for (StepConfig stepConfig : stepConfigMap.values()) {
             AuthenticatedUser authenticatedUserInStepConfig = stepConfig.getAuthenticatedUser();
             if (stepConfig.isSubjectAttributeStep() && authenticatedUserInStepConfig != null) {
-                authenticatedUser = new AuthenticatedUser(stepConfig.getAuthenticatedUser());
-                break;
+                handleIdentifierFirstNormalization(context, authenticatedUserInStepConfig);
+                return new AuthenticatedUser(stepConfig.getAuthenticatedUser());
             }
         }
-        if (authenticatedUser == null && context.getLastAuthenticatedUser() != null &&context.getLastAuthenticatedUser().getUserName() != null) {
-            authenticatedUser = context.getLastAuthenticatedUser();
+        if (context.getLastAuthenticatedUser() != null && context.getLastAuthenticatedUser().getUserName() != null) {
+            handleIdentifierFirstNormalization(context, context.getLastAuthenticatedUser());
+            return context.getLastAuthenticatedUser();
         }
-
-        // If the first step in the authentication history was handled by the Identifier First authenticator,
-        // validate the user store domain of the authenticated user to ensure correct resolution.
-        List<AuthHistory> authenticationStepHistory = context.getAuthenticationStepHistory();
-        if (authenticationStepHistory != null && !authenticationStepHistory.isEmpty() &&
-                authenticationStepHistory.get(0).getAuthenticatorName().equals(IDF_AUTHENTICATOR)) {
-            normalizeAuthenticatedUser(context, authenticatedUser);
-        }
-
-        return authenticatedUser;
+        return null;
     }
 
     /**
@@ -1312,8 +1303,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      * @param authenticatedUser AuthenticatedUser.
      * @throws AuthenticationFailedException If an error occurred while validating the userstore domain.
      */
-    private void normalizeAuthenticatedUser(AuthenticationContext context,
-                                            AuthenticatedUser authenticatedUser)
+    protected AuthenticatedUser normalizeAuthenticatedUser(AuthenticationContext context,
+                                                           AuthenticatedUser authenticatedUser)
             throws AuthenticationFailedException {
 
         final String tenantDomain = context.getTenantDomain();
@@ -1336,7 +1327,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             final AbstractUserStoreManager userStoreManager =
                     (AbstractUserStoreManager) userRealm.getUserStoreManager();
 
-            if (!userStoreManager.isExistingUser(username) && !username.contains(DOMAIN_SEPARATOR)) {
+            if (!userStoreManager.isExistingUser(username) && !username.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
                 UserStoreManager secondary = userStoreManager.getSecondaryUserStoreManager();
                 while (secondary != null) {
                     final String domain = secondary.getRealmConfiguration()
@@ -1363,6 +1354,26 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if (StringUtils.isNotBlank(userStoreDomain)) {
             authenticatedUser.setUserName(FIDOUtil.getUsernameWithoutDomain(username));
             authenticatedUser.setUserStoreDomain(userStoreDomain);
+        }
+
+        return authenticatedUser;
+    }
+
+    /**
+     * This method checks if the first step in the authentication history was handled by the Identifier First
+     * authenticator. If so, it normalizes the authenticated user to ensure correct user store domain resolution.
+     *
+     * @param context AuthenticationContext.
+     * @param user    AuthenticatedUser.
+     * @throws AuthenticationFailedException If an error occurs during normalization.
+     */
+    private void handleIdentifierFirstNormalization(AuthenticationContext context, AuthenticatedUser user)
+            throws AuthenticationFailedException {
+
+        List<AuthHistory> authHistory = context.getAuthenticationStepHistory();
+        if (authHistory != null && !authHistory.isEmpty() &&
+                IDF_AUTHENTICATOR.equals(authHistory.get(0).getAuthenticatorName())) {
+            normalizeAuthenticatedUser(context, user);
         }
     }
 }
