@@ -1020,13 +1020,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         for (StepConfig stepConfig : stepConfigMap.values()) {
             AuthenticatedUser authenticatedUserInStepConfig = stepConfig.getAuthenticatedUser();
             if (stepConfig.isSubjectAttributeStep() && authenticatedUserInStepConfig != null) {
-                handleIdentifierFirstNormalization(context, authenticatedUserInStepConfig);
-                return new AuthenticatedUser(stepConfig.getAuthenticatedUser());
+                return handleIdentifierFirstNormalization(context, authenticatedUserInStepConfig);
             }
         }
         if (context.getLastAuthenticatedUser() != null && context.getLastAuthenticatedUser().getUserName() != null) {
-            handleIdentifierFirstNormalization(context, context.getLastAuthenticatedUser());
-            return context.getLastAuthenticatedUser();
+            return handleIdentifierFirstNormalization(context, context.getLastAuthenticatedUser());
         }
         return null;
     }
@@ -1367,13 +1365,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      * @param user    AuthenticatedUser.
      * @throws AuthenticationFailedException If an error occurs during normalization.
      */
-    private void handleIdentifierFirstNormalization(AuthenticationContext context, AuthenticatedUser user)
+    private AuthenticatedUser handleIdentifierFirstNormalization(AuthenticationContext context, AuthenticatedUser user)
             throws AuthenticationFailedException {
 
         List<AuthHistory> authHistory = context.getAuthenticationStepHistory();
         if (authHistory != null && !authHistory.isEmpty() &&
                 IDF_AUTHENTICATOR.equals(authHistory.get(0).getAuthenticatorName())) {
-            normalizeAuthenticatedUser(context, user);
+            return normalizeAuthenticatedUser(context, user);
+        } else {
+            return user;
         }
     }
 }
