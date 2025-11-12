@@ -1292,14 +1292,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     }
 
     /**
-     * This method determines the correct user store domain and normalized username
+     * This method determines the correct user store domain and normalizes the username
      * for the given authenticated user within the tenant context. It validates the
-     * existence of the user across primary and secondary user stores, resolves the
-     * user ID, and updates the {@link AuthenticatedUser}
+     * existence of the user across primary and secondary user stores, and updates the
+     * {@link AuthenticatedUser} with the normalized values.
      *
      * @param context           AuthenticationContext.
      * @param authenticatedUser AuthenticatedUser.
      * @throws AuthenticationFailedException If an error occurred while validating the userstore domain.
+     * @return The normalized AuthenticatedUser with updated user store domain if applicable.
      */
     protected AuthenticatedUser normalizeAuthenticatedUser(AuthenticationContext context,
                                                            AuthenticatedUser authenticatedUser)
@@ -1318,8 +1319,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 if (log.isDebugEnabled()) {
                     log.debug("UserRealm is null for tenant: " + tenantDomain + " (id: " + tenantId + ")");
                 }
-                throw new AuthenticationFailedException("Cannot find the user realm for the given tenant: %s",
-                        String.valueOf(tenantId));
+                throw new AuthenticationFailedException(
+                        String.format("Cannot find the user realm for the given tenant: %s", tenantId));
             }
 
             final AbstractUserStoreManager userStoreManager =
@@ -1364,6 +1365,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      * @param context AuthenticationContext.
      * @param user    AuthenticatedUser.
      * @throws AuthenticationFailedException If an error occurs during normalization.
+     * @return The authenticated user, normalized if the first authentication step was Identifier First, otherwise the original user.
      */
     private AuthenticatedUser handleIdentifierFirstNormalization(AuthenticationContext context, AuthenticatedUser user)
             throws AuthenticationFailedException {
