@@ -26,12 +26,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.extension.identity.helper.FederatedAuthenticatorUtil;
 import org.wso2.carbon.identity.application.authentication.framework.AbstractApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.LocalApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.config.ConfigurationFacade;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.StepConfig;
+import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.InvalidCredentialsException;
@@ -45,6 +47,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
 import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAuthenticatorServerException;
+import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceComponent;
 import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
@@ -64,6 +67,10 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -101,6 +108,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.USER_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil.writeJson;
+import static org.wso2.carbon.user.core.UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME;
 
 /**
  * FIDO U2F Specification based authenticator.
@@ -112,6 +120,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
     private static FIDOAuthenticator instance = new FIDOAuthenticator();
     private static final String AUTHENTICATOR_MESSAGE = "authenticatorMessage";
+    public static final String IDF_AUTHENTICATOR = "IdentifierExecutor";
 
     @Override
     public AuthenticatorFlowStatus process(HttpServletRequest request, HttpServletResponse response,
@@ -1005,17 +1014,17 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      * @param context AuthenticationContext.
      * @return AuthenticatedUser
      */
-    private AuthenticatedUser getAuthenticatedUser(AuthenticationContext context) {
+    private AuthenticatedUser getAuthenticatedUser(AuthenticationContext context) throws AuthenticationFailedException {
 
         Map<Integer, StepConfig> stepConfigMap = context.getSequenceConfig().getStepMap();
         for (StepConfig stepConfig : stepConfigMap.values()) {
             AuthenticatedUser authenticatedUserInStepConfig = stepConfig.getAuthenticatedUser();
             if (stepConfig.isSubjectAttributeStep() && authenticatedUserInStepConfig != null) {
-                return new AuthenticatedUser(stepConfig.getAuthenticatedUser());
+                return handleIdentifierFirstNormalization(context, authenticatedUserInStepConfig);
             }
         }
         if (context.getLastAuthenticatedUser() != null && context.getLastAuthenticatedUser().getUserName() != null) {
-            return context.getLastAuthenticatedUser();
+            return handleIdentifierFirstNormalization(context, context.getLastAuthenticatedUser());
         }
         return null;
     }
@@ -1279,6 +1288,94 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         } catch (IdentityProviderManagementException e) {
             throw new AuthenticationFailedException(
                     String.format("Error occurred while getting IDP: %s from tenant: %s", idpName, tenantDomain));
+        }
+    }
+
+    /**
+     * This method determines the correct user store domain and normalizes the username
+     * for the given authenticated user within the tenant context. It validates the
+     * existence of the user across primary and secondary user stores, and updates the
+     * {@link AuthenticatedUser} with the normalized values.
+     *
+     * @param context           AuthenticationContext.
+     * @param authenticatedUser AuthenticatedUser.
+     * @throws AuthenticationFailedException If an error occurred while validating the userstore domain.
+     * @return The normalized AuthenticatedUser with updated user store domain if applicable.
+     */
+    protected AuthenticatedUser normalizeAuthenticatedUser(AuthenticationContext context,
+                                                           AuthenticatedUser authenticatedUser)
+            throws AuthenticationFailedException {
+
+        final String tenantDomain = context.getTenantDomain();
+        String username = authenticatedUser.getUserName();
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+
+        try {
+            final RealmService realmService = FIDOAuthenticatorServiceComponent.getRealmService();
+            final int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+            final UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
+
+            if (userRealm == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("UserRealm is null for tenant: " + tenantDomain + " (id: " + tenantId + ")");
+                }
+                throw new AuthenticationFailedException(
+                        String.format("Cannot find the user realm for the given tenant: %s", tenantId));
+            }
+
+            final AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) userRealm.getUserStoreManager();
+
+            if (!userStoreManager.isExistingUser(username) && !username.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                UserStoreManager secondary = userStoreManager.getSecondaryUserStoreManager();
+                while (secondary != null) {
+                    final String domain = secondary.getRealmConfiguration()
+                            .getUserStoreProperties()
+                            .get(PROPERTY_DOMAIN_NAME);
+
+                    if (StringUtils.isNotBlank(domain)) {
+                        final String domainQualifiedUsername = UserCoreUtil.addDomainToName(username, domain);
+                        if (userStoreManager.isExistingUser(domainQualifiedUsername)) {
+                            userStoreDomain = domain;
+                            break;
+                        }
+                    }
+                    secondary = secondary.getSecondaryUserStoreManager();
+                }
+            }
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("FIDO Authenticator failed while trying to authenticate.", e);
+            }
+            throw new AuthenticationFailedException("Cannot complete authentication due to a user store error.", e);
+        }
+
+        if (StringUtils.isNotBlank(userStoreDomain)) {
+            authenticatedUser.setUserName(FIDOUtil.getUsernameWithoutDomain(username));
+            authenticatedUser.setUserStoreDomain(userStoreDomain);
+        }
+
+        return authenticatedUser;
+    }
+
+    /**
+     * This method checks if the first step in the authentication history was handled by the Identifier First
+     * authenticator. If so, it normalizes the authenticated user to ensure correct user store domain resolution.
+     *
+     * @param context AuthenticationContext.
+     * @param user    AuthenticatedUser.
+     * @throws AuthenticationFailedException If an error occurs during normalization.
+     * @return The authenticated user, normalized if the first authentication step was Identifier First, otherwise the original user.
+     */
+    private AuthenticatedUser handleIdentifierFirstNormalization(AuthenticationContext context, AuthenticatedUser user)
+            throws AuthenticationFailedException {
+
+        List<AuthHistory> authHistory = context.getAuthenticationStepHistory();
+        if (authHistory != null && !authHistory.isEmpty() &&
+                IDF_AUTHENTICATOR.equals(authHistory.get(0).getAuthenticatorName())) {
+            return normalizeAuthenticatedUser(context, user);
+        } else {
+            return user;
         }
     }
 }
