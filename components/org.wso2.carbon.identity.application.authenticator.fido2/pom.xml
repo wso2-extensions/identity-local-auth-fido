@@ -99,6 +99,14 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.flow.mgt</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.json.wso2</groupId>
+            <artifactId>json</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
+        </dependency>
 
         <!--Test Dependencies-->
         <dependency>
@@ -144,6 +152,9 @@
                         <Import-Package>
                             !org.wso2.carbon.identity.webauthn.fido.core.*,
 
+                            org.json,
+                            org.wso2.carbon.identity.central.log.mgt.utils;
+                            version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.user.store.configuration.*;
                             version="${carbon.identity.package.import.version.range}",
                             !org.wso2.carbon.identity.application.authenticator.fido.*,
