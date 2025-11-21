@@ -99,6 +99,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2Au
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.MetadataService;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
+import org.wso2.carbon.identity.application.authenticator.fido2.util.WebAuthnAuditLogger;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -160,6 +161,7 @@ import static org.wso2.carbon.identity.configuration.mgt.core.constant.Configura
 public class WebAuthnService {
 
     private static final Log log = LogFactory.getLog(WebAuthnService.class);
+    private static final WebAuthnAuditLogger AUDIT_LOGGER = new WebAuthnAuditLogger();
 
     private static final int USER_HANDLE_LENGTH = 32;
     private final Clock clock = Clock.systemDefaultZone();
@@ -929,9 +931,16 @@ public class WebAuthnService {
         User user = User.getUserFromUserName(username);
         Optional<FIDO2CredentialRegistration> credReg = userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user
                 .toString(), identifier);
+        String initiator = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
 
         if (credReg.isPresent()) {
             userStorage.removeFIDO2RegistrationByUsername(user.toString(), credReg.get());
+            AUDIT_LOGGER.printAuditLog(
+                    WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE,
+                    username,
+                    credentialId,
+                    initiator
+            );
         } else {
             throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
                     ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
