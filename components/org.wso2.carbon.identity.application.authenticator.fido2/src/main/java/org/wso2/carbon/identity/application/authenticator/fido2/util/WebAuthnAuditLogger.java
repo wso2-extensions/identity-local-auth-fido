@@ -78,7 +78,7 @@ public class WebAuthnAuditLogger {
     private JSONObject createAuditLogEntry(String username, String credentialId, String initiator) {
 
         JSONObject data = new JSONObject();
-        data.put(LogConstants.USERNAME_FIELD, username!= null? username : JSONObject.NULL);
+        data.put(LogConstants.USERNAME_FIELD, username!= null? LoggerUtils.getMaskedContent(username) : JSONObject.NULL);
         data.put(LogConstants.CREDENTIAL_ID_FIELD, credentialId!= null? credentialId : JSONObject.NULL);
         data.put(LogConstants.INITIATOR, initiator != null ? initiator : JSONObject.NULL);
 
