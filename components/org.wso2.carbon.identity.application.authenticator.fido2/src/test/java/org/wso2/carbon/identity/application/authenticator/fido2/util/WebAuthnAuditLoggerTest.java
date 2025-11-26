@@ -50,7 +50,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
  * Unit test class for WebAuthnAuditLogger class.
  */
 @PrepareForTest({CarbonContext.class, UserCoreUtil.class, MultitenantUtils.class,
-                IdentityUtil.class, LoggerUtils.class})
+        IdentityUtil.class, LoggerUtils.class})
 public class WebAuthnAuditLoggerTest {
 
     private WebAuthnAuditLogger auditLogger;
@@ -200,10 +200,10 @@ public class WebAuthnAuditLoggerTest {
         String username = "testUser@carbon.super";
         String credentialId = "credential-123";
         String initiator = "admin";
-        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE;
+        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_PASSKEY;
 
         // Act
-        auditLogger.printAuditLog(operation, username, credentialId, initiator);
+        auditLogger.printAuditLog(operation, username, credentialId);
 
         // Assert - Verify that triggerAuditLogEvent was called
         verifyStatic();
@@ -216,7 +216,7 @@ public class WebAuthnAuditLoggerTest {
     @Test
     public void testOperationEnum() {
         // Act & Assert
-        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE;
+        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_PASSKEY;
         Assert.assertEquals(operation.getLogAction(), "deregister-device");
     }
 
@@ -226,7 +226,7 @@ public class WebAuthnAuditLoggerTest {
     @Test
     public void testBuildAuditLog() throws Exception {
         // Arrange
-        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE;
+        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_PASSKEY;
         JSONObject data = new JSONObject();
         data.put("Username", "testUser@carbon.super");
         data.put("CredentialId", "credential-123");

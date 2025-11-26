@@ -41,13 +41,12 @@ public class WebAuthnAuditLogger {
      *
      * @param operation    The operation being performed (e.g., REGISTER_DEVICE).
      * @param username     The fully qualified username of the user being acted upon.
-     * @param credentialId The credential ID of the FIDO2 device.
-     * @param initiator    The initiator of the operation.
+     * @param targetId     The credential ID of the FIDO2 device.
      */
-    public void printAuditLog(Operation operation, String username, String credentialId, String initiator) {
+    public void printAuditLog(Operation operation, String username, String targetId) {
 
-        JSONObject data = createAuditLogEntry(username, credentialId, initiator);
-        buildAuditLog(operation, data);
+        JSONObject data = createAuditLogEntry(username);
+        buildAuditLog(operation, targetId, data);
     }
 
     /**
@@ -56,31 +55,27 @@ public class WebAuthnAuditLogger {
      * @param operation The operation to be logged.
      * @param data      The JSON data payload for the log.
      */
-    private void buildAuditLog(Operation operation, JSONObject data) {
+    private void buildAuditLog(Operation operation, String targetId, JSONObject data) {
 
         AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(getInitiatorId(),
                 LoggerUtils.getInitiatorType(getInitiatorId()),
-                LoggerUtils.Initiator.System.name(),
-                LogConstants.TARGET_FIDO_DEVICE,
-                operation.getLogAction()).
-                data(jsonObjectToMap(data));
+                targetId,
+                LogConstants.TARGET_TYPE_FIELD,
+                operation.getLogAction()).data(jsonObjectToMap(data));
         triggerAuditLogEvent(auditLogBuilder);
     }
 
     /**
      * Create the core JSON data structure for the audit log entry.
      *
-     * @param username     The username associated with the credential.
-     * @param credentialId The credential ID.
-     * @param initiator The initiator of the operation.
+     * @param username The username the user associated with the credential.
      * @return A JSONObject containing the audit data.
      */
-    private JSONObject createAuditLogEntry(String username, String credentialId, String initiator) {
+    private JSONObject createAuditLogEntry(String username) {
 
         JSONObject data = new JSONObject();
-        data.put(LogConstants.USERNAME_FIELD, username!= null? LoggerUtils.getMaskedContent(username) : JSONObject.NULL);
-        data.put(LogConstants.CREDENTIAL_ID_FIELD, credentialId!= null? credentialId : JSONObject.NULL);
-        data.put(LogConstants.INITIATOR, initiator != null ? initiator : JSONObject.NULL);
+        data.put(LogConstants.END_USERNAME, username != null ? LoggerUtils.getMaskedContent(username) : JSONObject.NULL);
+        data.put(LogConstants.DEREGISTERED_AT_FIELD, System.currentTimeMillis());
 
         return data;
     }
@@ -131,7 +126,8 @@ public class WebAuthnAuditLogger {
      * FIDO2/WebAuthn operations to be logged.
      */
     public enum Operation {
-        DEREGISTER_DEVICE("deregister-device");
+
+        DEREGISTER_PASSKEY("Deregister-Passkey");
 
         private final String logAction;
 
@@ -149,9 +145,8 @@ public class WebAuthnAuditLogger {
      */
     private static class LogConstants {
 
-        public static final String TARGET_FIDO_DEVICE = "FidoDevice";
-        public static final String USERNAME_FIELD = "Username";
-        public static final String CREDENTIAL_ID_FIELD = "CredentialId";
-        public static final String INITIATOR = "Initiator";
+        public static final String TARGET_TYPE_FIELD = "Passkey";
+        public static final String END_USERNAME = "User";
+        public static final String DEREGISTERED_AT_FIELD = "DeregisteredAt";
     }
 }
