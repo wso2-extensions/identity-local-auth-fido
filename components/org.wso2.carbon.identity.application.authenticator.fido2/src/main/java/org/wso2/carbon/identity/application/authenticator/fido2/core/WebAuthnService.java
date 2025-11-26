@@ -898,6 +898,11 @@ public class WebAuthnService {
 
         if (credReg.isPresent()) {
             userStorage.removeFIDO2RegistrationByUsername(user.toString(), credReg.get());
+            AUDIT_LOGGER.printAuditLog(
+                    WebAuthnAuditLogger.Operation.DEREGISTER_PASSKEY,
+                    user.getUserName(),
+                    credentialId
+            );
         } else {
             throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,
                     ERROR_CODE_DELETE_REGISTRATION_CREDENTIAL_UNAVAILABLE.getErrorCode());
@@ -931,15 +936,13 @@ public class WebAuthnService {
         User user = User.getUserFromUserName(username);
         Optional<FIDO2CredentialRegistration> credReg = userStorage.getFIDO2RegistrationByUsernameAndCredentialId(user
                 .toString(), identifier);
-        String initiator = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
 
         if (credReg.isPresent()) {
             userStorage.removeFIDO2RegistrationByUsername(user.toString(), credReg.get());
             AUDIT_LOGGER.printAuditLog(
-                    WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE,
+                    WebAuthnAuditLogger.Operation.DEREGISTER_PASSKEY,
                     username,
-                    credentialId,
-                    initiator
+                    credentialId
             );
         } else {
             throw new FIDO2AuthenticatorClientException("Credential ID not registered: " + credentialId,

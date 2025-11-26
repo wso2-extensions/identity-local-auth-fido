@@ -19,79 +19,125 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.util;
 
 import org.json.JSONObject;
-import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.user.core.UserRealm;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.verifyStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 /**
  * Unit test class for WebAuthnAuditLogger class.
  */
-@PrepareForTest({CarbonContext.class, UserCoreUtil.class, MultitenantUtils.class,
-                IdentityUtil.class, LoggerUtils.class})
 public class WebAuthnAuditLoggerTest {
 
+    private static final String TEST_USER = "testUser";
+    private static final String TEST_TENANT_DOMAIN = "carbon.super";
+    private static final String TEST_USER_ID = "user-id-123";
+    private static final String TEST_CREDENTIAL_ID = "credential-id-123";
+
     private WebAuthnAuditLogger auditLogger;
-
-    @Mock
     private CarbonContext carbonContext;
+    private PrivilegedCarbonContext privilegedCarbonContext;
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new PowerMockObjectFactory();
-    }
+    private MockedStatic<CarbonContext> mockedCarbonContext;
+    private MockedStatic<PrivilegedCarbonContext> mockedPrivilegedCarbonContext;
+    private MockedStatic<UserCoreUtil> mockedUserCoreUtil;
+    private MockedStatic<MultitenantUtils> mockedMultitenantUtils;
+    private MockedStatic<IdentityUtil> mockedIdentityUtil;
+    private MockedStatic<IdentityTenantUtil> mockedIdentityTenantUtil;
+    private MockedStatic<LoggerUtils> mockedLoggerUtils;
+    private MockedStatic<FIDO2AuthenticatorServiceDataHolder> mockedDataHolder;
 
     @BeforeMethod
-    public void setUp() {
+    public void setUp() throws Exception {
+
         System.setProperty("carbon.home", ".");
-        initMocks(this);
+        MockitoAnnotations.openMocks(this);
         auditLogger = new WebAuthnAuditLogger();
 
-        mockStatic(CarbonContext.class);
-        mockStatic(UserCoreUtil.class);
-        mockStatic(MultitenantUtils.class);
-        mockStatic(IdentityUtil.class);
-        mockStatic(LoggerUtils.class);
+        mockedCarbonContext = mockStatic(CarbonContext.class);
+        mockedPrivilegedCarbonContext = mockStatic(PrivilegedCarbonContext.class);
+        mockedUserCoreUtil = mockStatic(UserCoreUtil.class);
+        mockedMultitenantUtils = mockStatic(MultitenantUtils.class);
+        mockedIdentityUtil = mockStatic(IdentityUtil.class);
+        mockedIdentityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        mockedLoggerUtils = mockStatic(LoggerUtils.class);
+        mockedDataHolder = mockStatic(FIDO2AuthenticatorServiceDataHolder.class);
 
-        when(CarbonContext.getThreadLocalCarbonContext()).thenReturn(carbonContext);
-        when(carbonContext.getUsername()).thenReturn("testUser");
-        when(carbonContext.getTenantDomain()).thenReturn("carbon.super");
-        when(UserCoreUtil.addTenantDomainToEntry("testUser", "carbon.super"))
-                .thenReturn("testUser@carbon.super");
-        when(MultitenantUtils.getTenantAwareUsername("testUser@carbon.super"))
-                .thenReturn("testUser");
-        when(MultitenantUtils.getTenantDomain("testUser@carbon.super"))
-                .thenReturn("carbon.super");
-        when(IdentityUtil.getInitiatorId("testUser", "carbon.super"))
+        carbonContext = mock(CarbonContext.class);
+        mockedCarbonContext.when(CarbonContext::getThreadLocalCarbonContext).thenReturn(carbonContext);
+        when(carbonContext.getUsername()).thenReturn(TEST_USER);
+        when(carbonContext.getTenantDomain()).thenReturn(TEST_TENANT_DOMAIN);
+
+        privilegedCarbonContext = mock(PrivilegedCarbonContext.class);
+        mockedPrivilegedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                .thenReturn(privilegedCarbonContext);
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(TEST_TENANT_DOMAIN);
+
+        mockedUserCoreUtil.when(() -> UserCoreUtil.addTenantDomainToEntry(anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(0) + "@" + invocation.getArgument(1));
+
+        mockedIdentityUtil.when(() -> IdentityUtil.getInitiatorId(anyString(), anyString()))
                 .thenReturn("initiator-id-test");
-        when(LoggerUtils.getInitiatorType(anyString()))
-                .thenReturn("User");
 
-        Map<String, Object> mockMap = new HashMap<>();
-        when(LoggerUtils.jsonObjectToMap(any(JSONObject.class)))
-                .thenReturn(mockMap);
+        mockedIdentityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(SUPER_TENANT_ID);
+
+        FIDO2AuthenticatorServiceDataHolder dataHolder = mock(FIDO2AuthenticatorServiceDataHolder.class);
+        RealmService realmService = mock(RealmService.class);
+        UserRealm userRealm = mock(UserRealm.class);
+        AbstractUserStoreManager userStoreManager = mock(AbstractUserStoreManager.class);
+
+        mockedDataHolder.when(FIDO2AuthenticatorServiceDataHolder::getInstance).thenReturn(dataHolder);
+        when(dataHolder.getRealmService()).thenReturn(realmService);
+        when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
+        when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+        when(userStoreManager.getUserIDFromUserName(anyString())).thenReturn(TEST_USER_ID);
+
+        mockedMultitenantUtils.when(() -> MultitenantUtils.getTenantAwareUsername(anyString()))
+                .thenAnswer(invocation -> {
+                    String username = invocation.getArgument(0);
+                    if (username != null && username.contains("@")) {
+                        return username.substring(0, username.lastIndexOf("@"));
+                    }
+                    return username;
+                });
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        mockedCarbonContext.close();
+        mockedPrivilegedCarbonContext.close();
+        mockedUserCoreUtil.close();
+        mockedMultitenantUtils.close();
+        mockedIdentityUtil.close();
+        mockedIdentityTenantUtil.close();
+        mockedLoggerUtils.close();
+        mockedDataHolder.close();
     }
 
     /**
@@ -99,73 +145,37 @@ public class WebAuthnAuditLoggerTest {
      */
     @Test
     public void testGetUserRegularUser() throws Exception {
-        // Act: Invoke the private method using reflection.
+
         Method getUserMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getUser");
         getUserMethod.setAccessible(true);
         String result = (String) getUserMethod.invoke(auditLogger);
-
-        // Assert
-        Assert.assertEquals(result, "testUser@carbon.super");
+        Assert.assertEquals(result, TEST_USER + "@" + TEST_TENANT_DOMAIN);
     }
 
     /**
-     * Test the private method 'getInitiatorId' with valid user data.
+     * Test the private method 'getUser' for the system user.
      */
     @Test
-    public void testGetInitiatorIdWithValidUser() throws Exception {
-        // Act
-        Method getInitiatorIdMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getInitiatorId");
-        getInitiatorIdMethod.setAccessible(true);
-        String result = (String) getInitiatorIdMethod.invoke(auditLogger);
+    public void testGetUserWithSystemUser() throws Exception {
 
-        // Assert
-        Assert.assertEquals(result, "initiator-id-test");
+        when(carbonContext.getUsername()).thenReturn("");
+        Method getUserMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getUser");
+        getUserMethod.setAccessible(true);
+        String result = (String) getUserMethod.invoke(auditLogger);
+        Assert.assertEquals(result, CarbonConstants.REGISTRY_SYSTEM_USERNAME);
     }
 
     /**
-     * Test the private method 'getInitiatorId' when IdentityUtil returns blank initiator.
+     * Test the private method 'getUser' when username is null.
      */
     @Test
-    public void testGetInitiatorIdWithBlankInitiator() throws Exception {
-        // Arrange
-        when(IdentityUtil.getInitiatorId("testUser", "carbon.super"))
-                .thenReturn("");
-        when(LoggerUtils.getMaskedContent("testUser@carbon.super"))
-                .thenReturn("masked-user");
+    public void testGetUserWithNullUsername() throws Exception {
 
-        // Act
-        Method getInitiatorIdMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getInitiatorId");
-        getInitiatorIdMethod.setAccessible(true);
-        String result = (String) getInitiatorIdMethod.invoke(auditLogger);
-
-        // Assert
-        Assert.assertEquals(result, "masked-user");
-    }
-
-    /**
-     * Test the private method 'getInitiatorId' for system user.
-     */
-    @Test
-    public void testGetInitiatorIdWithSystemUser() throws Exception {
-        // Arrange
-        when(carbonContext.getUsername()).thenReturn(CarbonConstants.REGISTRY_SYSTEM_USERNAME);
-        when(UserCoreUtil.addTenantDomainToEntry(
-                CarbonConstants.REGISTRY_SYSTEM_USERNAME, "carbon.super"))
-                .thenReturn(CarbonConstants.REGISTRY_SYSTEM_USERNAME + "@carbon.super");
-        when(MultitenantUtils.getTenantAwareUsername(
-                CarbonConstants.REGISTRY_SYSTEM_USERNAME + "@carbon.super"))
-                .thenReturn(CarbonConstants.REGISTRY_SYSTEM_USERNAME);
-        when(IdentityUtil.getInitiatorId(
-                CarbonConstants.REGISTRY_SYSTEM_USERNAME, "carbon.super"))
-                .thenReturn("");
-
-        // Act
-        Method getInitiatorIdMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getInitiatorId");
-        getInitiatorIdMethod.setAccessible(true);
-        String result = (String) getInitiatorIdMethod.invoke(auditLogger);
-
-        // Assert
-        Assert.assertEquals(result, LoggerUtils.Initiator.System.name());
+        when(carbonContext.getUsername()).thenReturn(null);
+        Method getUserMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getUser");
+        getUserMethod.setAccessible(true);
+        String result = (String) getUserMethod.invoke(auditLogger);
+        Assert.assertEquals(result, CarbonConstants.REGISTRY_SYSTEM_USERNAME);
     }
 
     /**
@@ -173,76 +183,101 @@ public class WebAuthnAuditLoggerTest {
      */
     @Test
     public void testCreateAuditLogEntryWithValidData() throws Exception {
-        // Arrange
-        String username = "testUser@carbon.super";
-        String credentialId = "credential-123";
-        String initiator = "admin";
 
-        // Act
+        String username = "testuser@carbon.super";
         Method createAuditLogEntryMethod = WebAuthnAuditLogger.class.getDeclaredMethod("createAuditLogEntry",
-                String.class, String.class, String.class);
+                String.class);
         createAuditLogEntryMethod.setAccessible(true);
-        JSONObject result = (JSONObject) createAuditLogEntryMethod.invoke(auditLogger, username, credentialId, initiator);
-
-        // Assert
+        JSONObject result = (JSONObject) createAuditLogEntryMethod.invoke(auditLogger, username);
         Assert.assertNotNull(result);
-        Assert.assertEquals(result.getString("Username"), username);
-        Assert.assertEquals(result.getString("CredentialId"), credentialId);
-        Assert.assertEquals(result.getString("Initiator"), initiator);
+        Assert.assertEquals(result.getString("UserId"), TEST_USER_ID);
+        Assert.assertTrue(result.has("DeregisteredAt"));
     }
 
     /**
-     * Test the public method 'printAuditLog' with valid data.
+     * Test the private method 'createAuditLogEntry' with null username.
      */
     @Test
-    public void testPrintAuditLogWithValidData() {
-        // Arrange
-        String username = "testUser@carbon.super";
-        String credentialId = "credential-123";
-        String initiator = "admin";
-        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE;
+    public void testCreateAuditLogEntryWithNullUsername() throws Exception {
 
-        // Act
-        auditLogger.printAuditLog(operation, username, credentialId, initiator);
+        Method createAuditLogEntryMethod = WebAuthnAuditLogger.class.getDeclaredMethod("createAuditLogEntry",
+                String.class);
+        createAuditLogEntryMethod.setAccessible(true);
+        JSONObject result = (JSONObject) createAuditLogEntryMethod.invoke(auditLogger, (String) null);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isNull("UserId"));
+        Assert.assertTrue(result.has("DeregisteredAt"));
+    }
 
-        // Assert - Verify that triggerAuditLogEvent was called
-        verifyStatic();
-        LoggerUtils.triggerAuditLogEvent(any(AuditLog.AuditLogBuilder.class));
+    /**
+     * Test the private method 'getInitiatorId' returns valid initiator ID.
+     */
+    @Test
+    public void testGetInitiatorId() throws Exception {
+
+        Method getInitiatorIdMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getInitiatorId");
+        getInitiatorIdMethod.setAccessible(true);
+        String result = (String) getInitiatorIdMethod.invoke(auditLogger);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result, "initiator-id-test");
+    }
+
+    /**
+     * Test the private method 'getInitiatorId' when initiator ID is blank.
+     */
+    @Test
+    public void testGetInitiatorIdWhenBlank() throws Exception {
+
+        mockedIdentityUtil.when(() -> IdentityUtil.getInitiatorId(anyString(), anyString()))
+                .thenReturn("");
+        mockedLoggerUtils.when(() -> LoggerUtils.getMaskedContent(anyString()))
+                .thenReturn("masked-user");
+
+        Method getInitiatorIdMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getInitiatorId");
+        getInitiatorIdMethod.setAccessible(true);
+        String result = (String) getInitiatorIdMethod.invoke(auditLogger);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result, "masked-user");
+    }
+
+    /**
+     * Test the private method 'getInitiatorId' for system user.
+     */
+    @Test
+    public void testGetInitiatorIdForSystemUser() throws Exception {
+
+        when(carbonContext.getUsername()).thenReturn("");
+        mockedIdentityUtil.when(() -> IdentityUtil.getInitiatorId(anyString(), anyString()))
+                .thenReturn("");
+
+        Method getInitiatorIdMethod = WebAuthnAuditLogger.class.getDeclaredMethod("getInitiatorId");
+        getInitiatorIdMethod.setAccessible(true);
+        String result = (String) getInitiatorIdMethod.invoke(auditLogger);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result, LoggerUtils.Initiator.System.name());
+    }
+
+    /**
+     * Test the private method 'resolveUserIdFromUsername' with valid username.
+     */
+    @Test
+    public void testResolveUserIdFromUsername() throws Exception {
+
+        String username = "testuser@carbon.super";
+        Method resolveUserIdMethod = WebAuthnAuditLogger.class.getDeclaredMethod("resolveUserIdFromUsername",
+                String.class);
+        resolveUserIdMethod.setAccessible(true);
+        String result = (String) resolveUserIdMethod.invoke(auditLogger, username);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result, TEST_USER_ID);
     }
 
     /**
      * Test the Operation enum values.
      */
     @Test
-    public void testOperationEnum() {
-        // Act & Assert
-        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE;
-        Assert.assertEquals(operation.getLogAction(), "deregister-device");
-    }
+    public void testOperationEnumValues() {
 
-    /**
-     * Test the private method 'buildAuditLog' to ensure proper audit log building.
-     */
-    @Test
-    public void testBuildAuditLog() throws Exception {
-        // Arrange
-        WebAuthnAuditLogger.Operation operation = WebAuthnAuditLogger.Operation.DEREGISTER_DEVICE;
-        JSONObject data = new JSONObject();
-        data.put("Username", "testUser@carbon.super");
-        data.put("CredentialId", "credential-123");
-        data.put("Initiator", "admin");
-
-        // Act
-        Method buildAuditLogMethod = WebAuthnAuditLogger.class.getDeclaredMethod("buildAuditLog",
-                WebAuthnAuditLogger.Operation.class, JSONObject.class);
-        buildAuditLogMethod.setAccessible(true);
-        buildAuditLogMethod.invoke(auditLogger, operation, data);
-
-        // Assert - Verify that triggerAuditLogEvent was called
-        verifyStatic();
-        LoggerUtils.triggerAuditLogEvent(any(AuditLog.AuditLogBuilder.class));
-
-        verifyStatic();
-        LoggerUtils.jsonObjectToMap(any(JSONObject.class));
+        Assert.assertEquals(WebAuthnAuditLogger.Operation.DEREGISTER_PASSKEY.getLogAction(), "Deregister-Passkey");
     }
 }

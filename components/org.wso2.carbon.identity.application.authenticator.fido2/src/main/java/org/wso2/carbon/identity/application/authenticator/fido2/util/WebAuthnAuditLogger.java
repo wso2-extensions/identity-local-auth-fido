@@ -22,11 +22,17 @@ import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceDataHolder;
 
 import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.jsonObjectToMap;
 import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
@@ -41,13 +47,17 @@ public class WebAuthnAuditLogger {
      *
      * @param operation    The operation being performed (e.g., REGISTER_DEVICE).
      * @param username     The fully qualified username of the user being acted upon.
-     * @param credentialId The credential ID of the FIDO2 device.
-     * @param initiator    The initiator of the operation.
+     * @param targetId     The credential ID of the FIDO2 device.
      */
-    public void printAuditLog(Operation operation, String username, String credentialId, String initiator) {
+    public void printAuditLog(Operation operation, String username, String targetId) {
 
-        JSONObject data = createAuditLogEntry(username, credentialId, initiator);
-        buildAuditLog(operation, data);
+        JSONObject data = null;
+        try {
+            data = createAuditLogEntry(username);
+        } catch (UserStoreException e) {
+            throw new RuntimeException("Error while retrieving user ID from username.", e);
+        }
+        buildAuditLog(operation, targetId, data);
     }
 
     /**
@@ -56,31 +66,32 @@ public class WebAuthnAuditLogger {
      * @param operation The operation to be logged.
      * @param data      The JSON data payload for the log.
      */
-    private void buildAuditLog(Operation operation, JSONObject data) {
+    private void buildAuditLog(Operation operation, String targetId, JSONObject data) {
 
-        AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(getInitiatorId(),
-                LoggerUtils.getInitiatorType(getInitiatorId()),
-                LoggerUtils.Initiator.System.name(),
-                LogConstants.TARGET_FIDO_DEVICE,
-                operation.getLogAction()).
-                data(jsonObjectToMap(data));
+        AuditLog.AuditLogBuilder auditLogBuilder;
+        try {
+            auditLogBuilder = new AuditLog.AuditLogBuilder(getInitiatorId(),
+                    LoggerUtils.getInitiatorType(getInitiatorId()),
+                    targetId,
+                    LogConstants.TARGET_TYPE_FIELD,
+                    operation.getLogAction()).data(jsonObjectToMap(data));
+        } catch (UserStoreException e) {
+            throw new RuntimeException("Error while retrieving user ID from username.", e);
+        }
         triggerAuditLogEvent(auditLogBuilder);
     }
 
     /**
      * Create the core JSON data structure for the audit log entry.
      *
-     * @param username     The username associated with the credential.
-     * @param credentialId The credential ID.
-     * @param initiator The initiator of the operation.
+     * @param username The username the user associated with the credential.
      * @return A JSONObject containing the audit data.
      */
-    private JSONObject createAuditLogEntry(String username, String credentialId, String initiator) {
+    private JSONObject createAuditLogEntry(String username) throws UserStoreException {
 
         JSONObject data = new JSONObject();
-        data.put(LogConstants.USERNAME_FIELD, username!= null? LoggerUtils.getMaskedContent(username) : JSONObject.NULL);
-        data.put(LogConstants.CREDENTIAL_ID_FIELD, credentialId!= null? credentialId : JSONObject.NULL);
-        data.put(LogConstants.INITIATOR, initiator != null ? initiator : JSONObject.NULL);
+        data.put(LogConstants.END_USER_ID, username != null ? resolveUserIdFromUsername(username) : JSONObject.NULL);
+        data.put(LogConstants.DEREGISTERED_AT_FIELD, System.currentTimeMillis());
 
         return data;
     }
@@ -90,7 +101,7 @@ public class WebAuthnAuditLogger {
      *
      * @return Current logged-in user.
      */
-    private String getUser() {
+    private String getUser() throws UserStoreException {
 
         String user = CarbonContext.getThreadLocalCarbonContext().getUsername();
         if (StringUtils.isNotEmpty(user)) {
@@ -108,11 +119,11 @@ public class WebAuthnAuditLogger {
      *
      * @return Initiator id despite masking.
      */
-    private String getInitiatorId() {
+    private String getInitiatorId() throws UserStoreException {
 
         String initiator = null;
-        String username = MultitenantUtils.getTenantAwareUsername(getUser());
-        String tenantDomain = MultitenantUtils.getTenantDomain(getUser());
+        String username = getUser();
+        String tenantDomain = getUser();
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(tenantDomain)) {
             initiator = IdentityUtil.getInitiatorId(username, tenantDomain);
         }
@@ -128,10 +139,28 @@ public class WebAuthnAuditLogger {
     }
 
     /**
+     * Resolve user ID from the given username.
+     *
+     * @param username The fully qualified username.
+     * @return The user ID.
+     * @throws UserStoreException If an error occurs while retrieving the user ID.
+     */
+    private String resolveUserIdFromUsername(String username) throws UserStoreException {
+
+        RealmService userRealm = FIDO2AuthenticatorServiceDataHolder.getInstance().getRealmService();
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) userRealm
+                .getTenantUserRealm(IdentityTenantUtil.getTenantId(tenantDomain)).getUserStoreManager();
+        String usernameWithoutDomain = MultitenantUtils.getTenantAwareUsername(username);
+        return userStoreManager.getUserIDFromUserName(usernameWithoutDomain);
+    }
+
+    /**
      * FIDO2/WebAuthn operations to be logged.
      */
     public enum Operation {
-        DEREGISTER_DEVICE("deregister-device");
+
+        DEREGISTER_PASSKEY("Deregister-Passkey");
 
         private final String logAction;
 
@@ -149,9 +178,8 @@ public class WebAuthnAuditLogger {
      */
     private static class LogConstants {
 
-        public static final String TARGET_FIDO_DEVICE = "FidoDevice";
-        public static final String USERNAME_FIELD = "Username";
-        public static final String CREDENTIAL_ID_FIELD = "CredentialId";
-        public static final String INITIATOR = "Initiator";
+        public static final String TARGET_TYPE_FIELD = "Passkey";
+        public static final String END_USER_ID = "UserId";
+        public static final String DEREGISTERED_AT_FIELD = "DeregisteredAt";
     }
 }

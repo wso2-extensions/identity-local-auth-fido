@@ -459,6 +459,7 @@
         <encoder.wso2.import.version.range>[1.2.0,2.0.0)</encoder.wso2.import.version.range>
         <json.wso2.version>3.0.0.wso2v4</json.wso2.version>
         <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
+
         <!--Test Dependencies-->
         <testng.version>6.9.10</testng.version>
         <mockito.version>5.3.1</mockito.version>
