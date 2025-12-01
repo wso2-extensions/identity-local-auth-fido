@@ -21,12 +21,12 @@ package org.wso2.carbon.identity.application.authenticator.fido.service;
 import com.yubico.u2f.data.messages.RegisterRequestData;
 import com.yubico.u2f.data.messages.RegisterResponse;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.CarbonContext;
@@ -36,21 +36,16 @@ import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAut
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
 
-import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
-@PrepareForTest({U2FService.class, CarbonContext.class, PrivilegedCarbonContext.class, FIDOUtil.class,
-        RegisterResponse.class})
 public class FIDOAdminServiceTest {
 
     private final String USER_STORE_DOMAIN = "PRIMARY";
@@ -66,17 +61,38 @@ public class FIDOAdminServiceTest {
     @Mock
     private RegisterResponse registerResponse;
 
+    private MockedStatic<U2FService> u2FServiceStaticMock;
+    private MockedStatic<FIDOUtil> fidoUtilStaticMock;
+    private MockedStatic<PrivilegedCarbonContext> privilegedCarbonContextStaticMock;
+    private MockedStatic<CarbonContext> carbonContextStaticMock;
+    private MockedStatic<RegisterResponse> registerResponseStaticMock;
+
     @BeforeMethod
     public void setUp() {
 
-        initMocks(this);
-        mockStatic(U2FService.class);
-        when(U2FService.getInstance()).thenReturn(u2FService);
+        MockitoAnnotations.openMocks(this);
+
+        // Mock U2FService static getInstance()
+        u2FServiceStaticMock = Mockito.mockStatic(U2FService.class);
+        u2FServiceStaticMock.when(U2FService::getInstance).thenReturn(u2FService);
+
         mockCarbonContext();
-        mockStatic(FIDOUtil.class);
-        when(FIDOUtil.getDomainName(anyString())).thenReturn(USER_STORE_DOMAIN);
-        when(FIDOUtil.getUsernameWithoutDomain(anyString())).thenReturn(USERNAME);
+
+        // Mock FIDOUtil static helpers
+        fidoUtilStaticMock = Mockito.mockStatic(FIDOUtil.class);
+        fidoUtilStaticMock.when(() -> FIDOUtil.getDomainName(anyString())).thenReturn(USER_STORE_DOMAIN);
+        fidoUtilStaticMock.when(() -> FIDOUtil.getUsernameWithoutDomain(anyString())).thenReturn(USERNAME);
+
         fidoAdminService = new FIDOAdminService();
+    }
+    
+    @AfterMethod
+    public void tearDown() {
+
+        u2FServiceStaticMock.close();
+        fidoUtilStaticMock.close();
+        privilegedCarbonContextStaticMock.close();
+        carbonContextStaticMock.close();
     }
 
     @Test(description = "Test case for startRegistration() method", priority = 1)
@@ -91,9 +107,12 @@ public class FIDOAdminServiceTest {
     public void testFinishRegistration() throws FIDOAuthenticatorClientException {
 
         String response = "testResponse";
-        mockStatic(RegisterResponse.class);
-        when(RegisterResponse.fromJson(anyString())).thenReturn(registerResponse);
+        registerResponseStaticMock = Mockito.mockStatic(RegisterResponse.class);
+        registerResponseStaticMock.when(() -> RegisterResponse.fromJson(anyString())).thenReturn(registerResponse);
+
         fidoAdminService.finishRegistration(response);
+
+        registerResponseStaticMock.close();
     }
 
     @Test(description = "Test case for removeAllRegistrations() method", priority = 3)
@@ -146,27 +165,22 @@ public class FIDOAdminServiceTest {
         Assert.assertEquals(returnedDeviceList.length, 0);
     }
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
-    }
-
     private void mockCarbonContext() {
 
         String carbonHome = Paths.get(System.getProperty("user.dir"), "target", "test-classes").toString();
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
-        System.setProperty(CarbonBaseConstants.CARBON_CONFIG_DIR_PATH, Paths.get(carbonHome, "conf").toString());
+        System.setProperty(CarbonBaseConstants.CARBON_CONFIG_DIR_PATH, Paths.get(carbonHome, "repository/conf").toString());
 
-        mockStatic(PrivilegedCarbonContext.class);
+        privilegedCarbonContextStaticMock = Mockito.mockStatic(PrivilegedCarbonContext.class);
         PrivilegedCarbonContext privilegedCarbonContext = mock(PrivilegedCarbonContext.class);
-        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+        privilegedCarbonContextStaticMock.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                .thenReturn(privilegedCarbonContext);
         when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
         when(privilegedCarbonContext.getTenantId()).thenReturn(SUPER_TENANT_ID);
         when(privilegedCarbonContext.getUsername()).thenReturn(USERNAME);
 
-        mockStatic(CarbonContext.class);
+        carbonContextStaticMock = Mockito.mockStatic(CarbonContext.class);
         carbonContext = mock(CarbonContext.class);
-        when(CarbonContext.getThreadLocalCarbonContext()).thenReturn(carbonContext);
+        carbonContextStaticMock.when(CarbonContext::getThreadLocalCarbonContext).thenReturn(carbonContext);
     }
 }

@@ -49,14 +49,14 @@ import com.yubico.webauthn.data.UserIdentity;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
-import org.powermock.reflect.internal.WhiteboxImpl;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.CarbonContext;
@@ -82,12 +82,10 @@ import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2Authen
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
-import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -109,18 +107,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyList;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anySet;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anySet;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME;
@@ -130,26 +125,16 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
-@PrepareForTest({FIDO2DeviceStoreDAO.class, IdentityUtil.class, JacksonCodecs.class, IdentityConfigParser.class,
-        UserCoreUtil.class, CarbonContext.class, PrivilegedCarbonContext.class, User.class, RelyingParty.class,
-        PublicKeyCredentialCreationOptions.class, StartRegistrationOptions.class, FIDO2Cache.class,
-        FIDO2CacheEntry.class, IdentityTenantUtil.class, FIDO2AuthenticatorServiceComponent.class,
-        InternetDomainName.class, FIDO2CredentialRegistration.class, PublicKeyCredentialCreationOptions.class,
-        FIDO2AuthenticatorServiceDataHolder.class, ConfigurationManager.class, FinishRegistrationOptions.class,
-        RegistrationResult.class, RegisteredCredential.class, PublicKeyCredentialDescriptor.class, UserIdentity.class,
-        AuthenticatorSelectionCriteria.class, RelyingPartyIdentity.class, WebAuthnService.class, WebAuthnManager.class,
-        RegistrationData.class, AssertionRequest.class, FIDO2CredentialRegistration.class, FIDOUtil.class,
-        StartAssertionOptions.class, AssertionResult.class})
 public class WebAuthnServiceTest {
 
-    private final String ORIGIN = "https://localhost:9443";
-    private final String USERNAME = "admin";
-    private final String TENANT_DOMAIN = "carbon.super";
-    private final String TENANT_QUALIFIED_USERNAME = "admin@carbon.super";
-    private final String DISPLAY_NAME = "Administrator";
-    private final String FIRST_NAME = "admin";
-    private final String LAST_NAME = "admin";
-    private final String USER_STORE_DOMAIN = "PRIMARY";
+    private static final String ORIGIN = "https://localhost:9443";
+    private static final String USERNAME = "admin";
+    private static final String TENANT_DOMAIN = "carbon.super";
+    private static final String TENANT_QUALIFIED_USERNAME = "admin@carbon.super";
+    private static final String DISPLAY_NAME = "Administrator";
+    private static final String FIRST_NAME = "admin";
+    private static final String LAST_NAME = "admin";
+    private static final String USER_STORE_DOMAIN = "PRIMARY";
     private static final String DISPLAY_NAME_CLAIM_URL = "http://wso2.org/claims/displayName";
     private static final String FIRST_NAME_CLAIM_URL = "http://wso2.org/claims/givenname";
     private static final String LAST_NAME_CLAIM_URL = "http://wso2.org/claims/lastname";
@@ -205,8 +190,6 @@ public class WebAuthnServiceTest {
     @Mock
     private RegistrationResult registrationResult;
     @Mock
-    private WebAuthnManager webAuthnManager;
-    @Mock
     private RegistrationData registrationData;
     @Mock
     private FIDO2CredentialRegistration fido2CredentialRegistration;
@@ -217,47 +200,83 @@ public class WebAuthnServiceTest {
     @Mock
     private AssertionResult assertionResult;
 
+    private MockedStatic<FIDO2DeviceStoreDAO> fido2DeviceStoreDAOMock;
+    private MockedStatic<IdentityUtil> identityUtilMock;
+    private MockedStatic<JacksonCodecs> jacksonCodecsMock;
+    private MockedStatic<IdentityConfigParser> identityConfigParserMock;
+    private MockedStatic<UserCoreUtil> userCoreUtilMock;
+    private MockedStatic<User> userMock;
+    private MockedStatic<RelyingParty> relyingPartyMock;
+    private MockedStatic<FIDO2Cache> fido2CacheMock;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtilMock;
+    private MockedStatic<FIDO2AuthenticatorServiceComponent> fido2AuthenticatorServiceComponentMock;
+    private MockedStatic<InternetDomainName> internetDomainNameMock;
+    private MockedStatic<FIDO2AuthenticatorServiceDataHolder> fido2AuthenticatorServiceDataHolderMock;
+    private MockedStatic<FIDOUtil> fidoUtilMock;
+    private MockedStatic<PrivilegedCarbonContext> privilegedCarbonContextMock;
+    private MockedStatic<CarbonContext> carbonContextMock;
+
     @BeforeMethod
-    public void setUp() throws UserStoreException, IOException, FIDO2AuthenticatorServerException, ConfigurationManagementException {
+    public void setUp() throws Exception {
 
         prepareResources();
-        initMocks(this);
-        mockStatic(FIDO2DeviceStoreDAO.class);
-        when(FIDO2DeviceStoreDAO.getInstance()).thenReturn(userStorageMock);
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty("FIDO.UserResponseTimeout")).thenReturn("300");
-        when(IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
-        when(IdentityUtil.replacePortNumberPlaceholder(anyString(), anyBoolean())).thenCallRealMethod();
-        mockStatic(JacksonCodecs.class);
-        when(JacksonCodecs.json()).thenReturn(objectMapperMock);
+        MockitoAnnotations.openMocks(this);
+
+        // FIDO2DeviceStoreDAO static mocking
+        fido2DeviceStoreDAOMock = Mockito.mockStatic(FIDO2DeviceStoreDAO.class);
+        fido2DeviceStoreDAOMock.when(FIDO2DeviceStoreDAO::getInstance).thenReturn(userStorageMock);
+
+        // IdentityUtil static mocking
+        identityUtilMock = Mockito.mockStatic(IdentityUtil.class);
+        identityUtilMock.when(() -> IdentityUtil.getProperty("FIDO.UserResponseTimeout")).thenReturn("300");
+        identityUtilMock.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                .thenCallRealMethod();
+        identityUtilMock.when(() -> IdentityUtil.replacePortNumberPlaceholder(anyString(), Mockito.anyBoolean()))
+                .thenCallRealMethod();
+        identityUtilMock.when(() -> IdentityUtil.fillURLPlaceholders(anyString()))
+                .thenReturn(ORIGIN);
+
+        // JacksonCodecs static mocking
+        jacksonCodecsMock = Mockito.mockStatic(JacksonCodecs.class);
+        jacksonCodecsMock.when(JacksonCodecs::json).thenReturn(objectMapperMock);
+
         webAuthnService = new WebAuthnService();
 
         when(FIDO2DeviceStoreDAO.getInstance()).thenReturn(fido2DeviceStoreDAO);
         trustedOrigins.add(ORIGIN);
         identityConfig.put(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS, trustedOrigins);
-        when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
-                FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
-                new Attribute(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME, ""));
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
+        when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME,
+                FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME, FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME))
+                .thenReturn(new Attribute(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME, ""));
+
+        // IdentityConfigParser static mocking
+        identityConfigParserMock = Mockito.mockStatic(IdentityConfigParser.class);
+        identityConfigParserMock.when(IdentityConfigParser::getInstance).thenReturn(identityConfigParser);
         when(identityConfigParser.getConfiguration()).thenReturn(identityConfig);
-        when(IdentityUtil.fillURLPlaceholders(anyString())).thenReturn(ORIGIN);
 
         mockCarbonContext();
-        mockStatic(UserCoreUtil.class);
-        when(UserCoreUtil.addTenantDomainToEntry(anyString(), anyString())).thenReturn(TENANT_QUALIFIED_USERNAME);
 
-        mockStatic(User.class);
+        // UserCoreUtil static mocking
+        userCoreUtilMock = Mockito.mockStatic(UserCoreUtil.class);
+        userCoreUtilMock.when(() -> UserCoreUtil.addTenantDomainToEntry(anyString(), anyString()))
+                .thenReturn(TENANT_QUALIFIED_USERNAME);
+        userCoreUtilMock.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString()))
+                .thenCallRealMethod();
+        userCoreUtilMock.when(() -> UserCoreUtil.addTenantDomainToEntry(anyString(), anyString()))
+                .thenCallRealMethod();
+
+        // User static mocking
+        userMock = Mockito.mockStatic(User.class);
         user = new User();
         user.setUserName(USERNAME);
         user.setTenantDomain(TENANT_DOMAIN);
         user.setUserStoreDomain(USER_STORE_DOMAIN);
-        when(User.getUserFromUserName(TENANT_QUALIFIED_USERNAME)).thenReturn(user);
-        when(User.getUserFromUserName(USERNAME)).thenReturn(user);
+        userMock.when(() -> User.getUserFromUserName(TENANT_QUALIFIED_USERNAME)).thenReturn(user);
+        userMock.when(() -> User.getUserFromUserName(USERNAME)).thenReturn(user);
 
-        mockStatic(RelyingParty.class);
-        mockStatic(RelyingParty.RelyingPartyBuilder.class);
-        when(RelyingParty.builder()).thenReturn(mandatoryStages);
+        // RelyingParty static mocking
+        relyingPartyMock = Mockito.mockStatic(RelyingParty.class);
+        relyingPartyMock.when(RelyingParty::builder).thenReturn(mandatoryStages);
         when(mandatoryStages.identity(any())).thenReturn(step2);
         when(step2.credentialRepository(any())).thenReturn(relyingPartyBuilder);
         when(relyingPartyBuilder.origins(anySet())).thenReturn(relyingPartyBuilder);
@@ -266,13 +285,19 @@ public class WebAuthnServiceTest {
         when(relyingPartyBuilder.preferredPubkeyParams(anyList())).thenReturn(relyingPartyBuilder);
         when(relyingPartyBuilder.build()).thenReturn(relyingParty);
 
-        mockStatic(FIDO2Cache.class);
-        when(FIDO2Cache.getInstance()).thenReturn(fido2Cache);
+        // FIDO2Cache static mocking
+        fido2CacheMock = Mockito.mockStatic(FIDO2Cache.class);
+        fido2CacheMock.when(FIDO2Cache::getInstance).thenReturn(fido2Cache);
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
-        mockStatic(FIDO2AuthenticatorServiceComponent.class);
-        when(FIDO2AuthenticatorServiceComponent.getRealmService()).thenReturn(realmService);
+        // IdentityTenantUtil static mocking
+        identityTenantUtilMock = Mockito.mockStatic(IdentityTenantUtil.class);
+        identityTenantUtilMock.when(() -> IdentityTenantUtil.getTenantId(SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(SUPER_TENANT_ID);
+
+        // FIDO2AuthenticatorServiceComponent static mocking
+        fido2AuthenticatorServiceComponentMock = Mockito.mockStatic(FIDO2AuthenticatorServiceComponent.class);
+        fido2AuthenticatorServiceComponentMock.when(FIDO2AuthenticatorServiceComponent::getRealmService)
+                .thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(userStoreManager);
@@ -283,79 +308,117 @@ public class WebAuthnServiceTest {
         when(userStoreManager.getUserClaimValue(TENANT_QUALIFIED_USERNAME, LAST_NAME_CLAIM_URL, null))
                 .thenReturn(LAST_NAME);
 
-        mockStatic(InternetDomainName.class);
-        when(InternetDomainName.from(anyString())).thenReturn(internetDomainName);
+        // InternetDomainName static mocking
+        internetDomainNameMock = Mockito.mockStatic(InternetDomainName.class);
+        internetDomainNameMock.when(() -> InternetDomainName.from(anyString()))
+                .thenReturn(internetDomainName);
         when(internetDomainName.hasPublicSuffix()).thenReturn(false);
 
-        mockStatic(FIDO2AuthenticatorServiceDataHolder.class);
-        when(FIDO2AuthenticatorServiceDataHolder.getInstance()).thenReturn(fido2AuthenticatorServiceDataHolder);
-        when(fido2AuthenticatorServiceDataHolder.getConfigurationManager()).thenReturn(configurationManager);
+        // FIDO2AuthenticatorServiceDataHolder static mocking
+        fido2AuthenticatorServiceDataHolderMock = Mockito.mockStatic(FIDO2AuthenticatorServiceDataHolder.class);
+        fido2AuthenticatorServiceDataHolderMock.when(FIDO2AuthenticatorServiceDataHolder::getInstance)
+                .thenReturn(fido2AuthenticatorServiceDataHolder);
+        when(fido2AuthenticatorServiceDataHolder.getConfigurationManager())
+                .thenReturn(configurationManager);
 
+        // DAO behaviour
         List<FIDO2CredentialRegistration> credentialRegistrations = new ArrayList<>();
         credentialRegistrations.add(fido2CredentialRegistration);
-        when(userStorageMock.getFIDO2RegistrationsByUsername(anyString())).thenReturn(credentialRegistrations);
-        when(userStorageMock.getFIDO2RegistrationsByUser(any(User.class))).thenReturn(credentialRegistrations);
-        FIDO2CredentialRegistration fido2CredentialRegistration = mock(FIDO2CredentialRegistration.class);
+        when(userStorageMock.getFIDO2RegistrationsByUsername(anyString()))
+                .thenReturn(credentialRegistrations);
+        when(userStorageMock.getFIDO2RegistrationsByUser(any(User.class)))
+                .thenReturn(credentialRegistrations);
+        FIDO2CredentialRegistration localFido2CredentialRegistration = mock(FIDO2CredentialRegistration.class);
         when(userStorageMock.getFIDO2RegistrationByUsernameAndCredentialId(anyString(), any(ByteArray.class)))
-                .thenReturn(Optional.of(fido2CredentialRegistration));
+                .thenReturn(Optional.of(localFido2CredentialRegistration));
 
-        mockStatic(FIDOUtil.class);
+        // FIDOUtil static mocking
+        fidoUtilMock = Mockito.mockStatic(FIDOUtil.class);
+    }
+    
+    @AfterMethod
+    public void tearDown() {
+
+        fido2DeviceStoreDAOMock.close();
+        identityUtilMock.close();
+        jacksonCodecsMock.close();
+        identityConfigParserMock.close();
+        userCoreUtilMock.close();
+        userMock.close();
+        relyingPartyMock.close();
+        fido2CacheMock.close();
+        identityTenantUtilMock.close();
+        fido2AuthenticatorServiceComponentMock.close();
+        internetDomainNameMock.close();
+        fido2AuthenticatorServiceDataHolderMock.close();
+        fidoUtilMock.close();
+        if (privilegedCarbonContextMock != null) {
+            privilegedCarbonContextMock.close();
+        }
+        if (carbonContextMock != null) {
+            carbonContextMock.close();
+        }
     }
 
     @Test(description = "Test case for startFIDO2Registration() method", priority = 1)
     public void testStartFIDO2Registration() throws JsonProcessingException, FIDO2AuthenticatorClientException,
             FIDO2AuthenticatorServerException {
 
-        mockStatic(StartRegistrationOptions.class);
-        StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
-        StartRegistrationOptions.StartRegistrationOptionsBuilder startRegistrationOptionsBuilder =
-                mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.class);
-        StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
-                mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
-        when(StartRegistrationOptions.builder()).thenReturn(mandatoryStages1);
-        when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString()))
-                .thenReturn(Optional.ofNullable(null));
-        when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
-                .thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.extensions(any())).thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.build()).thenReturn(startRegistrationOptions);
+        try (MockedStatic<StartRegistrationOptions> startRegistrationOptionsMock =
+                Mockito.mockStatic(StartRegistrationOptions.class)) {
+            StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder startRegistrationOptionsBuilder =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
+            startRegistrationOptionsMock.when(StartRegistrationOptions::builder).thenReturn(mandatoryStages1);
+            when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString()))
+                    .thenReturn(Optional.empty());
+            when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
+                    .thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.extensions(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.build()).thenReturn(startRegistrationOptions);
 
-        PublicKeyCredentialCreationOptions credentialCreationOptions = mock(PublicKeyCredentialCreationOptions.class);
-        when(relyingParty.startRegistration(any())).thenReturn(credentialCreationOptions);
-        when(objectMapperMock.writeValueAsString(any())).thenReturn("dummyValueAsString");
+            PublicKeyCredentialCreationOptions credentialCreationOptions = mock(PublicKeyCredentialCreationOptions.class);
+            when(relyingParty.startRegistration(any())).thenReturn(credentialCreationOptions);
+            when(objectMapperMock.writeValueAsString(any())).thenReturn("dummyValueAsString");
 
-        Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2Registration(ORIGIN);
-        Assert.assertTrue(result.isRight());
+            Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2Registration(ORIGIN);
+            Assert.assertTrue(result.isRight());
+        }
     }
 
     @Test(description = "Test case for startFIDO2UsernamelessRegistration() method", priority = 2)
     public void testStartFIDO2UsernamelessRegistration() throws JsonProcessingException,
             FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
 
-        mockStatic(StartRegistrationOptions.class);
-        StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
-        StartRegistrationOptions.StartRegistrationOptionsBuilder startRegistrationOptionsBuilder =
-                mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.class);
-        StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
-                mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
-        when(StartRegistrationOptions.builder()).thenReturn(mandatoryStages1);
-        when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString()))
-                .thenReturn(Optional.ofNullable(null));
-        when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
-                .thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.extensions(any())).thenReturn(startRegistrationOptionsBuilder);
-        when(startRegistrationOptionsBuilder.build()).thenReturn(startRegistrationOptions);
+        try (MockedStatic<StartRegistrationOptions> startRegistrationOptionsMock =
+                     Mockito.mockStatic(StartRegistrationOptions.class)) {
+            StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder startRegistrationOptionsBuilder =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
+            startRegistrationOptionsMock.when(StartRegistrationOptions::builder).thenReturn(mandatoryStages1);
+            when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString()))
+                    .thenReturn(Optional.empty());
+            when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
+                    .thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.extensions(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.build()).thenReturn(startRegistrationOptions);
 
-        PublicKeyCredentialCreationOptions credentialCreationOptions = mock(PublicKeyCredentialCreationOptions.class);
-        when(relyingParty.startRegistration(any())).thenReturn(credentialCreationOptions);
-        when(objectMapperMock.writeValueAsString(any())).thenReturn("dummyValueAsString");
+            PublicKeyCredentialCreationOptions credentialCreationOptions = mock(PublicKeyCredentialCreationOptions.class);
+            when(relyingParty.startRegistration(any())).thenReturn(credentialCreationOptions);
+            when(objectMapperMock.writeValueAsString(any())).thenReturn("dummyValueAsString");
 
-        Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2UsernamelessRegistration(ORIGIN);
-        Assert.assertTrue(result.isRight());
+            Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2UsernamelessRegistration(ORIGIN);
+            Assert.assertTrue(result.isRight());
+
+        }
     }
 
     @DataProvider(name = "finishFIDO2RegistrationDataProvider")
@@ -381,7 +444,7 @@ public class WebAuthnServiceTest {
         when(objectMapperMock.readValue(finishRegistrationResponseString, RegistrationResponse.class))
                 .thenReturn(finishRegistrationResponse);
         when(fido2DeviceStoreDAO.getFIDO2RegistrationByUsernameAndCredentialId(anyString(), any(ByteArray.class)))
-                .thenReturn(Optional.ofNullable(null));
+                .thenReturn(Optional.empty());
         when(fido2Cache.getValueFromCacheByRequestId(any(FIDO2CacheKey.class))).thenReturn(fido2CacheEntry);
         when(fido2CacheEntry.getPublicKeyCredentialCreationOptions())
                 .thenReturn("publicKeyCredentialCreationOptions");
@@ -398,8 +461,9 @@ public class WebAuthnServiceTest {
                 new Attribute(FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME, mdsValidationEnabled)
         );
 
+        MockedConstruction<WebAuthnManager> mockedWebAuthnManager = null;
         if (Boolean.parseBoolean(attestationValidationEnabled)) {
-            when(relyingParty.getOrigins()).thenReturn(new HashSet<String>(Arrays.asList(ORIGIN)));
+            when(relyingParty.getOrigins()).thenReturn(new HashSet<>(Arrays.asList(ORIGIN)));
 
             List<PublicKeyCredentialParameters> preferredPublicKeyCredentialParameters = Collections.unmodifiableList(
                     Arrays.asList(PublicKeyCredentialParameters.ES256, PublicKeyCredentialParameters.EdDSA,
@@ -410,10 +474,12 @@ public class WebAuthnServiceTest {
             when(relyingParty.getIdentity()).thenReturn(relyingPartyIdentity);
             when(relyingPartyIdentity.getId()).thenReturn("relyingPartyId");
 
-            whenNew(WebAuthnManager.class).withAnyArguments().thenReturn(webAuthnManager);
-            when(webAuthnManager.parse(any(RegistrationRequest.class))).thenReturn(registrationData);
-            when(webAuthnManager.validate(any(RegistrationData.class), any(RegistrationParameters.class)))
-                    .thenReturn(registrationData);
+            mockedWebAuthnManager = Mockito.mockConstruction(WebAuthnManager.class,
+                    (webAuthnManager, context) -> {
+                        when(webAuthnManager.parse(any(RegistrationRequest.class))).thenReturn(registrationData);
+                        when(webAuthnManager.validate(any(RegistrationData.class), any(RegistrationParameters.class)))
+                                .thenReturn(registrationData);
+                    });
         }
 
         if (Boolean.parseBoolean(mdsValidationEnabled)) {
@@ -424,59 +490,68 @@ public class WebAuthnServiceTest {
             when(metadataService.getDefaultCertPathTrustworthinessValidator()).thenReturn(certPathValidator);
         }
 
-        mockStatic(FinishRegistrationOptions.class);
-        FinishRegistrationOptions finishRegistrationOptions = mock(FinishRegistrationOptions.class);
-        FinishRegistrationOptions.FinishRegistrationOptionsBuilder finishRegistrationOptionsBuilder =
-                mock(FinishRegistrationOptions.FinishRegistrationOptionsBuilder.class);
-        FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
-                mock(FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages.class);
-        FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages.Step2 step2Finish =
-                mock(FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages.Step2.class);
+        // FinishRegistrationOptions static mocking
+        try (MockedStatic<FinishRegistrationOptions> finishRegistrationOptionsMock =
+                     Mockito.mockStatic(FinishRegistrationOptions.class);
+             MockedStatic<RegisteredCredential> registeredCredentialMock = 
+                     Mockito.mockStatic(RegisteredCredential.class)) {
+            FinishRegistrationOptions finishRegistrationOptions = mock(FinishRegistrationOptions.class);
+            FinishRegistrationOptions.FinishRegistrationOptionsBuilder finishRegistrationOptionsBuilder =
+                    mock(FinishRegistrationOptions.FinishRegistrationOptionsBuilder.class);
+            FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
+                    mock(FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages.class);
+            FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages.Step2 step2Finish =
+                    mock(FinishRegistrationOptions.FinishRegistrationOptionsBuilder.MandatoryStages.Step2.class);
 
-        when(FinishRegistrationOptions.builder()).thenReturn(mandatoryStages1);
-        when(mandatoryStages1.request(any(PublicKeyCredentialCreationOptions.class))).thenReturn(step2Finish);
-        when(step2Finish.response(any(PublicKeyCredential.class))).thenReturn(finishRegistrationOptionsBuilder);
-        when(finishRegistrationOptionsBuilder.build()).thenReturn(finishRegistrationOptions);
+            finishRegistrationOptionsMock.when(FinishRegistrationOptions::builder).thenReturn(mandatoryStages1);
+            when(mandatoryStages1.request(any(PublicKeyCredentialCreationOptions.class))).thenReturn(step2Finish);
+            when(step2Finish.response(any(PublicKeyCredential.class))).thenReturn(finishRegistrationOptionsBuilder);
+            when(finishRegistrationOptionsBuilder.build()).thenReturn(finishRegistrationOptions);
 
-        when(relyingParty.finishRegistration(any(FinishRegistrationOptions.class))).thenReturn(registrationResult);
-        PublicKeyCredentialDescriptor descriptor = mock(PublicKeyCredentialDescriptor.class);
-        ByteArray byteArray = new ByteArray(new byte[]{});
-        UserIdentity userIdentity = mock(UserIdentity.class);
-        when(registrationResult.getKeyId()).thenReturn(descriptor);
-        when(descriptor.getId()).thenReturn(byteArray);
-        when(registrationResult.getPublicKeyCose()).thenReturn(byteArray);
-        when(publicKeyCredentialCreationOptions.getUser()).thenReturn(userIdentity);
-        when(userIdentity.getId()).thenReturn(byteArray);
-        AuthenticatorSelectionCriteria authenticatorSelectionCriteria = mock(AuthenticatorSelectionCriteria.class);
-        when(publicKeyCredentialCreationOptions.getAuthenticatorSelection()).thenReturn(
-                Optional.ofNullable(authenticatorSelectionCriteria));
-        if (requireResidentKey) {
-            when(authenticatorSelectionCriteria.getResidentKey()).thenReturn(Optional.ofNullable(
-                    ResidentKeyRequirement.REQUIRED));
+            when(relyingParty.finishRegistration(any(FinishRegistrationOptions.class))).thenReturn(registrationResult);
+            PublicKeyCredentialDescriptor descriptor = mock(PublicKeyCredentialDescriptor.class);
+            ByteArray byteArray = new ByteArray(new byte[]{});
+            UserIdentity userIdentity = mock(UserIdentity.class);
+            when(registrationResult.getKeyId()).thenReturn(descriptor);
+            when(descriptor.getId()).thenReturn(byteArray);
+            when(registrationResult.getPublicKeyCose()).thenReturn(byteArray);
+            when(publicKeyCredentialCreationOptions.getUser()).thenReturn(userIdentity);
+            when(userIdentity.getId()).thenReturn(byteArray);
+            AuthenticatorSelectionCriteria authenticatorSelectionCriteria = mock(AuthenticatorSelectionCriteria.class);
+            when(publicKeyCredentialCreationOptions.getAuthenticatorSelection()).thenReturn(
+                    Optional.of(authenticatorSelectionCriteria));
+            if (requireResidentKey) {
+                when(authenticatorSelectionCriteria.getResidentKey()).thenReturn(Optional.of(
+                        ResidentKeyRequirement.REQUIRED));
 
-        } else {
-            when(authenticatorSelectionCriteria.getResidentKey()).thenReturn(Optional.ofNullable(
-                    ResidentKeyRequirement.DISCOURAGED));
+            } else {
+                when(authenticatorSelectionCriteria.getResidentKey()).thenReturn(Optional.of(
+                        ResidentKeyRequirement.DISCOURAGED));
+            }
+
+            // RegisteredCredential static mocking
+            RegisteredCredential registeredCredential = mock(RegisteredCredential.class);
+            RegisteredCredential.RegisteredCredentialBuilder registeredCredentialBuilder =
+                    mock(RegisteredCredential.RegisteredCredentialBuilder.class);
+            RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages mandatoryStages2 =
+                    mock(RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.class);
+            RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step2 step2RegisteredCredentials =
+                    mock(RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step2.class);
+            RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step3 step3RegisteredCredentials =
+                    mock(RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step3.class);
+
+            registeredCredentialMock.when(RegisteredCredential::builder).thenReturn(mandatoryStages2);
+            when(mandatoryStages2.credentialId(any(ByteArray.class))).thenReturn(step2RegisteredCredentials);
+            when(step2RegisteredCredentials.userHandle(any(ByteArray.class))).thenReturn(step3RegisteredCredentials);
+            when(step3RegisteredCredentials.publicKeyCose(any(ByteArray.class))).thenReturn(registeredCredentialBuilder);
+            when(registeredCredentialBuilder.signatureCount(anyLong())).thenReturn(registeredCredentialBuilder);
+            when(registeredCredentialBuilder.build()).thenReturn(registeredCredential);
+
+            webAuthnService.finishFIDO2Registration(finishRegistrationResponseString);
         }
-        mockStatic(RegisteredCredential.class);
-        RegisteredCredential registeredCredential = mock(RegisteredCredential.class);
-        RegisteredCredential.RegisteredCredentialBuilder registeredCredentialBuilder =
-                mock(RegisteredCredential.RegisteredCredentialBuilder.class);
-        RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages mandatoryStages2 =
-                mock(RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.class);
-        RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step2 step2RegisteredCredentials =
-                mock(RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step2.class);
-        RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step3 step3RegisteredCredentials =
-                mock(RegisteredCredential.RegisteredCredentialBuilder.MandatoryStages.Step3.class);
-
-        when(RegisteredCredential.builder()).thenReturn(mandatoryStages2);
-        when(mandatoryStages2.credentialId(any(ByteArray.class))).thenReturn(step2RegisteredCredentials);
-        when(step2RegisteredCredentials.userHandle(any(ByteArray.class))).thenReturn(step3RegisteredCredentials);
-        when(step3RegisteredCredentials.publicKeyCose(any(ByteArray.class))).thenReturn(registeredCredentialBuilder);
-        when(registeredCredentialBuilder.signatureCount(anyLong())).thenReturn(registeredCredentialBuilder);
-        when(registeredCredentialBuilder.build()).thenReturn(registeredCredential);
-
-        webAuthnService.finishFIDO2Registration(finishRegistrationResponseString);
+        if (mockedWebAuthnManager != null && !mockedWebAuthnManager.isClosed()) {
+            mockedWebAuthnManager.close();
+        }
     }
 
     @Test(description = "Test case for finishFIDO2Registration() method when the key is already registered",
@@ -495,30 +570,41 @@ public class WebAuthnServiceTest {
     @Test(description = "Test case for startAuthentication() method", priority = 5)
     public void testStartAuthentication() throws AuthenticationFailedException, JsonProcessingException {
 
-        mockStatic(StartAssertionOptions.class);
-        StartAssertionOptions.StartAssertionOptionsBuilder startAssertionOptionsBuilder =
-                mock(StartAssertionOptions.StartAssertionOptionsBuilder.class);
-        when(StartAssertionOptions.builder()).thenReturn(startAssertionOptionsBuilder);
-        when(startAssertionOptionsBuilder.username(anyString())).thenReturn(startAssertionOptionsBuilder);
-        when(relyingParty.startAssertion(any(StartAssertionOptions.class))).thenReturn(assertionRequest);
-        when(FIDOUtil.writeJson(any(AssertionRequestWrapper.class))).thenReturn("assertionRequest");
+        try (MockedStatic<StartAssertionOptions> startAssertionOptionsMock =
+                Mockito.mockStatic(StartAssertionOptions.class)) {
+            StartAssertionOptions.StartAssertionOptionsBuilder startAssertionOptionsBuilder =
+                    mock(StartAssertionOptions.StartAssertionOptionsBuilder.class);
+            startAssertionOptionsMock.when(StartAssertionOptions::builder).thenReturn(startAssertionOptionsBuilder);
+            when(startAssertionOptionsBuilder.username(anyString())).thenReturn(startAssertionOptionsBuilder);
 
-        String response = webAuthnService.startAuthentication(USERNAME, TENANT_DOMAIN, USER_STORE_DOMAIN, ORIGIN);
-        Assert.assertEquals(response, "assertionRequest");
+            StartAssertionOptions startAssertionOptions = mock(StartAssertionOptions.class);
+            when(startAssertionOptionsBuilder.build()).thenReturn(startAssertionOptions);
+            when(relyingParty.startAssertion(any(StartAssertionOptions.class))).thenReturn(assertionRequest);
+            fidoUtilMock.when(() -> FIDOUtil.writeJson(any(AssertionRequestWrapper.class))).thenReturn(
+                    "assertionRequest");
+
+            String response = webAuthnService.startAuthentication(USERNAME, TENANT_DOMAIN, USER_STORE_DOMAIN, ORIGIN);
+            Assert.assertEquals(response, "assertionRequest");
+        }
     }
 
     @Test(description = "Test case for startUsernamelessAuthentication() method", priority = 6)
     public void testStartUsernamelessAuthentication() throws AuthenticationFailedException, JsonProcessingException {
 
-        mockStatic(StartAssertionOptions.class);
-        StartAssertionOptions.StartAssertionOptionsBuilder startAssertionOptionsBuilder =
-                mock(StartAssertionOptions.StartAssertionOptionsBuilder.class);
-        when(StartAssertionOptions.builder()).thenReturn(startAssertionOptionsBuilder);
-        when(relyingParty.startAssertion(any(StartAssertionOptions.class))).thenReturn(assertionRequest);
-        when(FIDOUtil.writeJson(any(AssertionRequestWrapper.class))).thenReturn("assertionRequest");
+        try (MockedStatic<StartAssertionOptions> startAssertionOptionsMock =
+                     Mockito.mockStatic(StartAssertionOptions.class)) {
+            StartAssertionOptions.StartAssertionOptionsBuilder startAssertionOptionsBuilder =
+                    mock(StartAssertionOptions.StartAssertionOptionsBuilder.class);
+            startAssertionOptionsMock.when(StartAssertionOptions::builder).thenReturn(startAssertionOptionsBuilder);
+            StartAssertionOptions startAssertionOptions = mock(StartAssertionOptions.class);
+            when(startAssertionOptionsBuilder.build()).thenReturn(startAssertionOptions);
+            when(relyingParty.startAssertion(any(StartAssertionOptions.class))).thenReturn(assertionRequest);
+            fidoUtilMock.when(() -> FIDOUtil.writeJson(any(AssertionRequestWrapper.class)))
+                    .thenReturn("assertionRequest");
 
-        String response = webAuthnService.startUsernamelessAuthentication(ORIGIN);
-        Assert.assertEquals(response, "assertionRequest");
+            String response = webAuthnService.startUsernamelessAuthentication(ORIGIN);
+            Assert.assertEquals(response, "assertionRequest");
+        }
     }
 
     @Test(description = "Test case for finishAuthentication() method when assertion fails", expectedExceptions = {
@@ -605,10 +691,10 @@ public class WebAuthnServiceTest {
         Collection<FIDO2CredentialRegistration> response = webAuthnService.getFIDO2DeviceMetaData(USERNAME);
         Assert.assertNotNull(response.iterator().next());
     }
-
+    
     @Test(description = "Test case for deregisterFIDO2Credential() method", priority = 12)
     public void testDeregisterFIDO2Credential() throws FIDO2AuthenticatorServerException,
-            FIDO2AuthenticatorClientException, Base64UrlException {
+            FIDO2AuthenticatorClientException, Base64UrlException, AuthenticationFailedException {
 
         webAuthnService.deregisterFIDO2Credential(CREDENTIAL_ID);
     }
@@ -635,40 +721,40 @@ public class WebAuthnServiceTest {
     public void testValidateFIDO2TrustedOrigin(String origin, String trustedOrigins, boolean validationSuccess)
             throws Exception {
 
-        when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME,
-                FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
+        Mockito.when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME,
+                FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME, FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
                 new Attribute(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME, trustedOrigins));
-        when(IdentityUtil.fillURLPlaceholders(anyString())).thenCallRealMethod();
+        identityUtilMock.when(() -> IdentityUtil.fillURLPlaceholders(eq(trustedOrigins)))
+                .thenReturn(trustedOrigins);
+
         try {
-            WhiteboxImpl.invokeMethod(webAuthnService, "validateFIDO2TrustedOrigin", origin);
+            webAuthnService.startFIDO2Registration(origin);
             Assert.assertTrue(validationSuccess, "Trusted origin validation successful.");
         } catch (FIDO2AuthenticatorClientException e) {
-            Assert.assertFalse(validationSuccess, "Trusted origin validation should pass.");
+            Assert.assertFalse(validationSuccess, "Trusted origin validation should fail.");
         }
     }
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
-    }
-
     private void mockCarbonContext() {
-
-        String carbonHome = Paths.get(System.getProperty("user.dir"), "target", "test-classes").toString();
+        String carbonHome = 
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "repository").toString();
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
         System.setProperty(CarbonBaseConstants.CARBON_CONFIG_DIR_PATH, Paths.get(carbonHome, "conf").toString());
 
-        mockStatic(PrivilegedCarbonContext.class);
+        privilegedCarbonContextMock = Mockito.mockStatic(PrivilegedCarbonContext.class);
         PrivilegedCarbonContext privilegedCarbonContext = mock(PrivilegedCarbonContext.class);
-        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+        privilegedCarbonContextMock.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                .thenReturn(privilegedCarbonContext);
         when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
         when(privilegedCarbonContext.getTenantId()).thenReturn(SUPER_TENANT_ID);
         when(privilegedCarbonContext.getUsername()).thenReturn(USERNAME);
 
-        mockStatic(CarbonContext.class);
+        carbonContextMock = Mockito.mockStatic(CarbonContext.class);
         CarbonContext carbonContext = mock(CarbonContext.class);
-        when(CarbonContext.getThreadLocalCarbonContext()).thenReturn(carbonContext);
+        carbonContextMock.when(CarbonContext::getThreadLocalCarbonContext).thenReturn(carbonContext);
+        when(carbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        when(carbonContext.getTenantId()).thenReturn(SUPER_TENANT_ID);
+        when(carbonContext.getUsername()).thenReturn(USERNAME);
     }
 
     private static String readResource(String filename, Class cClass) throws IOException {

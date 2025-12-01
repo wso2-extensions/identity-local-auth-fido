@@ -29,13 +29,13 @@ import com.yubico.u2f.data.messages.RegisterResponse;
 import com.yubico.u2f.exceptions.DeviceCompromisedException;
 import com.yubico.u2f.exceptions.NoEligableDevicesException;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authenticator.fido.dao.DeviceStoreDAO;
@@ -49,18 +49,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-
-@PrepareForTest({U2FService.class, DeviceStoreDAO.class, DeviceRegistration.class, AuthenticateRequestData.class,
-        RegisterRequestData.class, Timestamp.class})
 public class U2FServiceTest {
 
     private final String APP_ID = "https://localhost:9443";
@@ -77,21 +71,50 @@ public class U2FServiceTest {
     @Mock
     private RegisterResponse registerResponse;
 
+    private MockedStatic<DeviceStoreDAO> deviceStoreDAOMock;
+    private MockedStatic<DeviceRegistration> deviceRegistrationMock;
+    private MockedStatic<AuthenticateRequestData> authenticateRequestDataMock;
+    private MockedStatic<RegisterRequestData> registerRequestDataMock;
+    private MockedStatic<Timestamp> timestampMock;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
-        initMocks(this);
-        whenNew(U2F.class).withNoArguments().thenReturn(u2F);
-        u2FService = U2FService.getInstance();
-        mockStatic(DeviceStoreDAO.class);
-        mockStatic(DeviceRegistration.class);
-        mockStatic(AuthenticateRequestData.class);
-        mockStatic(RegisterRequestData.class);
-        mockStatic(Timestamp.class);
+        MockitoAnnotations.openMocks(this);
+
+        // Intercept U2F constructor and inject our mock into the singleton
+        try (MockedConstruction<U2F> ignored = Mockito.mockConstruction(U2F.class)) {
+            u2FService = U2FService.getInstance();
+        }
+        Field u2FField = U2FService.class.getDeclaredField("u2f");
+        u2FField.setAccessible(true);
+        u2FField.set(u2FService, u2F);
+
+        deviceStoreDAOMock = Mockito.mockStatic(DeviceStoreDAO.class);
+        deviceRegistrationMock = Mockito.mockStatic(DeviceRegistration.class);
+        authenticateRequestDataMock = Mockito.mockStatic(AuthenticateRequestData.class);
+        registerRequestDataMock = Mockito.mockStatic(RegisterRequestData.class);
+        timestampMock = Mockito.mockStatic(Timestamp.class);
     }
 
     @AfterMethod
     public void cleanUp() throws NoSuchFieldException, IllegalAccessException {
+
+        if (deviceStoreDAOMock != null) {
+            deviceStoreDAOMock.close();
+        }
+        if (deviceRegistrationMock != null) {
+            deviceRegistrationMock.close();
+        }
+        if (authenticateRequestDataMock != null) {
+            authenticateRequestDataMock.close();
+        }
+        if (registerRequestDataMock != null) {
+            registerRequestDataMock.close();
+        }
+        if (timestampMock != null) {
+            timestampMock.close();
+        }
 
         Field instance = U2FService.class.getDeclaredField("u2FService");
         instance.setAccessible(true);
@@ -111,10 +134,10 @@ public class U2FServiceTest {
         Multimap<String, String> devices = ArrayListMultimap.create();
         devices.put("keyHandle1", "deviceData1");
         devices.put("keyHandle2", "deviceData2");
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         when(deviceStoreDAO.getDeviceRegistration(anyString(), anyString(), anyString())).thenReturn(devices.values());
 
-        when(DeviceRegistration.fromJson(anyString())).thenReturn(deviceRegistration);
+        deviceRegistrationMock.when(() -> DeviceRegistration.fromJson(anyString())).thenReturn(deviceRegistration);
         when(u2F.startAuthentication(anyString(), any())).thenReturn(authenticateRequestData);
         Assert.assertEquals(u2FService.startAuthentication(fidoUser), authenticateRequestData);
     }
@@ -130,10 +153,10 @@ public class U2FServiceTest {
         DeviceRegistration deviceRegistration = mock(DeviceRegistration.class);
 
         Multimap<String, String> devices = ArrayListMultimap.create();
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         when(deviceStoreDAO.getDeviceRegistration(anyString(), anyString(), anyString())).thenReturn(devices.values());
 
-        when(DeviceRegistration.fromJson(anyString())).thenReturn(deviceRegistration);
+        deviceRegistrationMock.when(() -> DeviceRegistration.fromJson(anyString())).thenReturn(deviceRegistration);
         Assert.assertNull(u2FService.startAuthentication(fidoUser));
     }
 
@@ -148,10 +171,11 @@ public class U2FServiceTest {
         Multimap<String, String> devices = ArrayListMultimap.create();
         devices.put("keyHandle1", "deviceData1");
         devices.put("keyHandle2", "deviceData2");
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         when(deviceStoreDAO.getDeviceRegistration(anyString(), anyString(), anyString())).thenReturn(devices.values());
 
-        when(AuthenticateRequestData.fromJson(anyString())).thenReturn(authenticateRequestData);
+        authenticateRequestDataMock.when(() -> AuthenticateRequestData.fromJson(anyString()))
+                .thenReturn(authenticateRequestData);
         when(u2F.finishAuthentication(any(), any(), any())).thenReturn(deviceRegistration);
         u2FService.finishAuthentication(fidoUser);
     }
@@ -165,7 +189,7 @@ public class U2FServiceTest {
         when(registerRequestData.toJson()).thenReturn("JSONString");
 
         Multimap<String, String> devices = ArrayListMultimap.create();
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         when(deviceStoreDAO.getDeviceRegistration(anyString(), anyString(), anyString())).thenReturn(devices.values());
 
         when(u2F.startRegistration(anyString(), any())).thenReturn(registerRequestData);
@@ -179,7 +203,8 @@ public class U2FServiceTest {
         when(registerResponse.getRequestId()).thenReturn("1234");
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, registerResponse);
         RegisterRequestData registerRequestData = mock(RegisterRequestData.class);
-        when(RegisterRequestData.fromJson(anyString())).thenReturn(registerRequestData);
+        registerRequestDataMock.when(() -> RegisterRequestData.fromJson(anyString()))
+                .thenReturn(registerRequestData);
 
         Map<String, String> requestStorageMap = new HashMap<String, String>();
         requestStorageMap.put("1234", "JSONString");
@@ -189,7 +214,7 @@ public class U2FServiceTest {
 
         DeviceRegistration deviceRegistration = mock(DeviceRegistration.class);
         when(u2F.finishRegistration(any(), any())).thenReturn(deviceRegistration);
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         u2FService.finishRegistration(fidoUser);
         Assert.assertEquals(fidoUser.getDeviceRegistration(), deviceRegistration);
     }
@@ -198,7 +223,7 @@ public class U2FServiceTest {
     public void testIsDeviceRegistered() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         Multimap<String, String> devices = ArrayListMultimap.create();
         devices.put("keyHandle1", "deviceData1");
         devices.put("keyHandle2", "deviceData2");
@@ -210,7 +235,7 @@ public class U2FServiceTest {
     public void testIsDeviceRegisteredWhenNoRegisteredDevices() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         Multimap<String, String> devices = ArrayListMultimap.create();
         when(deviceStoreDAO.getDeviceRegistration(anyString(), anyString(), anyString())).thenReturn(devices.values());
         Assert.assertFalse(u2FService.isDeviceRegistered(fidoUser));
@@ -223,7 +248,7 @@ public class U2FServiceTest {
         ArrayList<String> deviceMetadata = new ArrayList<>();
         deviceMetadata.add("deviceMetadata1");
         deviceMetadata.add("deviceMetadata2");
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         when(deviceStoreDAO.getDeviceMetadata(anyString(), anyString(), anyString())).thenReturn(deviceMetadata);
         Assert.assertEquals(u2FService.getDeviceMetadata(fidoUser), deviceMetadata);
     }
@@ -232,7 +257,7 @@ public class U2FServiceTest {
     public void testRemoveAllRegistrations() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         u2FService.removeAllRegistrations(fidoUser);
     }
 
@@ -240,14 +265,8 @@ public class U2FServiceTest {
     public void testRemoveRegistration() throws FIDOAuthenticatorServerException {
 
         FIDOUser fidoUser = new FIDOUser(USERNAME, SUPER_TENANT_DOMAIN_NAME, USER_STORE_DOMAIN, APP_ID);
-        when(DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
-        when(Timestamp.valueOf(anyString())).thenReturn(new Timestamp(new Date().getTime()));
+        deviceStoreDAOMock.when(DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
+        timestampMock.when(() -> Timestamp.valueOf(anyString())).thenReturn(new Timestamp(new Date().getTime()));
         u2FService.removeRegistration(fidoUser, "deviceRemarks");
-    }
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
     }
 }
