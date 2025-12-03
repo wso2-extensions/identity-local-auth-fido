@@ -21,18 +21,17 @@ package org.wso2.carbon.identity.application.authenticator.fido;
 import com.yubico.u2f.data.messages.AuthenticateRequestData;
 import com.yubico.u2f.data.messages.AuthenticateResponse;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
-import org.wso2.carbon.identity.application.authentication.framework.config.ConfigurationFacade;
 import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.ExternalIdPConfig;
@@ -43,12 +42,10 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.A
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
 import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceDataHolder;
-import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -56,7 +53,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
-import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -70,21 +66,15 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME;
 
-@PrepareForTest({FIDOAuthenticator.class, IdentityUtil.class, MultitenantUtils.class, IdentityTenantUtil.class,
-        U2FService.class, AuthenticateResponse.class, ConfigurationFacade.class, FileBasedConfigurationBuilder.class,
-        URLEncoder.class, ServiceURLBuilder.class, LoggerUtils.class, FIDOAuthenticatorServiceDataHolder.class,
-        FrameworkUtils.class})
 public class FIDOAuthenticatorTest {
 
     private static final String USER_STORE_DOMAIN = "PRIMARY";
@@ -116,20 +106,63 @@ public class FIDOAuthenticatorTest {
     @Mock
     private FIDOAuthenticatorServiceDataHolder mockServiceDataHolder;
 
+    private MockedStatic<IdentityUtil> identityUtilMock;
+    private MockedStatic<U2FService> u2FServiceMock;
+    private MockedStatic<AuthenticateResponse> authenticateResponseMock;
+    private MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigurationBuilderMock;
+    private MockedStatic<URLEncoder> urlEncoderMock;
+    private MockedStatic<ServiceURLBuilder> serviceURLBuilderMock;
+    private MockedStatic<LoggerUtils> loggerUtilsMock;
+    private MockedStatic<FIDOAuthenticatorServiceDataHolder> fidoAuthenticatorServiceDataHolderMock;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtilStatic;
+
     @BeforeMethod
     public void setUp() {
 
         fidoAuthenticator = FIDOAuthenticator.getInstance();
-        initMocks(this);
-        mockStatic(FIDOAuthenticator.class);
-        mockStatic(IdentityUtil.class);
-        mockStatic(MultitenantUtils.class);
-        mockStatic(IdentityTenantUtil.class);
-        mockStatic(LoggerUtils.class);
-        mockStatic(FIDOAuthenticatorServiceDataHolder.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        PowerMockito.when(FIDOAuthenticatorServiceDataHolder.getInstance()).thenReturn(mockServiceDataHolder);
+        MockitoAnnotations.openMocks(this);
+
+        identityUtilMock = Mockito.mockStatic(IdentityUtil.class);
+        loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class);
+        fidoAuthenticatorServiceDataHolderMock = Mockito.mockStatic(FIDOAuthenticatorServiceDataHolder.class);
+        identityTenantUtilStatic = Mockito.mockStatic(IdentityTenantUtil.class);
+
+        loggerUtilsMock.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+        fidoAuthenticatorServiceDataHolderMock.when(FIDOAuthenticatorServiceDataHolder::getInstance)
+                .thenReturn(mockServiceDataHolder);
         when(mockServiceDataHolder.getAccountLockService()).thenReturn(mockAccountLockService);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        if (identityUtilMock != null && !identityUtilMock.isClosed()) {
+            identityUtilMock.close();
+        }
+        if (u2FServiceMock != null && !u2FServiceMock.isClosed()) {
+            u2FServiceMock.close();
+        }
+        if (authenticateResponseMock != null && !authenticateResponseMock.isClosed()) {
+            authenticateResponseMock.close();
+        }
+        if (fileBasedConfigurationBuilderMock != null && !fileBasedConfigurationBuilderMock.isClosed()) {
+            fileBasedConfigurationBuilderMock.close();
+        }
+        if (urlEncoderMock != null && !urlEncoderMock.isClosed()) {
+            urlEncoderMock.close();
+        }
+        if (serviceURLBuilderMock != null && !serviceURLBuilderMock.isClosed()) {
+            serviceURLBuilderMock.close();
+        }
+        if (loggerUtilsMock != null && !loggerUtilsMock.isClosed()) {
+            loggerUtilsMock.close();
+        }
+        if (fidoAuthenticatorServiceDataHolderMock != null && !fidoAuthenticatorServiceDataHolderMock.isClosed()) {
+            fidoAuthenticatorServiceDataHolderMock.close();
+        }
+        if (identityTenantUtilStatic != null && !identityTenantUtilStatic.isClosed()) {
+            identityTenantUtilStatic.close();
+        }
     }
 
     private void mockServiceURLBuilder() {
@@ -169,15 +202,15 @@ public class FIDOAuthenticatorTest {
             public ServiceURL build() {
 
                 ServiceURL serviceURL = mock(ServiceURL.class);
-                PowerMockito.when(serviceURL.getAbsolutePublicURL()).thenReturn("http://localhost:9443" + path);
-                PowerMockito.when(serviceURL.getRelativePublicURL()).thenReturn(path);
-                PowerMockito.when(serviceURL.getRelativeInternalURL()).thenReturn(path);
+                when(serviceURL.getAbsolutePublicURL()).thenReturn("http://localhost:9443" + path);
+                when(serviceURL.getRelativePublicURL()).thenReturn(path);
+                when(serviceURL.getRelativeInternalURL()).thenReturn(path);
                 return serviceURL;
             }
         };
 
-        mockStatic(ServiceURLBuilder.class);
-        PowerMockito.when(ServiceURLBuilder.create()).thenReturn(builder);
+        serviceURLBuilderMock = Mockito.mockStatic(ServiceURLBuilder.class);
+        serviceURLBuilderMock.when(ServiceURLBuilder::create).thenReturn(builder);
     }
 
     @Test(description = "Test case for canHandle() method true case.", priority = 1)
@@ -232,7 +265,8 @@ public class FIDOAuthenticatorTest {
         sequenceConfig.setStepMap(stepMap);
         context.setSequenceConfig(sequenceConfig);
 
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
+        identityTenantUtilStatic.when(() -> IdentityTenantUtil.getTenantId(eq("carbon.super"))).thenReturn(-1234);
 
         AuthenticatedUser authenticatedUser = AuthenticatedUser
                 .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
@@ -244,12 +278,18 @@ public class FIDOAuthenticatorTest {
         context.setContextIdentifier(UUID.randomUUID().toString());
 
         when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
-        when(webAuthnService.finishUsernamelessAuthentication(anyString())).thenReturn(authenticatedUser);
-        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
-        fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
-        Assert.assertEquals(context.getSubject(), authenticatedUser);
-        Assert.assertEquals(context.getLastAuthenticatedUser(), authenticatedUser);
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
+                .thenReturn(String.valueOf(true));
+
+        // Use MockedConstruction for WebAuthnService
+        try (MockedConstruction<WebAuthnService> webAuthnServiceMockedConstruction = Mockito.mockConstruction(
+                WebAuthnService.class, (mock, context1) -> {
+                    when(mock.finishUsernamelessAuthentication(anyString())).thenReturn(authenticatedUser);
+                })) {
+            fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
+            Assert.assertEquals(context.getSubject(), authenticatedUser);
+            Assert.assertEquals(context.getLastAuthenticatedUser(), authenticatedUser);
+        }
     }
 
     @Test(description = "Test case for processAuthenticationResponse() method when Webauthn is enabled", priority = 6)
@@ -277,17 +317,24 @@ public class FIDOAuthenticatorTest {
         SequenceConfig sequenceConfig = new SequenceConfig();
         sequenceConfig.setStepMap(stepMap);
         context.setSequenceConfig(sequenceConfig);
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
         context.setProperty("username", USERNAME);
         context.setProperty("authenticatedUser", authenticatedUser);
         context.setContextIdentifier(UUID.randomUUID().toString());
 
         when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
-        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
-        fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
-        Assert.assertEquals(context.getSubject(), authenticatedUser);
-        Assert.assertEquals(context.getLastAuthenticatedUser(), authenticatedUser);
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
+                .thenReturn(String.valueOf(true));
+
+        // Use MockedConstruction for WebAuthnService
+        try (MockedConstruction<WebAuthnService> webAuthnServiceMockedConstruction = Mockito.mockConstruction(
+                WebAuthnService.class, (mock, context1) -> {
+                    doNothing().when(mock).finishAuthentication(anyString(), anyString(), anyString(), anyString());
+                })) {
+            fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
+            Assert.assertEquals(context.getSubject(), authenticatedUser);
+            Assert.assertEquals(context.getLastAuthenticatedUser(), authenticatedUser);
+        }
     }
 
     @Test(description = "Test case for processAuthenticationResponse() method when Webauthn is disabled", priority = 7)
@@ -316,19 +363,20 @@ public class FIDOAuthenticatorTest {
         sequenceConfig.setStepMap(stepMap);
         context.setSequenceConfig(sequenceConfig);
 
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
 
         context.setProperty("username", USERNAME);
         context.setProperty("authenticatedUser", authenticatedUser);
         context.setContextIdentifier(UUID.randomUUID().toString());
 
         when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(false));
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
+                .thenReturn(String.valueOf(false));
 
-        mockStatic(U2FService.class);
-        when(U2FService.getInstance()).thenReturn(u2FService);
-        mockStatic(AuthenticateResponse.class);
-        when(AuthenticateResponse.fromJson(anyString())).thenReturn(authenticateResponse);
+        u2FServiceMock = Mockito.mockStatic(U2FService.class);
+        u2FServiceMock.when(U2FService::getInstance).thenReturn(u2FService);
+        authenticateResponseMock = Mockito.mockStatic(AuthenticateResponse.class);
+        authenticateResponseMock.when(() -> AuthenticateResponse.fromJson(anyString())).thenReturn(authenticateResponse);
 
         fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
         Assert.assertEquals(context.getSubject(), authenticatedUser);
@@ -389,31 +437,35 @@ public class FIDOAuthenticatorTest {
         sequenceConfig.setStepMap(stepMap);
         context.setSequenceConfig(sequenceConfig);
 
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
 
         context.setProperty("username", USERNAME);
         context.setProperty("authenticatedUser", authenticatedUser);
         context.setContextIdentifier(UUID.randomUUID().toString());
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
-        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
-        when(webAuthnService.startAuthentication(anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(startAuthenticationResponse);
-        when(webAuthnService.startUsernamelessAuthentication(anyString())).thenReturn(startAuthenticationResponse);
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
+                .thenReturn(String.valueOf(true));
 
         Map<String, String> parameterMap = new HashMap<>();
         parameterMap.put(FIDOAuthenticatorConstants.APP_ID, "https://localhost:9443");
         parameterMap.put(FIDOAuthenticatorConstants.FIDO2_AUTH, "fido2-auth");
         authenticatorConfig.setParameterMap(parameterMap);
 
-        mockStatic(FileBasedConfigurationBuilder.class);
-        when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
+        fileBasedConfigurationBuilderMock = Mockito.mockStatic(FileBasedConfigurationBuilder.class);
+        fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
+                .thenReturn(fileBasedConfigurationBuilder);
         when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
 
-        mockStatic(URLEncoder.class);
-        when(URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
+        urlEncoderMock = Mockito.mockStatic(URLEncoder.class);
+        urlEncoderMock.when(() -> URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
         mockServiceURLBuilder();
 
-        try {
+        // Use MockedConstruction for WebAuthnService
+        try (MockedConstruction<WebAuthnService> webAuthnServiceMockedConstruction = Mockito.mockConstruction(
+                WebAuthnService.class, (mock, context1) -> {
+                    when(mock.startAuthentication(anyString(), anyString(), anyString(), anyString()))
+                            .thenReturn(startAuthenticationResponse);
+                    when(mock.startUsernamelessAuthentication(anyString())).thenReturn(startAuthenticationResponse);
+                })) {
             fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
         } catch (Exception e) {
             if (startAuthenticationResponse == null) {
@@ -463,16 +515,17 @@ public class FIDOAuthenticatorTest {
         sequenceConfig.setStepMap(stepMap);
         context.setSequenceConfig(sequenceConfig);
 
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
 
         context.setProperty("username", USERNAME);
         context.setProperty("authenticatedUser", authenticatedUser);
         context.setContextIdentifier(UUID.randomUUID().toString());
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(false));
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
+                .thenReturn(String.valueOf(false));
 
-        mockStatic(U2FService.class);
-        when(U2FService.getInstance()).thenReturn(u2FService);
-        mockStatic(AuthenticateResponse.class);
+        u2FServiceMock = Mockito.mockStatic(U2FService.class);
+        u2FServiceMock.when(U2FService::getInstance).thenReturn(u2FService);
+        authenticateResponseMock = Mockito.mockStatic(AuthenticateResponse.class);
 
         if (isU2FNullResponse) {
             when(u2FService.startAuthentication(any())).thenReturn(null);
@@ -485,12 +538,13 @@ public class FIDOAuthenticatorTest {
         parameterMap.put(FIDOAuthenticatorConstants.FIDO_AUTH, "fido-auth");
         authenticatorConfig.setParameterMap(parameterMap);
 
-        mockStatic(FileBasedConfigurationBuilder.class);
-        when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
+        fileBasedConfigurationBuilderMock = Mockito.mockStatic(FileBasedConfigurationBuilder.class);
+        fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
+                .thenReturn(fileBasedConfigurationBuilder);
         when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
 
-        mockStatic(URLEncoder.class);
-        when(URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
+        urlEncoderMock = Mockito.mockStatic(URLEncoder.class);
+        urlEncoderMock.when(() -> URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
         mockServiceURLBuilder();
 
         try {
@@ -513,9 +567,9 @@ public class FIDOAuthenticatorTest {
     @Test
     public void testGetAuthInitiationData() {
 
-        PowerMockito.when(authenticationContext.getExternalIdP()).thenReturn(externalIdPConfig);
-        PowerMockito.when(externalIdPConfig.getIdPName()).thenReturn("LOCAL");
-        PowerMockito.when(authenticationContext.getProperty(anyString())).thenReturn(SAMPLE_TOKEN_CHALLENGE);
+        when(authenticationContext.getExternalIdP()).thenReturn(externalIdPConfig);
+        when(externalIdPConfig.getIdPName()).thenReturn("LOCAL");
+        when(authenticationContext.getProperty(anyString())).thenReturn(SAMPLE_TOKEN_CHALLENGE);
         Optional<AuthenticatorData> authenticatorData = fidoAuthenticator.getAuthInitiationData
                 (authenticationContext);
         Assert.assertTrue(authenticatorData.isPresent());
@@ -566,22 +620,23 @@ public class FIDOAuthenticatorTest {
         sequenceConfig.setStepMap(stepMap);
         context.setSequenceConfig(sequenceConfig);
 
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
         context.setProperty("username", USERNAME);
         context.setProperty("authenticatedUser", authenticatedUser);
         context.setContextIdentifier(UUID.randomUUID().toString());
 
         when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
-        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
-
-        PowerMockito.doNothing().when(webAuthnService)
-                .finishAuthentication(anyString(), anyString(), anyString(), anyString());
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
+                .thenReturn(String.valueOf(true));
 
         when(mockAccountLockService.isAccountLocked(USERNAME, SUPER_TENANT_DOMAIN, USER_STORE_DOMAIN))
                 .thenReturn(true);
 
-        try {
+        // Use MockedConstruction for WebAuthnService
+        try (MockedConstruction<WebAuthnService> webAuthnServiceMockedConstruction = Mockito.mockConstruction(
+                WebAuthnService.class, (mock, context1) -> {
+                    doNothing().when(mock).finishAuthentication(anyString(), anyString(), anyString(), anyString());
+                })) {
             fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
             Assert.fail("Expected AuthenticationFailedException was not thrown");
         } catch (AuthenticationFailedException e) {
@@ -616,32 +671,27 @@ public class FIDOAuthenticatorTest {
         sequenceConfig.setStepMap(stepMap);
         context.setSequenceConfig(sequenceConfig);
 
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
         context.setProperty("username", USERNAME);
         context.setProperty("authenticatedUser", authenticatedUser);
         context.setContextIdentifier(UUID.randomUUID().toString());
 
         when(httpServletRequest.getParameter("tokenResponse")).thenReturn("123456");
-        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
-        whenNew(WebAuthnService.class).withNoArguments().thenReturn(webAuthnService);
-
-        PowerMockito.doNothing().when(webAuthnService)
-                .finishAuthentication(anyString(), anyString(), anyString(), anyString());
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
+                .thenReturn(String.valueOf(true));
 
         when(mockAccountLockService.isAccountLocked(USERNAME, SUPER_TENANT_DOMAIN, USER_STORE_DOMAIN))
                 .thenThrow(new AccountLockServiceException("Account lock service error"));
 
-        try {
+        // Use MockedConstruction for WebAuthnService
+        try (MockedConstruction<WebAuthnService> webAuthnServiceMockedConstruction = Mockito.mockConstruction(
+                WebAuthnService.class, (mock, context1) -> {
+                    doNothing().when(mock).finishAuthentication(anyString(), anyString(), anyString(), anyString());
+                })) {
             fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
             Assert.fail("Expected AuthenticationFailedException was not thrown");
         } catch (AuthenticationFailedException e) {
             Assert.assertTrue(e.getMessage().contains("Error occurred while checking account lock status for user"));
         }
-    }
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
     }
 }

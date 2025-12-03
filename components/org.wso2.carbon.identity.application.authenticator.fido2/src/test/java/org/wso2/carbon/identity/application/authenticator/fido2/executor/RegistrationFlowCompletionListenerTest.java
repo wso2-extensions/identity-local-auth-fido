@@ -19,12 +19,12 @@
 package org.wso2.carbon.identity.application.authenticator.fido2.executor;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authenticator.fido2.dao.FIDO2DeviceStoreDAO;
 import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2CredentialRegistration;
@@ -39,19 +39,16 @@ import org.wso2.carbon.identity.flow.execution.engine.model.FlowUser;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for RegistrationFlowCompletionListener.
  */
-@PrepareForTest({FIDOUtil.class, FIDO2DeviceStoreDAO.class})
 public class RegistrationFlowCompletionListenerTest {
 
     private static final String USERNAME = "testuser";
@@ -62,6 +59,9 @@ public class RegistrationFlowCompletionListenerTest {
     private static final String REGISTRATION_TIME_STRING = "2025-01-01T10:00:00Z";
 
     private RegistrationFlowCompletionListener listener;
+    private AutoCloseable openMocks;
+    private MockedStatic<FIDOUtil> fidoUtilStatic;
+    private MockedStatic<FIDO2DeviceStoreDAO> deviceStoreStatic;
 
     @Mock
     private FlowExecutionStep flowExecutionStep;
@@ -78,16 +78,28 @@ public class RegistrationFlowCompletionListenerTest {
     @BeforeMethod
     public void setUp() {
 
-        initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
         listener = new RegistrationFlowCompletionListener();
 
-        mockStatic(FIDOUtil.class);
-        mockStatic(FIDO2DeviceStoreDAO.class);
-
-        when(FIDO2DeviceStoreDAO.getInstance()).thenReturn(deviceStoreDAO);
+        fidoUtilStatic = Mockito.mockStatic(FIDOUtil.class);
+        deviceStoreStatic = Mockito.mockStatic(FIDO2DeviceStoreDAO.class);
+        deviceStoreStatic.when(FIDO2DeviceStoreDAO::getInstance).thenReturn(deviceStoreDAO);
         when(flowExecutionContext.getFlowUser()).thenReturn(flowUser);
         when(flowUser.getUsername()).thenReturn(USERNAME);
         when(flowExecutionContext.getContextIdentifier()).thenReturn(CONTEXT_IDENTIFIER);
+    }
+
+    @AfterMethod(alwaysRun = true)
+    public void tearDown() throws Exception {
+        if (fidoUtilStatic != null) {
+            fidoUtilStatic.close();
+        }
+        if (deviceStoreStatic != null) {
+            deviceStoreStatic.close();
+        }
+        if (openMocks != null) {
+            openMocks.close();
+        }
     }
 
     @Test
@@ -111,7 +123,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testDoPostExecuteWithRegistrationFlowAndCompleteStatus() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
         Map<String, Object> credentialRegistrationMap = createTestCredentialRegistrationMap();
         when(flowExecutionContext.getProperty(FIDO2ExecutorConstants.CREDENTIAL_REGISTRATION))
@@ -125,7 +137,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testDoPostExecuteWithNonRegistrationFlow() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(false);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(false);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
         boolean result = listener.doPostExecute(flowExecutionStep, flowExecutionContext);
         Assert.assertTrue(result);
@@ -134,7 +146,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testDoPostExecuteWithIncompleteStatus() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_INCOMPLETE);
         boolean result = listener.doPostExecute(flowExecutionStep, flowExecutionContext);
         Assert.assertTrue(result);
@@ -143,7 +155,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testDoPostExecuteWithNullCredentialRegistration() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
         when(flowExecutionContext.getProperty(FIDO2ExecutorConstants.CREDENTIAL_REGISTRATION))
                 .thenReturn(null);
@@ -154,7 +166,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testDoPostExecuteWithDAOException() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
 
         Map<String, Object> credentialRegistrationMap = createTestCredentialRegistrationMap();
@@ -170,7 +182,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testBuildFromMapWithCompleteData() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
 
         Map<String, Object> credentialRegistrationMap = createTestCredentialRegistrationMap();
@@ -185,7 +197,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testBuildFromMapWithMinimalData() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
 
         Map<String, Object> credentialRegistrationMap = createMinimalCredentialRegistrationMap();
@@ -200,7 +212,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testBuildFromMapWithNullOptionalFields() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
         Map<String, Object> credentialRegistrationMap = createCredentialRegistrationMapWithNulls();
         when(flowExecutionContext.getProperty(FIDO2ExecutorConstants.CREDENTIAL_REGISTRATION))
@@ -214,7 +226,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testBuildFromMapWithoutRegistrationTime() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
         Map<String, Object> credentialRegistrationMap = createTestCredentialRegistrationMap();
         credentialRegistrationMap.remove(FIDO2ExecutorConstants.RegistrationConstants.REGISTRATION_TIME);
@@ -229,7 +241,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testBuildFromMapWithZeroSignatureCount() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
         Map<String, Object> credentialRegistrationMap = createTestCredentialRegistrationMap();
         credentialRegistrationMap.put(FIDO2ExecutorConstants.RegistrationConstants.SIGNATURE_COUNT, null);
@@ -244,7 +256,7 @@ public class RegistrationFlowCompletionListenerTest {
     @Test
     public void testBuildFromMapWithUsernamelessSupported() throws Exception {
 
-        when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
+        fidoUtilStatic.when(() -> FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
         when(flowExecutionStep.getFlowStatus()).thenReturn(Constants.STATUS_COMPLETE);
         Map<String, Object> credentialRegistrationMap = createTestCredentialRegistrationMap();
         credentialRegistrationMap.put(FIDO2ExecutorConstants.RegistrationConstants.IS_USERNAMELESS_SUPPORTED, true);
@@ -336,11 +348,5 @@ public class RegistrationFlowCompletionListenerTest {
         map.put(FIDO2ExecutorConstants.RegistrationConstants.REGISTRATION_TIME, null);
 
         return map;
-    }
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
     }
 }

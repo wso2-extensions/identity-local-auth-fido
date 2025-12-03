@@ -21,12 +21,12 @@ package org.wso2.carbon.identity.application.authenticator.fido2.executor;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -43,27 +43,25 @@ import org.wso2.carbon.identity.flow.execution.engine.model.FlowUser;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.base.CarbonBaseConstants.CARBON_CONFIG_DIR_PATH;
 import static org.wso2.carbon.base.CarbonBaseConstants.CARBON_HOME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USERNAME_CLAIM;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.DISPLAY_NAME_CLAIM_URL;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIRST_NAME_CLAIM_URL;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL;
-import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_CLIENT_INPUT_REQUIRED;
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_COMPLETE;
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_ERROR;
 import static org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes.REGISTRATION;
@@ -73,8 +71,6 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 /**
  * Unit tests for FIDO2Executor.
  */
-@PrepareForTest({CarbonContext.class, PrivilegedCarbonContext.class, FIDO2Executor.class,
-        WebAuthnService.class, FIDOUtil.class, UserCoreUtil.class, JsonParser.class})
 public class FIDO2ExecutorTest {
 
     private static final String ORIGIN = "https://localhost:9443";
@@ -98,15 +94,23 @@ public class FIDO2ExecutorTest {
     @Mock
     private FlowUser flowUser;
 
+    private MockedStatic<PrivilegedCarbonContext> privilegedCarbonContextStatic;
+    private MockedStatic<CarbonContext> carbonContextStatic;
+    private MockedStatic<UserCoreUtil> userCoreUtilStatic;
+    private MockedStatic<FIDOUtil> fidoUtilStatic;
+    private MockedStatic<JsonParser> jsonParserStatic;
+    private AutoCloseable mocks;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
-        initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         fido2Executor = new FIDO2Executor();
         mockCarbonContext();
 
-        mockStatic(UserCoreUtil.class);
-        when(UserCoreUtil.addTenantDomainToEntry(anyString(), anyString())).thenReturn(TENANT_QUALIFIED_USERNAME);
+        userCoreUtilStatic = Mockito.mockStatic(UserCoreUtil.class);
+        userCoreUtilStatic.when(() -> UserCoreUtil.addTenantDomainToEntry(anyString(), anyString()))
+                .thenReturn(TENANT_QUALIFIED_USERNAME);
 
         when(flowExecutionContext.getFlowUser()).thenReturn(flowUser);
         when(flowUser.getUsername()).thenReturn(USERNAME);
@@ -119,10 +123,41 @@ public class FIDO2ExecutorTest {
         when(flowExecutionContext.getProperties()).thenReturn(propertyMap);
         when(flowExecutionContext.getUserInputData()).thenReturn(inputDataMap);
 
-        mockStatic(FIDOUtil.class);
-        when(FIDOUtil.writeJson(any())).thenReturn("{\"key\":\"value\"}");
+        fidoUtilStatic = Mockito.mockStatic(FIDOUtil.class);
+        fidoUtilStatic.when(() -> FIDOUtil.writeJson(any())).thenReturn("{\"key\":\"value\"}");
+
+        jsonParserStatic = Mockito.mockStatic(JsonParser.class);
 
         setWebAuthnServiceInExecutor();
+    }
+
+    @AfterMethod(alwaysRun = true)
+    public void tearDown() throws Exception {
+
+        if (jsonParserStatic != null) {
+            jsonParserStatic.close();
+            jsonParserStatic = null;
+        }
+        if (fidoUtilStatic != null) {
+            fidoUtilStatic.close();
+            fidoUtilStatic = null;
+        }
+        if (userCoreUtilStatic != null) {
+            userCoreUtilStatic.close();
+            userCoreUtilStatic = null;
+        }
+        if (privilegedCarbonContextStatic != null) {
+            privilegedCarbonContextStatic.close();
+            privilegedCarbonContextStatic = null;
+        }
+        if (carbonContextStatic != null) {
+            carbonContextStatic.close();
+            carbonContextStatic = null;
+        }
+        if (mocks != null) {
+            mocks.close();
+            mocks = null;
+        }
     }
 
     @Test
@@ -145,7 +180,7 @@ public class FIDO2ExecutorTest {
         when(flowExecutionContext.getUserInputData()).thenReturn(inputData);
         when(flowUser.getUsername()).thenReturn(USERNAME);
         ExecutorResponse response = fido2Executor.execute(flowExecutionContext);
-        Assert.assertEquals(response.getResult(), STATUS_CLIENT_INPUT_REQUIRED);
+        Assert.assertEquals(response.getResult(), Constants.ExecutorStatus.STATUS_CLIENT_INPUT_REQUIRED);
         Assert.assertTrue(response.getRequiredData().contains(FIDO2ExecutorConstants.ORIGIN));
     }
 
@@ -165,10 +200,9 @@ public class FIDO2ExecutorTest {
         inputData.put(FIDO2ExecutorConstants.CREDENTIAL, credential);
         when(flowExecutionContext.getUserInputData()).thenReturn(inputData);
 
-        mockStatic(JsonParser.class);
         JsonObject credentialJson = new JsonObject();
         credentialJson.addProperty(FIDO2ExecutorConstants.ID, CREDENTIAL_ID);
-        when(JsonParser.parseString(credential)).thenReturn(credentialJson);
+        jsonParserStatic.when(() -> JsonParser.parseString(credential)).thenReturn(credentialJson);
 
         when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
 
@@ -223,10 +257,9 @@ public class FIDO2ExecutorTest {
         inputData.put(FIDO2ExecutorConstants.CREDENTIAL, credential);
         when(flowExecutionContext.getUserInputData()).thenReturn(inputData);
 
-        mockStatic(JsonParser.class);
         JsonObject credentialJson = new JsonObject();
         credentialJson.addProperty(FIDO2ExecutorConstants.ID, CREDENTIAL_ID);
-        when(JsonParser.parseString(credential)).thenReturn(credentialJson);
+        jsonParserStatic.when(() -> JsonParser.parseString(credential)).thenReturn(credentialJson);
 
         when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(true);
 
@@ -504,10 +537,9 @@ public class FIDO2ExecutorTest {
         inputData.put(FIDO2ExecutorConstants.CREDENTIAL, credential);
         when(flowExecutionContext.getUserInputData()).thenReturn(inputData);
 
-        mockStatic(JsonParser.class);
         JsonObject credentialJson = new JsonObject();
         credentialJson.addProperty(FIDO2ExecutorConstants.ID, CREDENTIAL_ID);
-        when(JsonParser.parseString(credential)).thenReturn(credentialJson);
+        jsonParserStatic.when(() -> JsonParser.parseString(credential)).thenReturn(credentialJson);
 
         when(FIDOUtil.isRegistrationFlow(flowExecutionContext)).thenReturn(false);
 
@@ -567,7 +599,12 @@ public class FIDO2ExecutorTest {
 
         Field field = FIDO2Executor.class.getDeclaredField("webAuthnService");
         field.setAccessible(true);
-        field.set(fido2Executor, webAuthnService);
+
+        Field modifiers = Field.class.getDeclaredField("modifiers");
+        modifiers.setAccessible(true);
+        modifiers.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+        field.set(null, webAuthnService);
     }
 
     private void mockCarbonContext() {
@@ -576,23 +613,18 @@ public class FIDO2ExecutorTest {
         System.setProperty(CARBON_HOME, carbonHome);
         System.setProperty(CARBON_CONFIG_DIR_PATH, Paths.get(carbonHome, "conf").toString());
 
-        mockStatic(PrivilegedCarbonContext.class);
+        privilegedCarbonContextStatic = Mockito.mockStatic(PrivilegedCarbonContext.class);
         PrivilegedCarbonContext privilegedCarbonContext = mock(PrivilegedCarbonContext.class);
-        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+        privilegedCarbonContextStatic.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                .thenReturn(privilegedCarbonContext);
         when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
         when(privilegedCarbonContext.getTenantId()).thenReturn(SUPER_TENANT_ID);
         when(privilegedCarbonContext.getUsername()).thenReturn(USERNAME);
 
-        mockStatic(CarbonContext.class);
+        carbonContextStatic = Mockito.mockStatic(CarbonContext.class);
         CarbonContext carbonContext = mock(CarbonContext.class);
-        when(CarbonContext.getThreadLocalCarbonContext()).thenReturn(carbonContext);
+        carbonContextStatic.when(CarbonContext::getThreadLocalCarbonContext).thenReturn(carbonContext);
         when(carbonContext.getUsername()).thenReturn(USERNAME);
         when(carbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
-    }
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
     }
 }
