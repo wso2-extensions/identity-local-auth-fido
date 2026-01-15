@@ -82,11 +82,14 @@ import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2Authen
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserRealm;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -107,15 +110,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyList;
-import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anySet;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME;
@@ -178,7 +182,7 @@ public class WebAuthnServiceTest {
     @Mock
     private UserRealm userRealm;
     @Mock
-    private UserStoreManager userStoreManager;
+    private AbstractUserStoreManager userStoreManager;
     @Mock
     private InternetDomainName internetDomainName;
     @Mock
@@ -189,6 +193,8 @@ public class WebAuthnServiceTest {
     private ConfigurationManager configurationManager;
     @Mock
     private RegistrationResult registrationResult;
+    @Mock
+    private WebAuthnManager webAuthnManager;
     @Mock
     private RegistrationData registrationData;
     @Mock
@@ -221,6 +227,7 @@ public class WebAuthnServiceTest {
 
         prepareResources();
         MockitoAnnotations.openMocks(this);
+        mockCarbonContext();
 
         // FIDO2DeviceStoreDAO static mocking
         fido2DeviceStoreDAOMock = Mockito.mockStatic(FIDO2DeviceStoreDAO.class);
@@ -254,16 +261,16 @@ public class WebAuthnServiceTest {
         identityConfigParserMock.when(IdentityConfigParser::getInstance).thenReturn(identityConfigParser);
         when(identityConfigParser.getConfiguration()).thenReturn(identityConfig);
 
-        mockCarbonContext();
-
         // UserCoreUtil static mocking
         userCoreUtilMock = Mockito.mockStatic(UserCoreUtil.class);
         userCoreUtilMock.when(() -> UserCoreUtil.addTenantDomainToEntry(anyString(), anyString()))
                 .thenReturn(TENANT_QUALIFIED_USERNAME);
         userCoreUtilMock.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString()))
                 .thenCallRealMethod();
-        userCoreUtilMock.when(() -> UserCoreUtil.addTenantDomainToEntry(anyString(), anyString()))
-                .thenCallRealMethod();
+
+        identityTenantUtilMock = Mockito.mockStatic(IdentityTenantUtil.class);
+        identityTenantUtilMock.when(() -> IdentityTenantUtil.getTenantId(SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(SUPER_TENANT_ID);
 
         // User static mocking
         userMock = Mockito.mockStatic(User.class);
@@ -289,15 +296,19 @@ public class WebAuthnServiceTest {
         fido2CacheMock = Mockito.mockStatic(FIDO2Cache.class);
         fido2CacheMock.when(FIDO2Cache::getInstance).thenReturn(fido2Cache);
 
-        // IdentityTenantUtil static mocking
-        identityTenantUtilMock = Mockito.mockStatic(IdentityTenantUtil.class);
-        identityTenantUtilMock.when(() -> IdentityTenantUtil.getTenantId(SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(SUPER_TENANT_ID);
+        // FIDO2AuthenticatorServiceDataHolder static mocking
+        fido2AuthenticatorServiceDataHolderMock = Mockito.mockStatic(FIDO2AuthenticatorServiceDataHolder.class);
+        fido2AuthenticatorServiceDataHolderMock.when(FIDO2AuthenticatorServiceDataHolder::getInstance)
+                .thenReturn(fido2AuthenticatorServiceDataHolder);
+        when(fido2AuthenticatorServiceDataHolder.getRealmService()).thenReturn(realmService);
+        when(fido2AuthenticatorServiceDataHolder.getConfigurationManager()).thenReturn(configurationManager);
 
         // FIDO2AuthenticatorServiceComponent static mocking
         fido2AuthenticatorServiceComponentMock = Mockito.mockStatic(FIDO2AuthenticatorServiceComponent.class);
         fido2AuthenticatorServiceComponentMock.when(FIDO2AuthenticatorServiceComponent::getRealmService)
                 .thenReturn(realmService);
+
+        userStoreManager = mock(AbstractUserStoreManager.class);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(userStoreManager);
@@ -307,19 +318,13 @@ public class WebAuthnServiceTest {
                 .thenReturn(FIRST_NAME);
         when(userStoreManager.getUserClaimValue(TENANT_QUALIFIED_USERNAME, LAST_NAME_CLAIM_URL, null))
                 .thenReturn(LAST_NAME);
+        when(userStoreManager.getUserIDFromUserName(anyString())).thenReturn("user-id-123");
 
         // InternetDomainName static mocking
         internetDomainNameMock = Mockito.mockStatic(InternetDomainName.class);
         internetDomainNameMock.when(() -> InternetDomainName.from(anyString()))
                 .thenReturn(internetDomainName);
         when(internetDomainName.hasPublicSuffix()).thenReturn(false);
-
-        // FIDO2AuthenticatorServiceDataHolder static mocking
-        fido2AuthenticatorServiceDataHolderMock = Mockito.mockStatic(FIDO2AuthenticatorServiceDataHolder.class);
-        fido2AuthenticatorServiceDataHolderMock.when(FIDO2AuthenticatorServiceDataHolder::getInstance)
-                .thenReturn(fido2AuthenticatorServiceDataHolder);
-        when(fido2AuthenticatorServiceDataHolder.getConfigurationManager())
-                .thenReturn(configurationManager);
 
         // DAO behaviour
         List<FIDO2CredentialRegistration> credentialRegistrations = new ArrayList<>();
@@ -335,7 +340,7 @@ public class WebAuthnServiceTest {
         // FIDOUtil static mocking
         fidoUtilMock = Mockito.mockStatic(FIDOUtil.class);
     }
-    
+
     @AfterMethod
     public void tearDown() {
 
@@ -454,7 +459,7 @@ public class WebAuthnServiceTest {
 
         when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONFIG_RESOURCE_NAME,
                 FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME)).thenReturn(
-                        new Attribute(FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME, attestationValidationEnabled)
+                new Attribute(FIDO2_CONFIG_ATTESTATION_VALIDATION_ATTRIBUTE_NAME, attestationValidationEnabled)
         );
         when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME, FIDO2_CONFIG_RESOURCE_NAME,
                 FIDO2_CONFIG_MDS_VALIDATION_ATTRIBUTE_NAME)).thenReturn(
@@ -493,7 +498,7 @@ public class WebAuthnServiceTest {
         // FinishRegistrationOptions static mocking
         try (MockedStatic<FinishRegistrationOptions> finishRegistrationOptionsMock =
                      Mockito.mockStatic(FinishRegistrationOptions.class);
-             MockedStatic<RegisteredCredential> registeredCredentialMock = 
+             MockedStatic<RegisteredCredential> registeredCredentialMock =
                      Mockito.mockStatic(RegisteredCredential.class)) {
             FinishRegistrationOptions finishRegistrationOptions = mock(FinishRegistrationOptions.class);
             FinishRegistrationOptions.FinishRegistrationOptionsBuilder finishRegistrationOptionsBuilder =
@@ -691,10 +696,10 @@ public class WebAuthnServiceTest {
         Collection<FIDO2CredentialRegistration> response = webAuthnService.getFIDO2DeviceMetaData(USERNAME);
         Assert.assertNotNull(response.iterator().next());
     }
-    
+
     @Test(description = "Test case for deregisterFIDO2Credential() method", priority = 12)
     public void testDeregisterFIDO2Credential() throws FIDO2AuthenticatorServerException,
-            FIDO2AuthenticatorClientException, Base64UrlException, AuthenticationFailedException {
+            FIDO2AuthenticatorClientException, Base64UrlException {
 
         webAuthnService.deregisterFIDO2Credential(CREDENTIAL_ID);
     }
@@ -736,7 +741,7 @@ public class WebAuthnServiceTest {
     }
 
     private void mockCarbonContext() {
-        String carbonHome = 
+        String carbonHome =
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "repository").toString();
         System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
         System.setProperty(CarbonBaseConstants.CARBON_CONFIG_DIR_PATH, Paths.get(carbonHome, "conf").toString());
@@ -755,6 +760,9 @@ public class WebAuthnServiceTest {
         when(carbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
         when(carbonContext.getTenantId()).thenReturn(SUPER_TENANT_ID);
         when(carbonContext.getUsername()).thenReturn(USERNAME);
+        when(CarbonContext.getThreadLocalCarbonContext()).thenReturn(carbonContext);
+        when(carbonContext.getUsername()).thenReturn(USERNAME);
+        when(carbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
     }
 
     private static String readResource(String filename, Class cClass) throws IOException {

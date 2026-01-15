@@ -374,6 +374,16 @@
                 <artifactId>encoder</artifactId>
                 <version>${encoder.wso2.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.json.wso2</groupId>
+                <artifactId>json</artifactId>
+                <version>${json.wso2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
+                <version>${identity.framework.version}</version>
+            </dependency>
 
             <!--Test Dependencies-->
             <dependency>
@@ -447,6 +457,9 @@
         <carbon.identity.handler.event.account.lock.version>1.9.12</carbon.identity.handler.event.account.lock.version>
         <encoder.wso2.version>1.2.0.wso2v2</encoder.wso2.version>
         <encoder.wso2.import.version.range>[1.2.0,2.0.0)</encoder.wso2.import.version.range>
+        <json.wso2.version>3.0.0.wso2v4</json.wso2.version>
+        <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
+
         <!--Test Dependencies-->
         <testng.version>6.9.10</testng.version>
         <mockito.version>5.3.1</mockito.version>
