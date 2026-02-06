@@ -56,7 +56,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
  */
 public class FIDO2Executor extends AuthenticationExecutor {
 
-    private static final WebAuthnService webAuthnService = new WebAuthnService();
+    private static WebAuthnService webAuthnService = new WebAuthnService();
 
     @Override
     public String getName() {
