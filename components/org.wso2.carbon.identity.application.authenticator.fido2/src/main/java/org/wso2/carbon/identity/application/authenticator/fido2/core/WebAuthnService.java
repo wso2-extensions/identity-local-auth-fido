@@ -98,6 +98,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2Au
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.FIDO2AuthenticatorServiceDataHolder;
 import org.wso2.carbon.identity.application.authenticator.fido2.internal.MetadataService;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
+import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.WebAuthnAuditLogger;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -1060,8 +1061,13 @@ public class WebAuthnService {
 
         try {
             InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
-            rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
-                    : originUrl.getHost();
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(FIDO2AuthenticatorConstants
+                    .FIDO_RELYING_PARTY_ENFORCE_SUB_DOMAIN_RESTRICTION))){
+                rpId = internetDomainName.toString();
+            } else {
+                rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
+                        : originUrl.getHost();
+            }
         } catch (IllegalArgumentException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid domain name: '" + originUrl.getHost()
