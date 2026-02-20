@@ -59,8 +59,8 @@ public class FIDO2AuthenticatorConstants {
     public static final String FIDO_METADATA_STATEMENTS = "FIDO.MetadataService.MetadataStatementDirectory";
     public static final String FIDO_MDS_SCHEDULER_INITIAL_DELAY = "FIDO.MetadataService.SchedulerInitialDelay";
     public static final int FIDO_MDS_SCHEDULER_INITIAL_DELAY_DEFAULT_VALUE = 0;
-    public static final String FIDO_RELYING_PARTY_ENFORCE_SUB_DOMAIN_RESTRICTION
-            = "FIDO.WebAuthn.RelyingParty.EnforceSubdomainRestriction";
+    public static final String FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN
+            = "FIDO.WebAuthn.RelyingParty.UseFullEffectiveDomain";
 
     public static final String FIDO_CONFIG_RESOURCE_TYPE_NAME = "fido-config";
     public static final String FIDO2_CONFIG_RESOURCE_NAME = "fido2-validations";

@@ -749,7 +749,7 @@ public class WebAuthnServiceTest {
         };
     }
 
-    @Test(description = "Test case for FIDO_RELYING_PARTY_ENFORCE_SUB_DOMAIN_RESTRICTION configuration",
+    @Test(description = "Test case for FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN configuration",
             dataProvider = "subdomainRestrictionDataProvider", priority = 14)
     public void testRelyingPartySubdomainRestriction(String subdomainRestrictionEnabled, String origin,
                                                       String fullDomain, String expectedRpId) throws Exception {
@@ -773,7 +773,7 @@ public class WebAuthnServiceTest {
 
             // Mock the subdomain restriction property
             identityUtilMock.when(() -> IdentityUtil.getProperty(
-                    FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_ENFORCE_SUB_DOMAIN_RESTRICTION))
+                    FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN))
                     .thenReturn(subdomainRestrictionEnabled);
 
             // Mock InternetDomainName behavior for subdomain
@@ -784,6 +784,7 @@ public class WebAuthnServiceTest {
                     .thenReturn(fullDomainName);
             when(fullDomainName.toString()).thenReturn(fullDomain);
             when(fullDomainName.hasPublicSuffix()).thenReturn(true);
+            when(fullDomainName.isUnderPublicSuffix()).thenReturn(true);
             when(fullDomainName.topPrivateDomain()).thenReturn(topDomainName);
             when(topDomainName.toString()).thenReturn("wso2.com");
 
