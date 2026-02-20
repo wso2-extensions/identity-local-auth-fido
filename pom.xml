@@ -441,7 +441,7 @@
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>2.5.1.wso2v1</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>2.5.1</yubico.webauthn.version>
-        <orbit.webauthn4j.version>0.21.0.wso2v1</orbit.webauthn4j.version>
+        <orbit.webauthn4j.version>0.29.0.wso2v1</orbit.webauthn4j.version>
         <org.wso2.carbon.identity.organization.management.core.version>1.0.0
         </org.wso2.carbon.identity.organization.management.core.version>
         <carbon.identity.handler.event.account.lock.version>1.9.12</carbon.identity.handler.event.account.lock.version>

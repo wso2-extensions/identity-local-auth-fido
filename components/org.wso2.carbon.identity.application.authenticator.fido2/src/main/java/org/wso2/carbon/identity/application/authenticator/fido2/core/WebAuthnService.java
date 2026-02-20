@@ -33,17 +33,17 @@ import com.webauthn4j.data.client.Origin;
 import com.webauthn4j.data.client.challenge.DefaultChallenge;
 import com.webauthn4j.metadata.exception.MDSException;
 import com.webauthn4j.server.ServerProperty;
-import com.webauthn4j.validator.attestation.statement.androidkey.AndroidKeyAttestationStatementValidator;
-import com.webauthn4j.validator.attestation.statement.androidsafetynet.AndroidSafetyNetAttestationStatementValidator;
-import com.webauthn4j.validator.attestation.statement.apple.AppleAnonymousAttestationStatementValidator;
-import com.webauthn4j.validator.attestation.statement.none.NoneAttestationStatementValidator;
-import com.webauthn4j.validator.attestation.statement.packed.PackedAttestationStatementValidator;
-import com.webauthn4j.validator.attestation.statement.tpm.TPMAttestationStatementValidator;
-import com.webauthn4j.validator.attestation.statement.u2f.FIDOU2FAttestationStatementValidator;
-import com.webauthn4j.validator.attestation.trustworthiness.certpath.CertPathTrustworthinessValidator;
-import com.webauthn4j.validator.attestation.trustworthiness.certpath.NullCertPathTrustworthinessValidator;
-import com.webauthn4j.validator.attestation.trustworthiness.self.DefaultSelfAttestationTrustworthinessValidator;
-import com.webauthn4j.validator.exception.ValidationException;
+import com.webauthn4j.verifier.attestation.statement.androidkey.AndroidKeyAttestationStatementVerifier;
+import com.webauthn4j.verifier.attestation.statement.androidsafetynet.AndroidSafetyNetAttestationStatementVerifier;
+import com.webauthn4j.verifier.attestation.statement.apple.AppleAnonymousAttestationStatementVerifier;
+import com.webauthn4j.verifier.attestation.statement.none.NoneAttestationStatementVerifier;
+import com.webauthn4j.verifier.attestation.statement.packed.PackedAttestationStatementVerifier;
+import com.webauthn4j.verifier.attestation.statement.tpm.TPMAttestationStatementVerifier;
+import com.webauthn4j.verifier.attestation.statement.u2f.FIDOU2FAttestationStatementVerifier;
+import com.webauthn4j.verifier.attestation.trustworthiness.certpath.CertPathTrustworthinessVerifier;
+import com.webauthn4j.verifier.attestation.trustworthiness.certpath.NullCertPathTrustworthinessVerifier;
+import com.webauthn4j.verifier.attestation.trustworthiness.self.DefaultSelfAttestationTrustworthinessVerifier;
+import com.webauthn4j.verifier.exception.VerificationException;
 import com.yubico.internal.util.JacksonCodecs;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
@@ -454,7 +454,7 @@ public class WebAuthnService {
                     getWebAuthnManager().validate(registrationData, registrationParameters);
                 } catch (DataConversionException e) {
                     throw new FIDO2AuthenticatorServerException("Attestation data structure parse error", e);
-                } catch (ValidationException e) {
+                } catch (VerificationException e) {
                     throw new FIDO2AuthenticatorClientException("Validation failed: Invalid attestation!",
                             ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
                 } catch (MDSException e) {
@@ -594,7 +594,7 @@ public class WebAuthnService {
                     getWebAuthnManager().validate(registrationData, registrationParameters);
                 } catch (DataConversionException e) {
                     throw new FIDO2AuthenticatorServerException("Attestation data structure parse error", e);
-                } catch (ValidationException e) {
+                } catch (VerificationException e) {
                     throw new FIDO2AuthenticatorClientException("Validation failed: Invalid attestation!",
                             ERROR_CODE_FINISH_REGISTRATION_INVALID_ATTESTATION.getErrorCode(), e);
                 } catch (MDSException e) {
@@ -1438,26 +1438,26 @@ public class WebAuthnService {
                     if (webAuthnManagerMDSEnabled == null) {
                         MetadataService metadataService = FIDO2AuthenticatorServiceDataHolder.getInstance()
                                 .getMetadataService();
-                        if (metadataService.getDefaultCertPathTrustworthinessValidator() == null) {
+                        if (metadataService.getDefaultCertPathTrustworthinessVerifier() == null) {
                             log.info("FIDO2 mds certificate trustworthiness validator is null. " +
                                     "Hence initializing...");
-                            metadataService.initializeDefaultCertPathTrustworthinessValidator();
+                            metadataService.initializeDefaultCertPathTrustworthinessVerifier();
                         }
-                        CertPathTrustworthinessValidator certPathTrustworthinessValidator = metadataService
-                                .getDefaultCertPathTrustworthinessValidator();
+                        CertPathTrustworthinessVerifier certPathTrustworthinessValidator = metadataService
+                                .getDefaultCertPathTrustworthinessVerifier();
 
                         webAuthnManagerMDSEnabled = new WebAuthnManager(
                                 Arrays.asList(
-                                        new PackedAttestationStatementValidator(),
-                                        new FIDOU2FAttestationStatementValidator(),
-                                        new AndroidKeyAttestationStatementValidator(),
-                                        new AndroidSafetyNetAttestationStatementValidator(),
-                                        new TPMAttestationStatementValidator(),
-                                        new AppleAnonymousAttestationStatementValidator(),
-                                        new NoneAttestationStatementValidator()
+                                        new PackedAttestationStatementVerifier(),
+                                        new FIDOU2FAttestationStatementVerifier(),
+                                        new AndroidKeyAttestationStatementVerifier(),
+                                        new AndroidSafetyNetAttestationStatementVerifier(),
+                                        new TPMAttestationStatementVerifier(),
+                                        new AppleAnonymousAttestationStatementVerifier(),
+                                        new NoneAttestationStatementVerifier()
                                 ),
                                 certPathTrustworthinessValidator,
-                                new DefaultSelfAttestationTrustworthinessValidator()
+                                new DefaultSelfAttestationTrustworthinessVerifier()
                         );
                     }
                 }
@@ -1470,16 +1470,16 @@ public class WebAuthnService {
                     if (webAuthnManager == null) {
                         webAuthnManager = new WebAuthnManager(
                                 Arrays.asList(
-                                        new PackedAttestationStatementValidator(),
-                                        new FIDOU2FAttestationStatementValidator(),
-                                        new AndroidKeyAttestationStatementValidator(),
-                                        new AndroidSafetyNetAttestationStatementValidator(),
-                                        new TPMAttestationStatementValidator(),
-                                        new AppleAnonymousAttestationStatementValidator(),
-                                        new NoneAttestationStatementValidator()
+                                        new PackedAttestationStatementVerifier(),
+                                        new FIDOU2FAttestationStatementVerifier(),
+                                        new AndroidKeyAttestationStatementVerifier(),
+                                        new AndroidSafetyNetAttestationStatementVerifier(),
+                                        new TPMAttestationStatementVerifier(),
+                                        new AppleAnonymousAttestationStatementVerifier(),
+                                        new NoneAttestationStatementVerifier()
                                 ),
-                                new NullCertPathTrustworthinessValidator(),
-                                new DefaultSelfAttestationTrustworthinessValidator()
+                                new NullCertPathTrustworthinessVerifier(),
+                                new DefaultSelfAttestationTrustworthinessVerifier()
                         );
                     }
                 }

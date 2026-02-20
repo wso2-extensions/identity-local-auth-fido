@@ -71,11 +71,11 @@ public class MetadataSchedulerService {
                 }
 
                 FIDO2AuthenticatorServiceDataHolder.getInstance().getMetadataService()
-                        .initializeDefaultCertPathTrustworthinessValidator();
+                        .initializeDefaultCertPathTrustworthinessVerifier();
 
                 if (FIDO2AuthenticatorServiceDataHolder.getInstance().getMetadataService()
-                        .getDefaultCertPathTrustworthinessValidator() == null) {
-                    log.error("Error initializing default cert path trustworthiness validator.");
+                        .getDefaultCertPathTrustworthinessVerifier() == null) {
+                    log.error("Error initializing default cert path trustworthiness verifier.");
                 } else {
                     log.info("FIDO2 Metadata Initialization is successful.");
                 }
