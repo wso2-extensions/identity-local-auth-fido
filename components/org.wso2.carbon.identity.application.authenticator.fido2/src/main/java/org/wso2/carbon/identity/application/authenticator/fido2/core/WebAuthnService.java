@@ -152,6 +152,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.INVALID_ORIGIN_MESSAGE;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.TRUSTED_ORIGINS;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
 
@@ -1060,8 +1061,13 @@ public class WebAuthnService {
 
         try {
             InternetDomainName internetDomainName = InternetDomainName.from(originUrl.getHost());
-            rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
-                    : originUrl.getHost();
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN))
+                    && (internetDomainName.isUnderPublicSuffix())) {
+                rpId = internetDomainName.toString();
+            } else {
+                rpId = internetDomainName.hasPublicSuffix() ? internetDomainName.topPrivateDomain().toString()
+                        : originUrl.getHost();
+            }
         } catch (IllegalArgumentException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid domain name: '" + originUrl.getHost()

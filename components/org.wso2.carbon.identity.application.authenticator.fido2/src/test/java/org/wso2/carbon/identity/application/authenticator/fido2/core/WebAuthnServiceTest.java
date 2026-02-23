@@ -740,6 +740,88 @@ public class WebAuthnServiceTest {
         }
     }
 
+    @DataProvider(name = "subdomainRestrictionDataProvider")
+    public static Object[][] subdomainRestrictionDataProvider() {
+
+        return new Object[][] {
+                {"true", "https://is.wso2.com:9443", "is.wso2.com", "is.wso2.com"},
+                {"false", "https://is.wso2.com:9443", "is.wso2.com", "wso2.com"}
+        };
+    }
+
+    @Test(description = "Test case for FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN configuration",
+            dataProvider = "subdomainRestrictionDataProvider", priority = 14)
+    public void testRelyingPartySubdomainRestriction(String subdomainRestrictionEnabled, String origin,
+                                                      String fullDomain, String expectedRpId) throws Exception {
+
+        try (MockedStatic<StartRegistrationOptions> startRegistrationOptionsMock =
+                     Mockito.mockStatic(StartRegistrationOptions.class)) {
+
+            // Create a test-specific trusted origins list
+            ArrayList<String> testTrustedOrigins = new ArrayList<>();
+            testTrustedOrigins.add(origin);
+            identityConfig.put(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS, testTrustedOrigins);
+
+            // Mock the trusted origins configuration to return empty (so it relies on identityConfig)
+            Mockito.when(configurationManager.getAttribute(FIDO_CONFIG_RESOURCE_TYPE_NAME,
+                    FIDO2_CONNECTOR_CONFIG_RESOURCE_NAME, FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME)).thenReturn(
+                    new Attribute(FIDO2_CONFIG_TRUSTED_ORIGIN_ATTRIBUTE_NAME, ""));
+
+            // Override the fillURLPlaceholders mock to return the argument as-is for our test
+            identityUtilMock.when(() -> IdentityUtil.fillURLPlaceholders(anyString()))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            // Mock the subdomain restriction property
+            identityUtilMock.when(() -> IdentityUtil.getProperty(
+                    FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN))
+                    .thenReturn(subdomainRestrictionEnabled);
+
+            // Mock InternetDomainName behavior for subdomain
+            InternetDomainName fullDomainName = mock(InternetDomainName.class);
+            InternetDomainName topDomainName = mock(InternetDomainName.class);
+
+            internetDomainNameMock.when(() -> InternetDomainName.from(fullDomain))
+                    .thenReturn(fullDomainName);
+            when(fullDomainName.toString()).thenReturn(fullDomain);
+            when(fullDomainName.hasPublicSuffix()).thenReturn(true);
+            when(fullDomainName.isUnderPublicSuffix()).thenReturn(true);
+            when(fullDomainName.topPrivateDomain()).thenReturn(topDomainName);
+            when(topDomainName.toString()).thenReturn("wso2.com");
+
+            // Setup StartRegistrationOptions mocking
+            StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder startRegistrationOptionsBuilder =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
+            startRegistrationOptionsMock.when(StartRegistrationOptions::builder).thenReturn(mandatoryStages1);
+            when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString()))
+                    .thenReturn(Optional.empty());
+            when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
+                    .thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.extensions(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.build()).thenReturn(startRegistrationOptions);
+
+            PublicKeyCredentialCreationOptions credentialCreationOptions = mock(PublicKeyCredentialCreationOptions.class);
+            when(relyingParty.startRegistration(any())).thenReturn(credentialCreationOptions);
+            when(objectMapperMock.writeValueAsString(any())).thenReturn("dummyValueAsString");
+
+            // Call the method that triggers buildRelyingParty
+            Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2Registration(origin);
+            Assert.assertTrue(result.isRight());
+
+            // Verify that RelyingPartyIdentity was created with the correct rpId
+            Mockito.verify(mandatoryStages, Mockito.atLeastOnce()).identity(Mockito.argThat(identity -> identity.getId().equals(expectedRpId)));
+        } finally {
+            // Restore the original trusted origins
+            trustedOrigins.clear();
+            trustedOrigins.add(ORIGIN);
+            identityConfig.put(FIDO2AuthenticatorConstants.TRUSTED_ORIGINS, trustedOrigins);
+        }
+    }
+
     private void mockCarbonContext() {
         String carbonHome =
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources", "repository").toString();
