@@ -25,7 +25,7 @@ import com.webauthn4j.WebAuthnManager;
 import com.webauthn4j.data.RegistrationData;
 import com.webauthn4j.data.RegistrationParameters;
 import com.webauthn4j.data.RegistrationRequest;
-import com.webauthn4j.validator.attestation.trustworthiness.certpath.DefaultCertPathTrustworthinessValidator;
+import com.webauthn4j.verifier.attestation.trustworthiness.certpath.DefaultCertPathTrustworthinessVerifier;
 import com.yubico.internal.util.JacksonCodecs;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
@@ -489,10 +489,10 @@ public class WebAuthnServiceTest {
 
         if (Boolean.parseBoolean(mdsValidationEnabled)) {
             MetadataService metadataService = mock(MetadataService.class);
-            DefaultCertPathTrustworthinessValidator certPathValidator = mock(
-                    DefaultCertPathTrustworthinessValidator.class);
+            DefaultCertPathTrustworthinessVerifier certPathValidator = mock(
+                    DefaultCertPathTrustworthinessVerifier.class);
             when(fido2AuthenticatorServiceDataHolder.getMetadataService()).thenReturn(metadataService);
-            when(metadataService.getDefaultCertPathTrustworthinessValidator()).thenReturn(certPathValidator);
+            when(metadataService.getDefaultCertPathTrustworthinessVerifier()).thenReturn(certPathValidator);
         }
 
         // FinishRegistrationOptions static mocking

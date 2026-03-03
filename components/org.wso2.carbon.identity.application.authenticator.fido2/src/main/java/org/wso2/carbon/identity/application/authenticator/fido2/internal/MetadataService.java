@@ -26,7 +26,7 @@ import com.webauthn4j.metadata.MetadataBLOBProvider;
 import com.webauthn4j.metadata.anchor.AggregatingTrustAnchorRepository;
 import com.webauthn4j.metadata.anchor.MetadataBLOBBasedTrustAnchorRepository;
 import com.webauthn4j.metadata.anchor.MetadataStatementsBasedTrustAnchorRepository;
-import com.webauthn4j.validator.attestation.trustworthiness.certpath.DefaultCertPathTrustworthinessValidator;
+import com.webauthn4j.verifier.attestation.trustworthiness.certpath.DefaultCertPathTrustworthinessVerifier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
@@ -59,13 +59,13 @@ public class MetadataService {
 
     private static final Log log = LogFactory.getLog(MetadataService.class);
     private ObjectConverter objectConverter = null;
-    private DefaultCertPathTrustworthinessValidator defaultCertPathTrustworthinessValidator = null;
+    private DefaultCertPathTrustworthinessVerifier DefaultCertPathTrustworthinessVerifier = null;
     private static ArrayList<String> mdsEndpoints = null;
 
     /**
-     * Initialize the DefaultCertPathTrustworthinessValidator object needed for webauthn4j mds validations.
+     * Initialize the DefaultCertPathTrustworthinessVerifier object needed for webauthn4j mds validations.
      */
-    public void initializeDefaultCertPathTrustworthinessValidator() throws FIDO2AuthenticatorServerException {
+    public void initializeDefaultCertPathTrustworthinessVerifier() throws FIDO2AuthenticatorServerException {
 
         objectConverter = new ObjectConverter();
         X509Certificate rootCertificate;
@@ -145,20 +145,20 @@ public class MetadataService {
         }
 
         // Construct certificate trustworthiness validator object.
-        defaultCertPathTrustworthinessValidator = new DefaultCertPathTrustworthinessValidator(
+        DefaultCertPathTrustworthinessVerifier = new DefaultCertPathTrustworthinessVerifier(
                 trustAnchorRepository
         );
-        defaultCertPathTrustworthinessValidator.setFullChainProhibited(true);
+        DefaultCertPathTrustworthinessVerifier.setFullChainProhibited(true);
     }
 
     /**
-     * Get the DefaultCertPathTrustworthinessValidator object needed for webauthn4j mds validations.
+     * Get the DefaultCertPathTrustworthinessVerifier object needed for webauthn4j mds validations.
      *
-     * @return DefaultCertPathTrustworthinessValidator
+     * @return DefaultCertPathTrustworthinessVerifier
      */
-    public DefaultCertPathTrustworthinessValidator getDefaultCertPathTrustworthinessValidator() {
+    public DefaultCertPathTrustworthinessVerifier getDefaultCertPathTrustworthinessVerifier() {
 
-        return defaultCertPathTrustworthinessValidator;
+        return DefaultCertPathTrustworthinessVerifier;
     }
 
     private X509Certificate getMDS3RootCertificate() throws CertificateException, FileNotFoundException {
