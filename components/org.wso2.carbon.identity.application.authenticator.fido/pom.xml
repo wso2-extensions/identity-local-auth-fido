@@ -134,7 +134,7 @@
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Import-Package>
                             org.wso2.carbon.identity.application.authenticator.fido2.*;
-                            version="${identity.application.auth.fido.package.export.version.range}",
+                            version="${identity.application.auth.fido.package.import.version.range}",
                             org.wso2.carbon.identity.user.store.configuration.*;
                             version="${carbon.identity.package.import.version.range}",
                             !org.wso2.carbon.identity.application.authenticator.fido,
