@@ -413,8 +413,8 @@
         <identity.extension.utils.import.version.range>[1.0.8,2.0.0)</identity.extension.utils.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>33.0.0-jre</google.guava.version>
-        <fasterxml.jackson.version>2.17.2</fasterxml.jackson.version>
-        <jackson-databind.version>2.17.2</jackson-databind.version>
+        <fasterxml.jackson.version>2.18.6</fasterxml.jackson.version>
+        <jackson-databind.version>2.18.6</jackson-databind.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
         <imp.pkg.version.javax.servlet>[3.1.0, 4.0.0)</imp.pkg.version.javax.servlet>
@@ -441,7 +441,7 @@
         <maven.build.helper.plugin.version>1.8</maven.build.helper.plugin.version>
         <orbit.yubico.webauthn.version>2.5.1.wso2v1</orbit.yubico.webauthn.version>
         <yubico.webauthn.version>2.5.1</yubico.webauthn.version>
-        <orbit.webauthn4j.version>0.29.0.wso2v1</orbit.webauthn4j.version>
+        <orbit.webauthn4j.version>0.29.0.wso2v2</orbit.webauthn4j.version>
         <org.wso2.carbon.identity.organization.management.core.version>1.0.0
         </org.wso2.carbon.identity.organization.management.core.version>
         <carbon.identity.handler.event.account.lock.version>1.9.12</carbon.identity.handler.event.account.lock.version>
