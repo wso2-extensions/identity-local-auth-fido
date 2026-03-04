@@ -424,7 +424,7 @@
         <osgi.service.component.imp.pkg.version.range>[1.2.0, 2.0.0)</osgi.service.component.imp.pkg.version.range>
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
         <identity.application.auth.fido.package.export.version>${project.version}</identity.application.auth.fido.package.export.version>
-        <identity.application.auth.fido.package.export.version.range>[5.2.0, 6.0.0)</identity.application.auth.fido.package.export.version.range>
+        <identity.application.auth.fido.package.import.version.range>[6.0.0, 7.0.0)</identity.application.auth.fido.package.import.version.range>
         <axis2.wso2.version>1.6.1.wso2v12</axis2.wso2.version>
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
         <carbon.kernel.version>4.9.10</carbon.kernel.version>
