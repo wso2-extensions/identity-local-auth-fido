@@ -38,6 +38,8 @@ public class FIDOAuthenticatorConstants {
             "Error occurred while checking account lock status for user: %s";
     public static final String ACCOUNT_LOCKED_ERROR_QUERY_PARAMS =
             "&authFailure=true&authFailureMsg=error.user.account.locked";
+    public static final String NO_PASSKEY_ENROLLED_ERROR_QUERY_PARAMS =
+            "&authFailure=true&authFailureMsg=no.enrolled.passkey.found";
     public static final String ERROR_REDIRECTING_TO_ERROR_PAGE_MESSAGE =
             "Error occurred while redirecting to error page";
 
@@ -61,6 +63,7 @@ public class FIDOAuthenticatorConstants {
 
     public static final String WEBAUTHN_ENABLED = "FIDO.WebAuthn.Enable";
     public static final String IS_PASSKEY_CREATION_CONSENT_RECEIVED = "isPasskeyCreationConsentReceived";
+    public static final String IS_API_BASED_AND_NO_PASSKEY_ENROLLED = "isApiBasedAndNoPasskeyEnrolled";
     public static final String TOKEN_RESPONSE = "tokenResponse";
     public static final String ERROR_CODE = "errorCode";
     public static final String CHALLENGE_RESPONSE = "challengeResponse";
