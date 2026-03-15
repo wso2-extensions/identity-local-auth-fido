@@ -42,6 +42,8 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.A
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOUtil;
 import org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FService;
 import org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnService;
@@ -74,6 +76,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.IS_API_BASED_AND_NO_PASSKEY_ENROLLED;
 
 public class FIDOAuthenticatorTest {
 
@@ -587,6 +590,26 @@ public class FIDOAuthenticatorTest {
         Assert.assertTrue(additionalData.containsKey(FIDOAuthenticatorConstants.CHALLENGE_DATA));
     }
 
+    @Test(description = "Test case for getAuthInitiationData() when the request is API based and no passkeys are"
+            + " enrolled - should return authenticator data without required params or additional data.")
+    public void testGetAuthInitiationDataWhenAPIBasedAndNoPasskeyEnrolled() {
+
+        when(authenticationContext.getExternalIdP()).thenReturn(externalIdPConfig);
+        when(externalIdPConfig.getIdPName()).thenReturn("LOCAL");
+        authenticationContext.setProperty(IS_API_BASED_AND_NO_PASSKEY_ENROLLED, true);
+
+        Optional<AuthenticatorData> authenticatorData = fidoAuthenticator.getAuthInitiationData(authenticationContext);
+
+        Assert.assertTrue(authenticatorData.isPresent());
+        AuthenticatorData authenticatorDataObj = authenticatorData.get();
+        Assert.assertEquals(authenticatorDataObj.getDisplayName(), AUTHENTICATOR_FRIENDLY_NAME);
+        Assert.assertEquals(authenticatorDataObj.getI18nKey(), AUTHENTICATOR_FIDO);
+        Assert.assertEquals(authenticatorDataObj.getPromptType(),
+                FrameworkConstants.AuthenticatorPromptType.INTERNAL_PROMPT);
+        Assert.assertTrue(authenticatorDataObj.getRequiredParams().isEmpty());
+        Assert.assertNull(authenticatorDataObj.getAdditionalData());
+    }
+
     @Test
     public void testIsAPIBasedAuthenticationSupported() {
 
@@ -642,6 +665,44 @@ public class FIDOAuthenticatorTest {
         } catch (AuthenticationFailedException e) {
             Assert.assertTrue(e.getMessage()
                     .contains(FIDOAuthenticatorConstants.AUTHENTICATION_FAILED_ACCOUNT_LOCKED_ERROR_MESSAGE));
+        }
+    }
+
+    @Test(description = "Test case for API based auth request when no passkeys are enrolled - should redirect to error"
+            + " page and return INCOMPLETE.", priority = 16)
+    public void testProcessAPIBasedAuthRequestWithNoPasskeyEnrolled() throws Exception {
+
+        AuthenticationContext context = new AuthenticationContext();
+        AuthenticatedUser authenticatedUser = AuthenticatedUser
+                .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
+        authenticatedUser.setFederatedUser(false);
+        authenticatedUser.setUserName(USERNAME);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+
+        StepConfig stepConfig = new StepConfig();
+        stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
+        Map<Integer, StepConfig> stepMap = new HashMap<>();
+        stepMap.put(1, stepConfig);
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setStepMap(stepMap);
+        context.setSequenceConfig(sequenceConfig);
+        context.setContextIdentifier(UUID.randomUUID().toString());
+
+        identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
+        when(httpServletRequest.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW)).thenReturn(Boolean.TRUE);
+
+        try (MockedStatic<FIDOUtil> fidoUtilMock = Mockito.mockStatic(FIDOUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMock = Mockito.mockStatic(FrameworkUtils.class);
+             MockedConstruction<WebAuthnService> ignored = Mockito.mockConstruction(WebAuthnService.class,
+                     (mock, ctx) -> when(mock.isFidoKeyRegistered(any(AuthenticatedUser.class))).thenReturn(false))) {
+
+            AuthenticatorFlowStatus status = fidoAuthenticator.process(
+                    httpServletRequest, httpServletResponse, context);
+
+            Assert.assertEquals(status, AuthenticatorFlowStatus.INCOMPLETE);
+            Assert.assertEquals(context.getProperty(IS_API_BASED_AND_NO_PASSKEY_ENROLLED), true);
         }
     }
 
