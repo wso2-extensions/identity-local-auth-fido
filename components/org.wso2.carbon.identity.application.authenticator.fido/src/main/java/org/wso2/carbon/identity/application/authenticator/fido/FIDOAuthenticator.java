@@ -100,6 +100,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_DISPLAY_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.FIDO_KEY_ID;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.IS_PASSKEY_CREATION_CONSENT_RECEIVED;
+import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.IS_API_BASED_AND_NO_PASSKEY_ENROLLED;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.PROCESS_AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.ActionIDs.VALIDATE_FIDO_REQUEST;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.LogConstants.FIDO_AUTH_SERVICE;
@@ -182,6 +183,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             }
             authenticatedUser.setUserName(mappedLocalUsername);
             boolean enrolledPasskeysExist = hasUserSetPasskeys(authenticatedUser);
+
+            // If the request is API based and no passkeys are enrolled, then redirect the user to error page.
+            if (isAPIBasedAuthRequest(request) && !enrolledPasskeysExist) {
+                // App-native doesn't support progressive passkey enrollment.
+                // TODO: This need to be updated once the app-native supports progressive passkey enrollment.
+                context.setProperty(IS_API_BASED_AND_NO_PASSKEY_ENROLLED, true);
+                redirectToNoPasskeyEnrolledErrorPage(response, context);
+                return AuthenticatorFlowStatus.INCOMPLETE;
+            }
             if (enrolledPasskeysExist) {
                 // If the user have already enrolled passkeys and if the user initiated a passkey enrollment request,
                 // then inform the user that passkeys already exist and disregard the enrollment request.
@@ -732,6 +742,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             authenticatorData.setMessage((AuthenticatorMessage) propertyValue);
         }
 
+        if (Boolean.TRUE.equals(context.getProperty(IS_API_BASED_AND_NO_PASSKEY_ENROLLED))) {
+            // If the request is API based and no passkeys are enrolled, only authenticator data is added.
+            return Optional.of(authenticatorData);
+        }
+
         List<String> requiredParameterList = new ArrayList<>();
         requiredParameterList.add(TOKEN_RESPONSE);
         authenticatorData.setRequiredParams(requiredParameterList);
@@ -1272,6 +1287,22 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                 IdentityCoreConstants.UTF_8);
 
         return buildAbsoluteURL(provisionedUserNotFoundRedirectUrl);
+    }
+
+    private void redirectToNoPasskeyEnrolledErrorPage(HttpServletResponse response, AuthenticationContext context)
+            throws AuthenticationFailedException {
+
+        try {
+            String queryParams = FrameworkUtils.getQueryStringWithFrameworkContextId(context.getQueryParams(),
+                    context.getCallerSessionKey(), context.getContextIdentifier());
+            queryParams += FIDOAuthenticatorConstants.NO_PASSKEY_ENROLLED_ERROR_QUERY_PARAMS;
+            String errorPage = FIDOUtil.getErrorPageUrl();
+            String url = FrameworkUtils.appendQueryParamsStringToUrl(errorPage, queryParams);
+            response.sendRedirect(url);
+        } catch (IOException e) {
+            throw new AuthenticationFailedException(FIDOAuthenticatorConstants.ERROR_REDIRECTING_TO_ERROR_PAGE_MESSAGE,
+                    e);
+        }
     }
 
     private IdentityProvider getIdentityProvider(String idpName, String tenantDomain) throws
