@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -53,6 +53,7 @@ public class FIDOAuthenticatorConstants {
     public static final String FIDO2_PASSKEY_STATUS = "Fido2PasskeyStatus";
     public static final String FIDO2_IDENTIFIER_FIRST = "Fido2IdentifierFirst";
     public static final String APP_ID = "AppID";
+    public static final String SCRIPT_APP_ID = "appId";
 
     public static final String URI_LOGIN = "login.do";
     public static final String URI_FIDO_LOGIN = "fido-auth.jsp";

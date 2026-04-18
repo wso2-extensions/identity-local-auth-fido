@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2022-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -73,6 +73,9 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FRIENDLY_NAME;
@@ -125,10 +128,10 @@ public class FIDOAuthenticatorTest {
         fidoAuthenticator = FIDOAuthenticator.getInstance();
         MockitoAnnotations.openMocks(this);
 
-        identityUtilMock = Mockito.mockStatic(IdentityUtil.class);
-        loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class);
-        fidoAuthenticatorServiceDataHolderMock = Mockito.mockStatic(FIDOAuthenticatorServiceDataHolder.class);
-        identityTenantUtilStatic = Mockito.mockStatic(IdentityTenantUtil.class);
+        identityUtilMock = mockStatic(IdentityUtil.class);
+        loggerUtilsMock = mockStatic(LoggerUtils.class);
+        fidoAuthenticatorServiceDataHolderMock = mockStatic(FIDOAuthenticatorServiceDataHolder.class);
+        identityTenantUtilStatic = mockStatic(IdentityTenantUtil.class);
 
         loggerUtilsMock.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
         fidoAuthenticatorServiceDataHolderMock.when(FIDOAuthenticatorServiceDataHolder::getInstance)
@@ -212,7 +215,7 @@ public class FIDOAuthenticatorTest {
             }
         };
 
-        serviceURLBuilderMock = Mockito.mockStatic(ServiceURLBuilder.class);
+        serviceURLBuilderMock = mockStatic(ServiceURLBuilder.class);
         serviceURLBuilderMock.when(ServiceURLBuilder::create).thenReturn(builder);
     }
 
@@ -376,9 +379,9 @@ public class FIDOAuthenticatorTest {
         identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
                 .thenReturn(String.valueOf(false));
 
-        u2FServiceMock = Mockito.mockStatic(U2FService.class);
+        u2FServiceMock = mockStatic(U2FService.class);
         u2FServiceMock.when(U2FService::getInstance).thenReturn(u2FService);
-        authenticateResponseMock = Mockito.mockStatic(AuthenticateResponse.class);
+        authenticateResponseMock = mockStatic(AuthenticateResponse.class);
         authenticateResponseMock.when(() -> AuthenticateResponse.fromJson(anyString())).thenReturn(authenticateResponse);
 
         fidoAuthenticator.processAuthenticationResponse(httpServletRequest, httpServletResponse, context);
@@ -453,12 +456,12 @@ public class FIDOAuthenticatorTest {
         parameterMap.put(FIDOAuthenticatorConstants.FIDO2_AUTH, "fido2-auth");
         authenticatorConfig.setParameterMap(parameterMap);
 
-        fileBasedConfigurationBuilderMock = Mockito.mockStatic(FileBasedConfigurationBuilder.class);
+        fileBasedConfigurationBuilderMock = mockStatic(FileBasedConfigurationBuilder.class);
         fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
                 .thenReturn(fileBasedConfigurationBuilder);
         when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
 
-        urlEncoderMock = Mockito.mockStatic(URLEncoder.class);
+        urlEncoderMock = mockStatic(URLEncoder.class);
         urlEncoderMock.when(() -> URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
         mockServiceURLBuilder();
 
@@ -526,9 +529,9 @@ public class FIDOAuthenticatorTest {
         identityUtilMock.when(() -> IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED))
                 .thenReturn(String.valueOf(false));
 
-        u2FServiceMock = Mockito.mockStatic(U2FService.class);
+        u2FServiceMock = mockStatic(U2FService.class);
         u2FServiceMock.when(U2FService::getInstance).thenReturn(u2FService);
-        authenticateResponseMock = Mockito.mockStatic(AuthenticateResponse.class);
+        authenticateResponseMock = mockStatic(AuthenticateResponse.class);
 
         if (isU2FNullResponse) {
             when(u2FService.startAuthentication(any())).thenReturn(null);
@@ -541,12 +544,12 @@ public class FIDOAuthenticatorTest {
         parameterMap.put(FIDOAuthenticatorConstants.FIDO_AUTH, "fido-auth");
         authenticatorConfig.setParameterMap(parameterMap);
 
-        fileBasedConfigurationBuilderMock = Mockito.mockStatic(FileBasedConfigurationBuilder.class);
+        fileBasedConfigurationBuilderMock = mockStatic(FileBasedConfigurationBuilder.class);
         fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
                 .thenReturn(fileBasedConfigurationBuilder);
         when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
 
-        urlEncoderMock = Mockito.mockStatic(URLEncoder.class);
+        urlEncoderMock = mockStatic(URLEncoder.class);
         urlEncoderMock.when(() -> URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
         mockServiceURLBuilder();
 
@@ -693,8 +696,8 @@ public class FIDOAuthenticatorTest {
         identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
         when(httpServletRequest.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW)).thenReturn(Boolean.TRUE);
 
-        try (MockedStatic<FIDOUtil> fidoUtilMock = Mockito.mockStatic(FIDOUtil.class);
-             MockedStatic<FrameworkUtils> frameworkUtilsMock = Mockito.mockStatic(FrameworkUtils.class);
+        try (MockedStatic<FIDOUtil> fidoUtilMock = mockStatic(FIDOUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMock = mockStatic(FrameworkUtils.class);
              MockedConstruction<WebAuthnService> ignored = Mockito.mockConstruction(WebAuthnService.class,
                      (mock, ctx) -> when(mock.isFidoKeyRegistered(any(AuthenticatedUser.class))).thenReturn(false))) {
 
@@ -753,6 +756,190 @@ public class FIDOAuthenticatorTest {
             Assert.fail("Expected AuthenticationFailedException was not thrown");
         } catch (AuthenticationFailedException e) {
             Assert.assertTrue(e.getMessage().contains("Error occurred while checking account lock status for user"));
+        }
+    }
+
+    @Test(description = "Test case for initiateAuthenticationRequest() when API-based with valid rpId from " +
+            "adaptive script param for an identified user with passkeys", priority = 16)
+    public void testInitiateAuthenticationRequestApiBasedWithRpId() throws Exception {
+
+        AuthenticationContext context = new AuthenticationContext();
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        authenticatorConfig.setApplicationAuthenticator(fidoAuthenticator);
+        List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
+        authenticatorList.add(authenticatorConfig);
+
+        AuthenticatedUser authenticatedUser = AuthenticatedUser
+                .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
+        authenticatedUser.setFederatedUser(false);
+        authenticatedUser.setUserName(USERNAME);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
+
+        StepConfig stepConfig = new StepConfig();
+        stepConfig.setAuthenticatorList(authenticatorList);
+        stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
+        Map<Integer, StepConfig> stepMap = new HashMap<>();
+        stepMap.put(1, stepConfig);
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setStepMap(stepMap);
+        context.setSequenceConfig(sequenceConfig);
+        context.setSubject(authenticatedUser);
+        context.setServiceProviderName("TestSP");
+        context.setContextIdentifier(UUID.randomUUID().toString());
+
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
+        when(httpServletRequest.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW)).thenReturn(Boolean.TRUE);
+
+        // Inject scriptAppId into context runtime params (read by AbstractApplicationAuthenticator.getRuntimeParams).
+        Map<String, String> scriptParams = new HashMap<>();
+        scriptParams.put(FIDOAuthenticatorConstants.SCRIPT_APP_ID, "https://abcd.example.com:9443");
+        Map<String, Map<String, String>> contextParamMap = new HashMap<>();
+        contextParamMap.put(FIDOAuthenticatorConstants.AUTHENTICATOR_NAME, scriptParams);
+        context.addAuthenticatorParams(contextParamMap);
+
+        Map<String, String> parameterMap = new HashMap<>();
+        parameterMap.put(FIDOAuthenticatorConstants.APP_ID, "https://localhost:9443");
+        parameterMap.put(FIDOAuthenticatorConstants.FIDO2_AUTH, "fido2-auth");
+        authenticatorConfig.setParameterMap(parameterMap);
+
+        fileBasedConfigurationBuilderMock = mockStatic(FileBasedConfigurationBuilder.class);
+        fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
+                .thenReturn(fileBasedConfigurationBuilder);
+        when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
+
+        urlEncoderMock = mockStatic(URLEncoder.class);
+        urlEncoderMock.when(() -> URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
+        mockServiceURLBuilder();
+
+        try (MockedConstruction<WebAuthnService> webAuthnServiceMockedConstruction = Mockito.mockConstruction(
+                WebAuthnService.class, (mock, context1) -> {
+                    when(mock.isFidoKeyRegistered(any(AuthenticatedUser.class))).thenReturn(true);
+                    when(mock.startAuthenticationWithRpId(anyString(), anyString(), anyString(),
+                            anyString(), anyString(), anyString())).thenReturn("rpIdAssertionRequest");
+                })) {
+            fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+
+            WebAuthnService constructedMock = webAuthnServiceMockedConstruction.constructed().get(0);
+            verify(constructedMock).startAuthenticationWithRpId(eq("abcd.example.com"), eq("TestSP"),
+                    eq(USERNAME), anyString(), anyString(), anyString());
+            verify(constructedMock, never()).startAuthentication(anyString(), anyString(), anyString(), anyString());
+        }
+    }
+
+    @Test(description = "Test case for initiateAuthenticationRequest() when API-based with valid rpId from " +
+            "adaptive script param and no identified user (usernameless flow)", priority = 17)
+    public void testInitiateAuthenticationRequestApiBasedWithRpIdUsernameless() throws Exception {
+
+        AuthenticationContext context = new AuthenticationContext();
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
+        authenticatorList.add(authenticatorConfig);
+
+        // No authenticated user on step → getAuthenticatedUser() returns null → usernameless path.
+        StepConfig stepConfig = new StepConfig();
+        stepConfig.setAuthenticatorList(authenticatorList);
+        Map<Integer, StepConfig> stepMap = new HashMap<>();
+        stepMap.put(1, stepConfig);
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setStepMap(stepMap);
+        context.setSequenceConfig(sequenceConfig);
+        context.setServiceProviderName("TestSP");
+        context.setContextIdentifier(UUID.randomUUID().toString());
+
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(USER_STORE_DOMAIN);
+        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
+        when(httpServletRequest.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW)).thenReturn(Boolean.TRUE);
+
+        Map<String, String> scriptParams = new HashMap<>();
+        scriptParams.put(FIDOAuthenticatorConstants.SCRIPT_APP_ID, "https://abcd.example.com:9443");
+        Map<String, Map<String, String>> contextParamMap = new HashMap<>();
+        contextParamMap.put(FIDOAuthenticatorConstants.AUTHENTICATOR_NAME, scriptParams);
+        context.addAuthenticatorParams(contextParamMap);
+
+        Map<String, String> parameterMap = new HashMap<>();
+        parameterMap.put(FIDOAuthenticatorConstants.APP_ID, "https://localhost:9443");
+        parameterMap.put(FIDOAuthenticatorConstants.FIDO2_AUTH, "fido2-auth");
+        authenticatorConfig.setParameterMap(parameterMap);
+
+        fileBasedConfigurationBuilderMock = mockStatic(FileBasedConfigurationBuilder.class);
+        fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
+                .thenReturn(fileBasedConfigurationBuilder);
+        when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
+
+        urlEncoderMock = mockStatic(URLEncoder.class);
+        urlEncoderMock.when(() -> URLEncoder.encode(anyString(), anyString())).thenReturn("encodedUrl");
+        mockServiceURLBuilder();
+
+        try (MockedConstruction<WebAuthnService> webAuthnServiceMockedConstruction = Mockito.mockConstruction(
+                WebAuthnService.class, (mock, context1) -> {
+                    when(mock.startUsernamelessAuthenticationWithRpId(anyString(), anyString(), anyString()))
+                            .thenReturn("rpIdUsernamelessAssertionRequest");
+                })) {
+            fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+
+            WebAuthnService constructedMock = webAuthnServiceMockedConstruction.constructed().get(0);
+            verify(constructedMock).startUsernamelessAuthenticationWithRpId(
+                    eq("abcd.example.com"), eq("TestSP"), eq("https://abcd.example.com:9443"));
+            verify(constructedMock, never()).startUsernamelessAuthentication(anyString());
+        }
+    }
+
+    @Test(description = "Test case for initiateAuthenticationRequest() when API-based with malformed rpId from " +
+            "adaptive script param", priority = 18)
+    public void testInitiateAuthenticationRequestApiBasedWithMalformedScriptAppId() throws Exception {
+
+        AuthenticationContext context = new AuthenticationContext();
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        authenticatorConfig.setApplicationAuthenticator(fidoAuthenticator);
+        List<AuthenticatorConfig> authenticatorList = new ArrayList<>();
+        authenticatorList.add(authenticatorConfig);
+
+        AuthenticatedUser authenticatedUser = AuthenticatedUser
+                .createLocalAuthenticatedUserFromSubjectIdentifier(USERNAME);
+        authenticatedUser.setFederatedUser(false);
+        authenticatedUser.setUserName(USERNAME);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN);
+        authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
+
+        StepConfig stepConfig = new StepConfig();
+        stepConfig.setAuthenticatorList(authenticatorList);
+        stepConfig.setAuthenticatedUser(authenticatedUser);
+        stepConfig.setSubjectAttributeStep(true);
+        Map<Integer, StepConfig> stepMap = new HashMap<>();
+        stepMap.put(1, stepConfig);
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setStepMap(stepMap);
+        context.setSequenceConfig(sequenceConfig);
+        context.setSubject(authenticatedUser);
+        context.setContextIdentifier(UUID.randomUUID().toString());
+
+        when(IdentityUtil.getProperty(FIDOAuthenticatorConstants.WEBAUTHN_ENABLED)).thenReturn(String.valueOf(true));
+        when(httpServletRequest.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW)).thenReturn(Boolean.TRUE);
+
+        Map<String, String> scriptParams = new HashMap<>();
+        scriptParams.put(FIDOAuthenticatorConstants.SCRIPT_APP_ID, "not-a-valid-url");
+        Map<String, Map<String, String>> contextParamMap = new HashMap<>();
+        contextParamMap.put(FIDOAuthenticatorConstants.AUTHENTICATOR_NAME, scriptParams);
+        context.addAuthenticatorParams(contextParamMap);
+
+        Map<String, String> parameterMap = new HashMap<>();
+        parameterMap.put(FIDOAuthenticatorConstants.APP_ID, "https://localhost:9443");
+        parameterMap.put(FIDOAuthenticatorConstants.FIDO2_AUTH, "fido2-auth");
+        authenticatorConfig.setParameterMap(parameterMap);
+
+        fileBasedConfigurationBuilderMock = mockStatic(FileBasedConfigurationBuilder.class);
+        fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
+                .thenReturn(fileBasedConfigurationBuilder);
+        when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
+
+        try (MockedConstruction<WebAuthnService> ignored = Mockito.mockConstruction(WebAuthnService.class)) {
+            fidoAuthenticator.initiateAuthenticationRequest(httpServletRequest, httpServletResponse, context);
+            Assert.fail("Expected AuthenticationFailedException was not thrown");
+        } catch (AuthenticationFailedException e) {
+            Assert.assertTrue(e.getMessage().contains("Malformed AppID value set via adaptive script parameters"));
         }
     }
 }
