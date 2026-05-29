@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2A
 import org.wso2.carbon.identity.application.authenticator.fido2.util.Either;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2ExecutorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.flow.execution.engine.Constants;
 import org.wso2.carbon.identity.flow.execution.engine.graph.AuthenticationExecutor;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
@@ -111,7 +112,7 @@ public class FIDO2Executor extends AuthenticationExecutor {
                 JsonObject credentialObject = (JsonObject) JsonParser.parseString(credential);
                 challengeResponse.add(FIDO2ExecutorConstants.REQUEST_ID, JsonParser.parseString(requestId));
                 challengeResponse.add(FIDO2ExecutorConstants.CREDENTIAL, credentialObject);
-                // Add tenant domain to the username.
+                username = IdentityUtil.addDomainToName(username, context.getFlowUser().getUserStoreDomain());
                 username = UserCoreUtil.addTenantDomainToEntry(username, context.getTenantDomain());
                 if (FIDOUtil.isRegistrationFlow(context)) {
                     FIDO2CredentialRegistration registration = webAuthnService

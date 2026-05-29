@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2A
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2ExecutorConstants;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.flow.execution.engine.Constants;
 import org.wso2.carbon.identity.flow.execution.engine.listener.AbstractFlowExecutionListener;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
@@ -81,6 +82,7 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
                     });
             try {
                 String username = context.getFlowUser().getUsername();
+                username = IdentityUtil.addDomainToName(username, context.getFlowUser().getUserStoreDomain());
                 username = UserCoreUtil.addTenantDomainToEntry(username, context.getTenantDomain());
                 FIDO2DeviceStoreDAO.getInstance().addFIDO2RegistrationByUsername(username,
                         buildFromMap(credentialRegistration));
