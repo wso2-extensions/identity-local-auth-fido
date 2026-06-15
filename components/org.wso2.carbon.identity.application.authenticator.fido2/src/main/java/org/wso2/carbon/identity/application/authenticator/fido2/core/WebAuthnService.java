@@ -1,7 +1,7 @@
 /*
- * Copyright (c) (2019-2022), WSO2 Inc. (http://www.wso2.com).
+ * Copyright (c) 2019-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.application.authenticator.fido2.core;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.net.InternetDomainName;
 import com.webauthn4j.WebAuthnManager;
 import com.webauthn4j.converter.exception.DataConversionException;
@@ -125,7 +127,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.yubico.webauthn.data.UserVerificationRequirement.PREFERRED;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.APPLICATION_NAME;
@@ -651,31 +652,79 @@ public class WebAuthnService {
         URL originUrl;
         try {
             originUrl = new URL(appId);
-
             User user = new User();
             user.setUserName(username);
             user.setTenantDomain(tenantDomain);
             user.setUserStoreDomain(storeDomain);
-            if (userStorage.getFIDO2RegistrationsByUser(user).isEmpty()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("No registered device found for user :" + user.toString());
-                }
-                return null;
-            } else {
-                RelyingParty relyingParty = buildRelyingParty(originUrl);
-                AssertionRequestWrapper request = new AssertionRequestWrapper(
-                        generateRandom(),
-                        relyingParty.startAssertion(StartAssertionOptions.builder().username(user.toString()).build())
-                );
-                FIDO2Cache.getInstance().addToCacheByRequestWrapperId(
-                        new FIDO2CacheKey(request.getRequestId().getBase64()),
-                        new FIDO2CacheEntry(null, jsonMapper.writeValueAsString(request
-                                .getRequest()), originUrl));
-                return FIDOUtil.writeJson(request);
-            }
+            return doStartAuthentication(buildRelyingParty(originUrl), originUrl, user, null);
         } catch (MalformedURLException | JsonProcessingException | FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException(e.getMessage());
         }
+    }
+
+    /**
+     * Initiate authentication flow with an explicitly provided rpId, bypassing the servlet-hostname derivation.
+     * Used in API-based authentication flows where the rpId is resolved from operator configuration or the
+     * request Origin header.
+     *
+     * @param rpId         The relying party identifier (hostname) to use.
+     * @param rpName       The relying party display name. Passed through to the RelyingPartyIdentity.
+     * @param username     Authenticating username.
+     * @param tenantDomain Tenant domain of the user.
+     * @param storeDomain  User store domain.
+     * @param appId        Application origin URL (used for the trusted-origins set).
+     * @return JSON-serialised assertion request, or null if the user has no registered devices.
+     * @throws AuthenticationFailedException on failure.
+     */
+    public String startAuthenticationWithRpId(String rpId, String rpName, String username, String tenantDomain,
+                                              String storeDomain, String appId)
+            throws AuthenticationFailedException {
+
+        URL originUrl;
+        try {
+            originUrl = new URL(appId);
+            if (log.isDebugEnabled()) {
+                log.debug("Starting authentication with explicit rpId '" + rpId + "' for application: " + rpName);
+            }
+            User user = new User();
+            user.setUserName(username);
+            user.setTenantDomain(tenantDomain);
+            user.setUserStoreDomain(storeDomain);
+            return doStartAuthentication(buildRelyingPartyWithExplicitRpId(rpId, rpName), originUrl, user, rpId);
+        } catch (MalformedURLException | JsonProcessingException | FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException(e.getMessage());
+        }
+    }
+
+    /**
+     * Shared assertion-building logic for {@link #startAuthentication} and {@link #startAuthenticationWithRpId}.
+     * Checks for registered devices, builds the assertion request, caches it, and returns the serialised form.
+     *
+     * @param relyingParty Pre-built RelyingParty (contains the rpId to use).
+     * @param originUrl    Origin URL stored in the cache entry for later finish-assertion lookup.
+     * @param user         The authenticating user.
+     * @param explicitRpId The rpId that was explicitly resolved (e.g. from SP config or Origin header), or
+     *                     {@code null} for browser-redirect flows where rpId is re-derived at finish time.
+     * @return JSON-serialised assertion request, or null if the user has no registered devices.
+     */
+    private String doStartAuthentication(RelyingParty relyingParty, URL originUrl, User user, String explicitRpId)
+            throws JsonProcessingException, FIDO2AuthenticatorServerException {
+
+        if (userStorage.getFIDO2RegistrationsByUser(user).isEmpty()) {
+            if (log.isDebugEnabled()) {
+                log.debug("No registered device found for user: " + user.toString());
+            }
+            return null;
+        }
+        AssertionRequestWrapper request = new AssertionRequestWrapper(
+                generateRandom(),
+                relyingParty.startAssertion(StartAssertionOptions.builder().username(user.toString()).build())
+        );
+        FIDO2Cache.getInstance().addToCacheByRequestWrapperId(
+                new FIDO2CacheKey(request.getRequestId().getBase64()),
+                new FIDO2CacheEntry(null,
+                        jsonMapper.writeValueAsString(request.getRequest()), originUrl, explicitRpId));
+        return FIDOUtil.writeJson(request);
     }
 
     /**
@@ -690,19 +739,74 @@ public class WebAuthnService {
         URL originUrl;
         try {
             originUrl = new URL(appId);
-            RelyingParty relyingParty = buildRelyingParty(originUrl);
-            AssertionRequestWrapper request = new AssertionRequestWrapper(generateRandom(),
-                    relyingParty.startAssertion(StartAssertionOptions.builder().build()));
-            FIDO2Cache.getInstance().addToCacheByRequestWrapperId(
-                    new FIDO2CacheKey(request.getRequestId().getBase64()),
-                    new FIDO2CacheEntry(null, jsonMapper.writeValueAsString(request
-                            .getRequest()), originUrl)
-            );
-            return FIDOUtil.writeJson(request);
+            return doStartUsernamelessAuthentication(buildRelyingParty(originUrl), originUrl, null);
         } catch (MalformedURLException | JsonProcessingException | FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException("Usernameless authentication initialization failed for the " +
                     "application with app id: " + appId, e);
         }
+    }
+
+    /**
+     * Initiate usernameless authentication flow with an explicitly provided rpId, bypassing the
+     * servlet-hostname derivation. Used in API-based authentication flows.
+     *
+     * @param rpId   The relying party identifier (hostname) to use.
+     * @param rpName The relying party display name.
+     * @param appId  Application origin URL (used for the trusted-origins set).
+     * @return JSON-serialised assertion request.
+     * @throws AuthenticationFailedException on failure.
+     */
+    public String startUsernamelessAuthenticationWithRpId(String rpId, String rpName, String appId)
+            throws AuthenticationFailedException {
+
+        URL originUrl;
+        try {
+            originUrl = new URL(appId);
+            if (log.isDebugEnabled()) {
+                log.debug("Starting usernameless authentication with explicit rpId '" + rpId
+                        + "' for application: " + rpName);
+            }
+            return doStartUsernamelessAuthentication(buildRelyingPartyWithExplicitRpId(rpId, rpName), originUrl, rpId);
+        } catch (MalformedURLException | JsonProcessingException | FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException("Usernameless authentication initialization failed for the " +
+                    "application with app id: " + appId, e);
+        }
+    }
+
+    /**
+     * Shared assertion-building logic for {@link #startUsernamelessAuthentication} and
+     * {@link #startUsernamelessAuthenticationWithRpId}.
+     *
+     * @param relyingParty Pre-built RelyingParty (contains the rpId to use).
+     * @param originUrl    Origin URL stored in the cache entry for later finish-assertion lookup.
+     * @param explicitRpId The rpId that was explicitly resolved (e.g. from SP config or Origin header), or
+     *                     {@code null} for browser-redirect flows where rpId is re-derived at finish time.
+     * @return JSON-serialised assertion request.
+     */
+    private String doStartUsernamelessAuthentication(RelyingParty relyingParty, URL originUrl, String explicitRpId)
+            throws JsonProcessingException {
+
+        AssertionRequestWrapper request = new AssertionRequestWrapper(generateRandom(),
+                relyingParty.startAssertion(StartAssertionOptions.builder().build()));
+        FIDO2Cache.getInstance().addToCacheByRequestWrapperId(
+                new FIDO2CacheKey(request.getRequestId().getBase64()),
+                new FIDO2CacheEntry(null, jsonMapper.writeValueAsString(request.getRequest()), originUrl, explicitRpId)
+        );
+        return FIDOUtil.writeJson(request);
+    }
+
+    /**
+     * Return the currently effective trusted-origins list (combines DB and config-file sources).
+     * Callers outside this class (e.g. FIDOAuthenticator) use this to validate the request Origin header
+     * before using it for rpId resolution.
+     *
+     * @return Unmodifiable list of trusted origin strings.
+     * @throws FIDO2AuthenticatorServerException if trusted origins cannot be read.
+     */
+    public List<String> getTrustedOrigins() throws FIDO2AuthenticatorServerException {
+
+        readTrustedOrigins();
+        return Collections.unmodifiableList(origins);
     }
 
     public void finishAuthentication(String username, String tenantDomain, String storeDomain, String responseJson)
@@ -727,14 +831,21 @@ public class WebAuthnService {
         }
 
         try {
-            response = jsonMapper.readValue(responseJson, AssertionResponse.class);
+            response = jsonMapper.readValue(injectClientExtensionResults(responseJson), AssertionResponse.class);
             String requestId = response.getRequestId().getBase64();
             FIDO2CacheEntry cacheEntry = FIDO2Cache.getInstance()
                     .getValueFromCacheByRequestId(new FIDO2CacheKey(requestId));
 
             if (cacheEntry != null) {
                 request = jsonMapper.readValue(cacheEntry.getAssertionRequest(), AssertionRequest.class);
-                relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+                // If an explicit rpId was stored at start time (API-based flow), use it directly so the
+                // RelyingParty matches the credential's rpIdHash.  Otherwise fall back to the legacy
+                // derivation from the cached origin URL (browser-redirect flows).
+                if (cacheEntry.getExplicitRpId() != null) {
+                    relyingParty = buildRelyingPartyWithExplicitRpId(cacheEntry.getExplicitRpId(), APPLICATION_NAME);
+                } else {
+                    relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+                }
                 FIDO2Cache.getInstance().clearCacheEntryByRequestId(new FIDO2CacheKey(requestId));
             }
         } catch (IOException e) {
@@ -795,7 +906,14 @@ public class WebAuthnService {
         AssertionRequest request = getAssertionRequest(cacheEntry);
         RelyingParty relyingParty = null;
         try {
-            relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+            // If an explicit rpId was stored at start time (API-based flow), use it directly so the
+            // RelyingParty matches the credential's rpIdHash.  Otherwise fall back to the legacy
+            // derivation from the cached origin URL (browser-redirect flows).
+            if (cacheEntry.getExplicitRpId() != null) {
+                relyingParty = buildRelyingPartyWithExplicitRpId(cacheEntry.getExplicitRpId(), APPLICATION_NAME);
+            } else {
+                relyingParty = buildRelyingParty(cacheEntry.getOrigin());
+            }
         } catch (FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException("Server error when building relying party for request ID: ",
                     requestId, e);
@@ -1056,7 +1174,6 @@ public class WebAuthnService {
 
     private RelyingParty buildRelyingParty(URL originUrl) throws FIDO2AuthenticatorServerException {
 
-        readTrustedOrigins();
         String rpId;
 
         try {
@@ -1076,7 +1193,29 @@ public class WebAuthnService {
             rpId = originUrl.getHost();
         }
 
-        RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder().id(rpId).name(APPLICATION_NAME).build();
+        return buildRelyingPartyWithExplicitRpId(rpId, APPLICATION_NAME);
+    }
+
+    /**
+     * Build a RelyingParty with an explicitly provided rpId and rp name, bypassing the hostname-derivation logic.
+     * Used in API-based authentication flows where the rpId is resolved from operator configuration or the
+     * request Origin header rather than from the IS servlet hostname.
+     *
+     * @param rpId   The relying party identifier (hostname) to use directly.
+     * @param rpName The relying party display name. Falls back to APPLICATION_NAME if blank.
+     * @return A configured RelyingParty instance.
+     * @throws FIDO2AuthenticatorServerException if trusted origins cannot be read.
+     */
+    private RelyingParty buildRelyingPartyWithExplicitRpId(String rpId, String rpName)
+            throws FIDO2AuthenticatorServerException {
+
+        readTrustedOrigins();
+        String resolvedRpName = StringUtils.isNotBlank(rpName) ? rpName : APPLICATION_NAME;
+
+        RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
+                .id(rpId)
+                .name(resolvedRpName)
+                .build();
 
         List<PublicKeyCredentialParameters> preferredPublicKeyCredentialParameters = Collections.unmodifiableList(
                 Arrays.asList(PublicKeyCredentialParameters.ES256, PublicKeyCredentialParameters.EdDSA,
@@ -1302,7 +1441,7 @@ public class WebAuthnService {
          * string.
          */
         List<String> updatedOrigins = origins.stream()
-                .flatMap(url -> Stream.of(removeDefaultPort(url), appendDefaultPortIfAbsent(url))).distinct()
+                .flatMap(url -> Arrays.stream(new String[]{removeDefaultPort(url), appendDefaultPortIfAbsent(url)})).distinct()
                 .collect(Collectors.toList());
 
         origins.clear();
@@ -1371,6 +1510,36 @@ public class WebAuthnService {
         return credential;
     }
 
+    /**
+     * Ensures the assertion response JSON contains a {@code clientExtensionResults} object inside the
+     * {@code credential} node.  The browser's WebAuthn API omits this field when no extensions are
+     * requested, but Yubico's {@link PublicKeyCredential} marks it {@code @NonNull}.  Without this
+     * pre-processing Jackson would throw a {@code NullPointerException} (wrapped as
+     * {@code JsonMappingException}) when deserialising the credential, which surfaces as
+     * "Failed to decode response object."
+     *
+     * @param responseJson The raw assertion response JSON string.
+     * @return The (possibly modified) JSON string that always has {@code clientExtensionResults: {}}.
+     */
+    private String injectClientExtensionResults(String responseJson) {
+
+        try {
+            JsonNode root = jsonMapper.readTree(responseJson);
+            if (root.isObject() && root.has("credential")) {
+                JsonNode credentialNode = root.get("credential");
+                if (credentialNode.isObject() && !credentialNode.has("clientExtensionResults")) {
+                    ((ObjectNode) credentialNode).set("clientExtensionResults", jsonMapper.createObjectNode());
+                    return jsonMapper.writeValueAsString(root);
+                }
+            }
+        } catch (IOException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not pre-process assertion response JSON to inject clientExtensionResults.", e);
+            }
+        }
+        return responseJson;
+    }
+
     private AssertionResponse getAssertionResponse(String responseJson) throws AuthenticationFailedException {
 
         final AssertionResponse response;
@@ -1385,7 +1554,7 @@ public class WebAuthnService {
         }
 
         try {
-            response = jsonMapper.readValue(responseJson, AssertionResponse.class);
+            response = jsonMapper.readValue(injectClientExtensionResults(responseJson), AssertionResponse.class);
         } catch (IOException e) {
             throw new AuthenticationFailedException("Assertion for finish authentication flow failed due to failure " +
                     "in decoding json response: " + responseJson, e);
