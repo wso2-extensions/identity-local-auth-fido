@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,12 +30,20 @@ public class FIDO2CacheEntry extends CacheEntry {
     private String publicKeyCredentialCreationOptions;
     private URL appId;
     private String assertionRequest;
+    private String explicitRpId;
 
     public FIDO2CacheEntry(String publicKeyCredentialCreationOptions, String assertionRequest, URL appId) {
 
         this.publicKeyCredentialCreationOptions = publicKeyCredentialCreationOptions;
         this.appId = appId;
         this.assertionRequest = assertionRequest;
+    }
+
+    public FIDO2CacheEntry(String publicKeyCredentialCreationOptions, String assertionRequest, URL appId,
+                           String explicitRpId) {
+
+        this(publicKeyCredentialCreationOptions, assertionRequest, appId);
+        this.explicitRpId = explicitRpId;
     }
 
     public String getAssertionRequest() {
@@ -51,5 +59,10 @@ public class FIDO2CacheEntry extends CacheEntry {
     public URL getOrigin() {
 
         return appId;
+    }
+
+    public String getExplicitRpId() {
+
+        return explicitRpId;
     }
 }
