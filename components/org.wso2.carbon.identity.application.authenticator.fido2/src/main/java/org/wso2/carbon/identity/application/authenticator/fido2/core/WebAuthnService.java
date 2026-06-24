@@ -1768,6 +1768,27 @@ public class WebAuthnService {
         return fidoTrustedOrigins;
     }
 
+    /**
+     * Resolve the username under which a passkey is stored for the given user, matching the request username
+     * case-insensitively. Returns the stored (canonical) username, or null if the user has no registered passkey.
+     * Used to normalize a case-differing request username to the enrolled passkey's username.
+     *
+     * @param username        Request username (domain free).
+     * @param tenantDomain    Tenant domain.
+     * @param userStoreDomain User store domain.
+     * @return The stored passkey username, or null if none is registered.
+     * @throws FIDO2AuthenticatorServerException
+     */
+    public String resolveStoredUsername(String username, String tenantDomain, String userStoreDomain)
+            throws FIDO2AuthenticatorServerException {
+
+        User user = new User();
+        user.setUserName(username);
+        user.setTenantDomain(tenantDomain);
+        user.setUserStoreDomain(userStoreDomain);
+        return userStorage.getStoredUsernameIgnoreCase(user);
+    }
+
     public boolean isFidoKeyRegistered(String username) throws AuthenticationFailedException {
 
         try {

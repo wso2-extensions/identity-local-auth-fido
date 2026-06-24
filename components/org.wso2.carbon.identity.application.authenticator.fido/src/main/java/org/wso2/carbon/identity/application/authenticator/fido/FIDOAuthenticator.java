@@ -68,6 +68,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -1414,6 +1415,19 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     secondary = secondary.getSecondaryUserStoreManager();
                 }
             }
+
+            // On a case-insensitive store, resolve the username to the case under which the passkey was
+            // enrolled so a case-differing authorize `username` param (which bypasses Identifier First)
+            // still matches the stored passkey.
+            String caseDomain = StringUtils.isNotBlank(userStoreDomain)
+                    ? userStoreDomain : UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+            if (!IdentityUtil.isUserStoreCaseSensitive(caseDomain, tenantId)) {
+                String storedUsername = resolveStoredPasskeyUsername(
+                        FIDOUtil.getUsernameWithoutDomain(username), tenantDomain, userStoreDomain);
+                if (StringUtils.isNotBlank(storedUsername)) {
+                    username = storedUsername;
+                }
+            }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             if (log.isDebugEnabled()) {
                 log.debug("FIDO Authenticator failed while trying to authenticate.", e);
@@ -1427,6 +1441,17 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         }
 
         return authenticatedUser;
+    }
+
+    private String resolveStoredPasskeyUsername(String username, String tenantDomain, String userStoreDomain)
+            throws AuthenticationFailedException {
+
+        try {
+            return new WebAuthnService().resolveStoredUsername(username, tenantDomain, userStoreDomain);
+        } catch (FIDO2AuthenticatorServerException e) {
+            throw new AuthenticationFailedException(
+                    "Error while resolving the stored passkey username for: " + username, e);
+        }
     }
 
     /**

@@ -97,6 +97,9 @@ public class FIDO2AuthenticatorConstants {
         public static final String GET_DEVICE_REGISTRATION_BY_USERNAME = "SELECT * FROM FIDO2_DEVICE_STORE " +
                 "WHERE TENANT_ID = ? AND DOMAIN_NAME = ? AND USER_NAME = ?";
 
+        public static final String GET_USERNAME_BY_CASE_INSENSITIVE_USERNAME = "SELECT USER_NAME FROM " +
+                "FIDO2_DEVICE_STORE WHERE TENANT_ID = ? AND DOMAIN_NAME = ? AND LOWER(USER_NAME) = LOWER(?)";
+
         public static final String GET_DEVICE_REGISTRATION_BY_USERNAME_AND_ID = "SELECT * FROM FIDO2_DEVICE_STORE " +
                 "WHERE TENANT_ID = ? AND DOMAIN_NAME = ? AND USER_NAME = ? AND CREDENTIAL_ID = ?";
 

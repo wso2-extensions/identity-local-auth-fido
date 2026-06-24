@@ -426,6 +426,39 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
     }
 
     /**
+     * Resolve the username under which a passkey is stored for the given user, matching case-insensitively.
+     * Returns the stored (canonical) USER_NAME so a case-differing request username still maps to the
+     * enrolled passkey. Returns null when no passkey exists for the user.
+     *
+     * @param user User (tenant domain, user store domain and username).
+     * @return The stored passkey username, or null if none is registered.
+     * @throws FIDO2AuthenticatorServerException
+     */
+    public String getStoredUsernameIgnoreCase(User user) throws FIDO2AuthenticatorServerException {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        try {
+            preparedStatement = connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries
+                    .GET_USERNAME_BY_CASE_INSENSITIVE_USERNAME);
+            preparedStatement.setInt(1, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
+            preparedStatement.setString(2, user.getUserStoreDomain());
+            preparedStatement.setString(3, user.getUserName());
+            resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getString(FIDO2AuthenticatorConstants.USERNAME);
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new FIDO2AuthenticatorServerException("Error while resolving stored passkey username for user: "
+                    + user, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
+        }
+    }
+
+    /**
      * Retrieve FIDO2 registration details.
      *
      * @param user User.
