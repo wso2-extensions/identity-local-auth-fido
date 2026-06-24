@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2Credent
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -451,8 +452,10 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
             }
             return null;
         } catch (SQLException e) {
+            String maskedUsername = LoggerUtils.isLogMaskingEnable
+                    ? LoggerUtils.getMaskedContent(user.getUserName()) : user.getUserName();
             throw new FIDO2AuthenticatorServerException("Error while resolving stored passkey username for user: "
-                    + user, e);
+                    + maskedUsername, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
         }
