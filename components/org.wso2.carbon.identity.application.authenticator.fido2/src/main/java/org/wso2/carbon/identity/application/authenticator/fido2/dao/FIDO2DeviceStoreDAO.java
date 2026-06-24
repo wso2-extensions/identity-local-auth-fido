@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.authenticator.fido2.dto.FIDO2Credent
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -423,6 +424,41 @@ public class FIDO2DeviceStoreDAO implements CredentialRepository {
 
         User user = User.getUserFromUserName(username);
         return getFIDO2RegistrationsByUser(user);
+    }
+
+    /**
+     * Resolve the username under which a passkey is stored for the given user, matching case-insensitively.
+     * Returns the stored (canonical) USER_NAME so a case-differing request username still maps to the
+     * enrolled passkey. Returns null when no passkey exists for the user.
+     *
+     * @param user User (tenant domain, user store domain and username).
+     * @return The stored passkey username, or null if none is registered.
+     * @throws FIDO2AuthenticatorServerException
+     */
+    public String getStoredUsernameIgnoreCase(User user) throws FIDO2AuthenticatorServerException {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        try {
+            preparedStatement = connection.prepareStatement(FIDO2AuthenticatorConstants.SQLQueries
+                    .GET_USERNAME_BY_CASE_INSENSITIVE_USERNAME);
+            preparedStatement.setInt(1, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
+            preparedStatement.setString(2, user.getUserStoreDomain());
+            preparedStatement.setString(3, user.getUserName());
+            resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getString(FIDO2AuthenticatorConstants.USERNAME);
+            }
+            return null;
+        } catch (SQLException e) {
+            String maskedUsername = LoggerUtils.isLogMaskingEnable
+                    ? LoggerUtils.getMaskedContent(user.getUserName()) : user.getUserName();
+            throw new FIDO2AuthenticatorServerException("Error while resolving stored passkey username for user: "
+                    + maskedUsername, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, preparedStatement);
+        }
     }
 
     /**

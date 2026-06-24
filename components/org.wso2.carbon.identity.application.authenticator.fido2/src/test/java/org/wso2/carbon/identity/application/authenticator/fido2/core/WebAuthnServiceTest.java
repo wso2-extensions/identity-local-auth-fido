@@ -48,6 +48,7 @@ import com.yubico.webauthn.data.ResidentKeyRequirement;
 import com.yubico.webauthn.data.UserIdentity;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import com.yubico.webauthn.exception.AssertionFailedException;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -1046,6 +1047,49 @@ public class WebAuthnServiceTest {
                     finishRegistrationResponseString, TENANT_QUALIFIED_USERNAME);
             Assert.assertNotNull(result);
         }
+    }
+
+    /**
+     * {@code userStorage} is a private static final field bound to the DAO returned by the first
+     * {@code FIDO2DeviceStoreDAO.getInstance()} call that loaded the class; read it reflectively so the test
+     * stubs/verifies against the actual delegate regardless of which mock instance it resolved to.
+     */
+    private FIDO2DeviceStoreDAO boundUserStorage() throws Exception {
+
+        java.lang.reflect.Field field = WebAuthnService.class.getDeclaredField("userStorage");
+        field.setAccessible(true);
+        return (FIDO2DeviceStoreDAO) field.get(null);
+    }
+
+    @Test(description = "resolveStoredUsername (#7113): delegates to the DAO with a User built from the supplied " +
+            "username/tenant/store and returns the stored canonical username.", priority = 25)
+    public void testResolveStoredUsername() throws Exception {
+
+        FIDO2DeviceStoreDAO boundStorage = boundUserStorage();
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        when(boundStorage.getStoredUsernameIgnoreCase(any(User.class))).thenReturn(USERNAME);
+
+        String resolved = webAuthnService.resolveStoredUsername("Admin", TENANT_DOMAIN, USER_STORE_DOMAIN);
+
+        Assert.assertEquals(resolved, USERNAME, "Should return the DAO-resolved canonical username.");
+        Mockito.verify(boundStorage, Mockito.atLeastOnce()).getStoredUsernameIgnoreCase(userCaptor.capture());
+        User passed = userCaptor.getValue();
+        Assert.assertEquals(passed.getUserName(), "Admin", "Request username must be forwarded verbatim.");
+        Assert.assertEquals(passed.getTenantDomain(), TENANT_DOMAIN);
+        Assert.assertEquals(passed.getUserStoreDomain(), USER_STORE_DOMAIN);
+    }
+
+    @Test(description = "resolveStoredUsername (#7113): returns null (no enrolled passkey) when the DAO returns null.",
+            priority = 26)
+    public void testResolveStoredUsernameReturnsNullWhenNoPasskey() throws Exception {
+
+        // The static-field DAO mock is shared across tests, so assert on the returned value (a null DAO
+        // result must surface as a null resolution) rather than a count-sensitive interaction check.
+        when(boundUserStorage().getStoredUsernameIgnoreCase(any(User.class))).thenReturn(null);
+
+        String resolved = webAuthnService.resolveStoredUsername("Admin", TENANT_DOMAIN, USER_STORE_DOMAIN);
+
+        Assert.assertNull(resolved, "Should return null when the user has no registered passkey.");
     }
 
     private void mockCarbonContext() {
