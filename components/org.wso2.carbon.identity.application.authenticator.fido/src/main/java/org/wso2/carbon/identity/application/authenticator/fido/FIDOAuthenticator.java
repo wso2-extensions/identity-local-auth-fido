@@ -68,7 +68,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserRealm;
-import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -1420,7 +1419,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             // enrolled so a case-differing authorize `username` param (which bypasses Identifier First)
             // still matches the stored passkey.
             String caseDomain = StringUtils.isNotBlank(userStoreDomain)
-                    ? userStoreDomain : UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+                    ? userStoreDomain : IdentityUtil.getPrimaryDomainName();
             if (!IdentityUtil.isUserStoreCaseSensitive(caseDomain, tenantId)) {
                 String storedUsername = resolveStoredPasskeyUsername(
                         FIDOUtil.getUsernameWithoutDomain(username), tenantDomain, userStoreDomain);
@@ -1450,7 +1449,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             return new WebAuthnService().resolveStoredUsername(username, tenantDomain, userStoreDomain);
         } catch (FIDO2AuthenticatorServerException e) {
             throw new AuthenticationFailedException(
-                    "Error while resolving the stored passkey username for: " + username, e);
+                    "Error while resolving the stored passkey username for: " + getMaskedUsername(username), e);
         }
     }
 
