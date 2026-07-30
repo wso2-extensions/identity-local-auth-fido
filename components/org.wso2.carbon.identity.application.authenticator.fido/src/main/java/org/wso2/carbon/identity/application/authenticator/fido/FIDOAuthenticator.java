@@ -126,12 +126,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private static final String AUTHENTICATOR_MESSAGE = "authenticatorMessage";
     public static final String IDF_AUTHENTICATOR = "IdentifierExecutor";
 
-    /**
-     * Context property set by {@link #normalizeAuthenticatedUser} when the user exists only in user store domains
-     * that are blocked for FIDO authentication. The resolved user store domain cannot carry this information, since
-     * an unresolved user is deliberately left with the last walked domain to keep the flow indistinguishable from a
-     * user who has no enrolled passkeys.
-     */
     private static final String IS_USER_STORE_DOMAIN_BLOCKED = "isUserStoreDomainBlocked";
 
     @Override
@@ -182,18 +176,12 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         if (authenticatedUser != null) {
 
-            // The domain check covers the flows where the user store domain was not resolved by
-            // normalizeAuthenticatedUser, such as a domain qualified username or a first step that is not the
-            // Identifier First authenticator. The context property covers the users who could only be found in a
-            // blocked domain, since those are not left with a blocked user store domain.
             boolean isResolvedDomainBlocked =
                     getBlockedUserStoreDomainsList().contains(authenticatedUser.getUserStoreDomain());
             boolean existsOnlyInBlockedDomains =
                     Boolean.TRUE.equals(context.getProperty(IS_USER_STORE_DOMAIN_BLOCKED));
 
             if (isResolvedDomainBlocked || existsOnlyInBlockedDomains) {
-                // An unresolved user carries the last walked user store domain rather than a blocked one, so the
-                // resolved domain must not be reported as the blocked one in that case.
                 String blockReason = isResolvedDomainBlocked
                         ? "The user store domain: " + authenticatedUser.getUserStoreDomain() +
                                 " is blocked for FIDO authentication."
@@ -1445,8 +1433,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
             final boolean isDomainQualified = username.contains(CarbonConstants.DOMAIN_SEPARATOR);
             final boolean isPrimaryDomainBlocked = blockedUserStoreDomainsList.contains(userStoreManagerDomain);
-            // isExistingUser routes a domain qualified username to the store named in the username, so it only
-            // reports on the primary store when the username carries no domain.
             final boolean existsInPrimaryDomain = !isDomainQualified && userStoreManager.isExistingUser(username);
 
             boolean isUserResolved = false;
@@ -1465,8 +1451,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                                 isUserResolved = true;
                                 break;
                             }
-                            // The user exists here but the domain is blocked. Keep walking in case a usable store
-                            // holds the same username, and record that this username is not unknown.
                             existsInBlockedDomain = true;
                         }
                     }
@@ -1474,9 +1458,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 }
             }
 
-            // An unresolved user keeps the last walked user store domain so that the remaining flow is identical to
-            // that of a user without enrolled passkeys. Only a user who genuinely exists in a blocked domain is
-            // flagged as blocked, so an unknown username is never distinguishable from a user with no passkeys.
             context.setProperty(IS_USER_STORE_DOMAIN_BLOCKED, existsInBlockedDomain && !isUserResolved);
 
             // On a case-insensitive store, resolve the username to the case under which the passkey was
