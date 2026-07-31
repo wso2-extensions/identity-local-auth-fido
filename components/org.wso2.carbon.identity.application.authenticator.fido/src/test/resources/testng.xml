@@ -24,6 +24,7 @@
         <classes>
             <class name="org.wso2.carbon.identity.application.authenticator.fido.FIDOAuthenticatorTest" />
             <class name="org.wso2.carbon.identity.application.authenticator.fido.FIDOAuthenticatorNormalizeUsernameTest" />
+            <class name="org.wso2.carbon.identity.application.authenticator.fido.FIDOAuthenticatorBlockedUserStoreDomainTest" />
             <class name="org.wso2.carbon.identity.application.authenticator.fido.service.FIDOAdminServiceTest" />
             <class name="org.wso2.carbon.identity.application.authenticator.fido.u2f.U2FServiceTest" />
         </classes>

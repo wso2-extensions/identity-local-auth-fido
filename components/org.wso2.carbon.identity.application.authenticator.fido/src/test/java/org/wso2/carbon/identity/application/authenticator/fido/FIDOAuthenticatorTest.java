@@ -696,10 +696,20 @@ public class FIDOAuthenticatorTest {
         identityUtilMock.when(IdentityUtil::getPrimaryDomainName).thenReturn(USER_STORE_DOMAIN);
         when(httpServletRequest.getAttribute(FrameworkConstants.IS_API_BASED_AUTH_FLOW)).thenReturn(Boolean.TRUE);
 
+        AuthenticatorConfig blockedDomainsConfig = new AuthenticatorConfig();
+        blockedDomainsConfig.setParameterMap(new HashMap<>());
+
         try (MockedStatic<FIDOUtil> fidoUtilMock = mockStatic(FIDOUtil.class);
              MockedStatic<FrameworkUtils> frameworkUtilsMock = mockStatic(FrameworkUtils.class);
+             MockedStatic<FileBasedConfigurationBuilder> configBuilderMock =
+                     mockStatic(FileBasedConfigurationBuilder.class);
              MockedConstruction<WebAuthnService> ignored = Mockito.mockConstruction(WebAuthnService.class,
                      (mock, ctx) -> when(mock.isFidoKeyRegistered(any(AuthenticatedUser.class))).thenReturn(false))) {
+
+            // process() reads the BlockedUserStoreDomains parameter for every identified user.
+            configBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
+                    .thenReturn(fileBasedConfigurationBuilder);
+            when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(blockedDomainsConfig);
 
             AuthenticatorFlowStatus status = fidoAuthenticator.process(
                     httpServletRequest, httpServletResponse, context);

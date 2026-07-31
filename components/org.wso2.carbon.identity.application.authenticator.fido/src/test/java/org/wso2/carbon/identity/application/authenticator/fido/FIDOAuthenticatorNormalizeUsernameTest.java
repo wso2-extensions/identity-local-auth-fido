@@ -27,6 +27,8 @@ import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -39,6 +41,8 @@ import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
+
+import java.util.HashMap;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mockStatic;
@@ -67,10 +71,13 @@ public class FIDOAuthenticatorNormalizeUsernameTest {
     private UserRealm userRealm;
     @Mock
     private AbstractUserStoreManager userStoreManager;
+    @Mock
+    private FileBasedConfigurationBuilder fileBasedConfigurationBuilder;
 
     private MockedStatic<IdentityUtil> identityUtilMock;
     private MockedStatic<FIDOUtil> fidoUtilMock;
     private MockedStatic<FIDOAuthenticatorServiceComponent> fidoAuthenticatorServiceComponentMock;
+    private MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigurationBuilderMock;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -81,6 +88,15 @@ public class FIDOAuthenticatorNormalizeUsernameTest {
         identityUtilMock = mockStatic(IdentityUtil.class);
         fidoUtilMock = mockStatic(FIDOUtil.class);
         fidoAuthenticatorServiceComponentMock = mockStatic(FIDOAuthenticatorServiceComponent.class);
+        fileBasedConfigurationBuilderMock = mockStatic(FileBasedConfigurationBuilder.class);
+
+        // normalizeAuthenticatedUser reads the BlockedUserStoreDomains parameter. These tests do not block any
+        // domain, so an empty parameter map is enough.
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        authenticatorConfig.setParameterMap(new HashMap<>());
+        fileBasedConfigurationBuilderMock.when(FileBasedConfigurationBuilder::getInstance)
+                .thenReturn(fileBasedConfigurationBuilder);
+        when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(authenticatorConfig);
 
         fidoAuthenticatorServiceComponentMock.when(FIDOAuthenticatorServiceComponent::getRealmService)
                 .thenReturn(realmService);
@@ -107,6 +123,9 @@ public class FIDOAuthenticatorNormalizeUsernameTest {
         }
         if (fidoAuthenticatorServiceComponentMock != null) {
             fidoAuthenticatorServiceComponentMock.close();
+        }
+        if (fileBasedConfigurationBuilderMock != null) {
+            fileBasedConfigurationBuilderMock.close();
         }
     }
 

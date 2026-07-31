@@ -93,6 +93,8 @@ import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.BLOCKED_USERSTORE_DOMAINS_LIST;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.BLOCKED_USERSTORE_DOMAINS_SEPARATOR;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.AUTHENTICATOR_FIDO;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.CHALLENGE_DATA;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.CHALLENGE_RESPONSE;
@@ -111,7 +113,6 @@ import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOA
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.TOKEN_RESPONSE;
 import static org.wso2.carbon.identity.application.authenticator.fido.util.FIDOAuthenticatorConstants.USER_NAME;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil.writeJson;
-import static org.wso2.carbon.user.core.UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME;
 
 /**
  * FIDO U2F Specification based authenticator.
@@ -124,6 +125,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     private static FIDOAuthenticator instance = new FIDOAuthenticator();
     private static final String AUTHENTICATOR_MESSAGE = "authenticatorMessage";
     public static final String IDF_AUTHENTICATOR = "IdentifierExecutor";
+
+    private static final String IS_USER_STORE_DOMAIN_BLOCKED = "isUserStoreDomainBlocked";
 
     @Override
     public AuthenticatorFlowStatus process(HttpServletRequest request, HttpServletResponse response,
@@ -172,6 +175,34 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(context);
 
         if (authenticatedUser != null) {
+
+            boolean isResolvedDomainBlocked =
+                    getBlockedUserStoreDomainsList().contains(authenticatedUser.getUserStoreDomain());
+            boolean existsOnlyInBlockedDomains =
+                    Boolean.TRUE.equals(context.getProperty(IS_USER_STORE_DOMAIN_BLOCKED));
+
+            if (isResolvedDomainBlocked || existsOnlyInBlockedDomains) {
+                String blockReason = isResolvedDomainBlocked
+                        ? "The user store domain: " + authenticatedUser.getUserStoreDomain() +
+                                " is blocked for FIDO authentication."
+                        : "The user could only be found in user store domains that are blocked for FIDO " +
+                                "authentication.";
+                if (log.isDebugEnabled()) {
+                    log.debug(blockReason);
+                }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                            FIDO_AUTH_SERVICE, VALIDATE_FIDO_REQUEST);
+                    diagnosticLogBuilder.resultMessage(blockReason)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                            .inputParam(LogConstants.InputKeys.STEP, context.getCurrentStep())
+                            .inputParams(getApplicationDetails(context));
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
+                redirectToPasskeysExistenceStatusPage(response, context, false);
+                return AuthenticatorFlowStatus.INCOMPLETE;
+            }
 
             // We need to identify the username that the server is using to identify the user. This is needed to handle
             // federated scenarios, since for federated users, the username in the authentication context is not same
@@ -1394,26 +1425,40 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                         String.format("Cannot find the user realm for the given tenant: %s", tenantId));
             }
 
+            final List<String> blockedUserStoreDomainsList = getBlockedUserStoreDomainsList();
+
             final AbstractUserStoreManager userStoreManager =
                     (AbstractUserStoreManager) userRealm.getUserStoreManager();
+            final String userStoreManagerDomain = getUserStoreManagerDomainName(userStoreManager);
 
-            if (!userStoreManager.isExistingUser(username) && !username.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+            final boolean isDomainQualified = username.contains(CarbonConstants.DOMAIN_SEPARATOR);
+            final boolean isPrimaryDomainBlocked = blockedUserStoreDomainsList.contains(userStoreManagerDomain);
+            final boolean existsInPrimaryDomain = !isDomainQualified && userStoreManager.isExistingUser(username);
+
+            boolean isUserResolved = false;
+            boolean existsInBlockedDomain = isPrimaryDomainBlocked && existsInPrimaryDomain;
+
+            if ((isPrimaryDomainBlocked || !existsInPrimaryDomain) && !isDomainQualified) {
                 UserStoreManager secondary = userStoreManager.getSecondaryUserStoreManager();
                 while (secondary != null) {
-                    final String domain = secondary.getRealmConfiguration()
-                            .getUserStoreProperties()
-                            .get(PROPERTY_DOMAIN_NAME);
+                    userStoreDomain = getUserStoreManagerDomainName(secondary);
 
-                    if (StringUtils.isNotBlank(domain)) {
-                        final String domainQualifiedUsername = UserCoreUtil.addDomainToName(username, domain);
+                    if (StringUtils.isNotBlank(userStoreDomain)) {
+                        final String domainQualifiedUsername =
+                                UserCoreUtil.addDomainToName(username, userStoreDomain);
                         if (userStoreManager.isExistingUser(domainQualifiedUsername)) {
-                            userStoreDomain = domain;
-                            break;
+                            if (!blockedUserStoreDomainsList.contains(userStoreDomain)) {
+                                isUserResolved = true;
+                                break;
+                            }
+                            existsInBlockedDomain = true;
                         }
                     }
                     secondary = secondary.getSecondaryUserStoreManager();
                 }
             }
+
+            context.setProperty(IS_USER_STORE_DOMAIN_BLOCKED, existsInBlockedDomain && !isUserResolved);
 
             // On a case-insensitive store, resolve the username to the case under which the passkey was
             // enrolled so a case-differing authorize `username` param (which bypasses Identifier First)
@@ -1472,5 +1517,40 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         } else {
             return user;
         }
+    }
+
+    /**
+     * Resolves the domain name of the given user store. {@link UserCoreUtil#getDomainName} dereferences the realm
+     * configuration, so the absence of one is handled here and reported as an unknown domain.
+     *
+     * @param userStoreManager The user store manager to read the domain name from.
+     * @return The upper cased domain name, or null when it cannot be determined.
+     */
+    private String getUserStoreManagerDomainName(UserStoreManager userStoreManager) {
+
+        if (userStoreManager == null || userStoreManager.getRealmConfiguration() == null) {
+            return null;
+        }
+        return UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+    }
+
+    /**
+     * Reads the user store domains that are blocked for FIDO authentication from the authenticator configuration.
+     * Entries are trimmed and upper cased, since they are compared against domain names returned by
+     * {@link UserCoreUtil#getDomainName}, which upper cases them.
+     *
+     * @return The blocked user store domain names, empty when the configuration is not set.
+     */
+    private List<String> getBlockedUserStoreDomainsList() {
+
+        List<String> blockedUserStoreDomainsList = new ArrayList<>();
+        String blockedUserStoreDomains =
+                getAuthenticatorConfig().getParameterMap().get(BLOCKED_USERSTORE_DOMAINS_LIST);
+        if (StringUtils.isNotBlank(blockedUserStoreDomains)) {
+            for (String domain : StringUtils.split(blockedUserStoreDomains, BLOCKED_USERSTORE_DOMAINS_SEPARATOR)) {
+                blockedUserStoreDomainsList.add(domain.trim().toUpperCase());
+            }
+        }
+        return blockedUserStoreDomainsList;
     }
 }
