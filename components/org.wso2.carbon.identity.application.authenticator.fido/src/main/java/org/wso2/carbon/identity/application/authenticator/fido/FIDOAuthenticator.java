@@ -1484,6 +1484,10 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             authenticatedUser.setUserStoreDomain(userStoreDomain);
         }
 
+        // AUTHDIAG (temporary) - this method sets the domain but never the user id.
+        log.info("AUTHDIAG fido-normalize outDomain=" + authenticatedUser.getUserStoreDomain()
+                + " userIdSet=" + authenticatedUser.isUserIdExists());
+
         return authenticatedUser;
     }
 
