@@ -181,6 +181,15 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             boolean existsOnlyInBlockedDomains =
                     Boolean.TRUE.equals(context.getProperty(IS_USER_STORE_DOMAIN_BLOCKED));
 
+            // AUTHDIAG (temporary) - the blocked domain gate, which sends the user to the passkey
+            // status page instead of a challenge.
+            log.info("AUTHDIAG fido-block-gate step=" + context.getCurrentStep()
+                    + " domain=" + authenticatedUser.getUserStoreDomain()
+                    + " userIdSet=" + authenticatedUser.isUserIdExists()
+                    + " resolvedDomainBlocked=" + isResolvedDomainBlocked
+                    + " onlyInBlockedDomains=" + existsOnlyInBlockedDomains
+                    + " willBlock=" + (isResolvedDomainBlocked || existsOnlyInBlockedDomains));
+
             if (isResolvedDomainBlocked || existsOnlyInBlockedDomains) {
                 String blockReason = isResolvedDomainBlocked
                         ? "The user store domain: " + authenticatedUser.getUserStoreDomain() +
@@ -560,9 +569,17 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             tokenResponse = base64URLDecode(request.getParameter(TOKEN_RESPONSE));
         }
         if (tokenResponse != null && !tokenResponse.contains(ERROR_CODE)) {
+            // AUTHDIAG (temporary) - which assertion path handles the response.
+            log.info("AUTHDIAG fido-assertion webAuthn=" + isWebAuthnEnabled()
+                    + " path=" + (user == null ? "usernameless" : "username")
+                    + " inDomain=" + (user == null ? null : user.getUserStoreDomain())
+                    + " inUserIdSet=" + (user != null && user.isUserIdExists()));
             if (isWebAuthnEnabled()) {
                 if (user == null) {
                     user = processFido2UsernamelessAuthenticationResponse(tokenResponse);
+                    // AUTHDIAG (temporary) - the user the credential itself resolved to.
+                    log.info("AUTHDIAG fido-usernameless-resolved domain=" + user.getUserStoreDomain()
+                            + " tenant=" + user.getTenantDomain() + " userIdSet=" + user.isUserIdExists());
                 } else {
                     processFido2AuthenticationResponse(user, tokenResponse);
                 }
@@ -571,6 +588,11 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 processFidoAuthenticationResponse(user, appID, tokenResponse);
             }
             user.setAuthenticatedSubjectIdentifier(user.getUsernameAsSubjectIdentifier(true, true));
+            // AUTHDIAG (temporary) - the subject FIDO hands back to the framework. This is the identity
+            // that ends up as sub and drives claim resolution.
+            log.info("AUTHDIAG fido-subject domain=" + user.getUserStoreDomain()
+                    + " tenant=" + user.getTenantDomain() + " userIdSet=" + user.isUserIdExists()
+                    + " federated=" + user.isFederatedUser());
             context.setSubject(user);
 
             // Check account lock status before completing the authentication.
@@ -867,15 +889,31 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         WebAuthnService webAuthnService = new WebAuthnService();
 
-        if (FrameworkUtils.isPreviousIdPAuthenticationFlowHandler(context)) {
+        boolean prevIsFlowHandler = FrameworkUtils.isPreviousIdPAuthenticationFlowHandler(context);
+        // AUTHDIAG (temporary) - gate on the branch below, which is one of the few places the FIDO
+        // connector itself writes the user id.
+        log.info("AUTHDIAG fido-mal-gate previousIsFlowHandler=" + prevIsFlowHandler
+                + " userNull=" + (user == null)
+                + " domain=" + (user == null ? null : user.getUserStoreDomain())
+                + " userIdSet=" + (user != null && user.isUserIdExists()));
+        if (prevIsFlowHandler) {
             boolean isUserResolved = FrameworkUtils.getIsUserResolved(context);
+            log.info("AUTHDIAG fido-mal-gate isUserResolved=" + isUserResolved);
             if (!isUserResolved && user != null) {
                 String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(user.toFullQualifiedUsername());
                 String tenantDomain = MultitenantUtils.getTenantDomain(user.toFullQualifiedUsername());
                 ResolvedUserResult resolvedUserResult = FrameworkUtils.
                         processMultiAttributeLoginIdentification(tenantAwareUsername, tenantDomain);
+                // AUTHDIAG (temporary) - multi attribute login resolution outcome.
+                log.info("AUTHDIAG fido-mal-result null=" + (resolvedUserResult == null)
+                        + " status=" + (resolvedUserResult == null ? null : resolvedUserResult.getResolvedStatus()));
                 if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS
                         .equals(resolvedUserResult.getResolvedStatus())) {
+                    // AUTHDIAG (temporary) - the FIDO connector overwriting the user id here.
+                    log.info("AUTHDIAG fido-mal-set oldUserIdSet=" + user.isUserIdExists()
+                            + " oldDomain=" + user.getUserStoreDomain()
+                            + " newUserId=" + resolvedUserResult.getUser().getUserID()
+                            + " newDomain=" + resolvedUserResult.getUser().getUserStoreDomain());
                     user.setUserName(resolvedUserResult.getUser().getUsername());
                     user.setUserId(resolvedUserResult.getUser().getUserID());
                     user.setUserStoreDomain(resolvedUserResult.getUser().getUserStoreDomain());
@@ -915,7 +953,14 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         //Initiate the usernameless authentication process when either the user is unidentified or the identified user
         // lacks an enrolled passkey.
-        if (user == null || !hasUserSetPasskeys(user)) {
+        boolean hasPasskeys = user != null && hasUserSetPasskeys(user);
+        // AUTHDIAG (temporary) - which challenge is issued, and the identity the passkey lookup used.
+        log.info("AUTHDIAG fido-challenge mode=" + (user == null || !hasPasskeys ? "usernameless" : "username")
+                + " domain=" + (user == null ? null : user.getUserStoreDomain())
+                + " tenant=" + (user == null ? null : user.getTenantDomain())
+                + " userIdSet=" + (user != null && user.isUserIdExists())
+                + " hasPasskeys=" + hasPasskeys);
+        if (user == null || !hasPasskeys) {
             if (resolvedRpId != null) {
                 return webAuthnService.startUsernamelessAuthenticationWithRpId(resolvedRpId, rpName, effectiveAppId);
             }
@@ -1106,12 +1151,22 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         for (StepConfig stepConfig : stepConfigMap.values()) {
             AuthenticatedUser authenticatedUserInStepConfig = stepConfig.getAuthenticatedUser();
             if (stepConfig.isSubjectAttributeStep() && authenticatedUserInStepConfig != null) {
+                // AUTHDIAG (temporary) - resolved from the subject attribute step.
+                log.info("AUTHDIAG fido-getuser source=subjectAttributeStep step=" + stepConfig.getOrder()
+                        + " domain=" + authenticatedUserInStepConfig.getUserStoreDomain()
+                        + " userIdSet=" + authenticatedUserInStepConfig.isUserIdExists());
                 return handleIdentifierFirstNormalization(context, authenticatedUserInStepConfig);
             }
         }
         if (context.getLastAuthenticatedUser() != null && context.getLastAuthenticatedUser().getUserName() != null) {
+            // AUTHDIAG (temporary) - fell back to the last authenticated user.
+            log.info("AUTHDIAG fido-getuser source=lastAuthenticatedUser"
+                    + " domain=" + context.getLastAuthenticatedUser().getUserStoreDomain()
+                    + " userIdSet=" + context.getLastAuthenticatedUser().isUserIdExists());
             return handleIdentifierFirstNormalization(context, context.getLastAuthenticatedUser());
         }
+        // AUTHDIAG (temporary) - no user identified; the usernameless path follows.
+        log.info("AUTHDIAG fido-getuser source=none");
         return null;
     }
 
@@ -1438,7 +1493,20 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             boolean isUserResolved = false;
             boolean existsInBlockedDomain = isPrimaryDomainBlocked && existsInPrimaryDomain;
 
-            if ((isPrimaryDomainBlocked || !existsInPrimaryDomain) && !isDomainQualified) {
+            // AUTHDIAG (temporary) - the inputs to the domain decision.
+            log.info("AUTHDIAG fido-normalize-in inDomain=" + userStoreDomain
+                    + " primaryStoreDomain=" + userStoreManagerDomain
+                    + " storeClass=" + userStoreManager.getClass().getSimpleName()
+                    + " domainQualified=" + isDomainQualified
+                    + " existsInPrimary=" + existsInPrimaryDomain
+                    + " primaryBlocked=" + isPrimaryDomainBlocked
+                    + " blockedList=" + blockedUserStoreDomainsList
+                    + " userIdSet=" + authenticatedUser.isUserIdExists());
+
+            boolean secondaryWalkRan = (isPrimaryDomainBlocked || !existsInPrimaryDomain) && !isDomainQualified;
+            log.info("AUTHDIAG fido-normalize-walk willWalkSecondaries=" + secondaryWalkRan);
+
+            if (secondaryWalkRan) {
                 UserStoreManager secondary = userStoreManager.getSecondaryUserStoreManager();
                 while (secondary != null) {
                     userStoreDomain = getUserStoreManagerDomainName(secondary);
@@ -1446,7 +1514,12 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     if (StringUtils.isNotBlank(userStoreDomain)) {
                         final String domainQualifiedUsername =
                                 UserCoreUtil.addDomainToName(username, userStoreDomain);
-                        if (userStoreManager.isExistingUser(domainQualifiedUsername)) {
+                        boolean existsHere = userStoreManager.isExistingUser(domainQualifiedUsername);
+                        // AUTHDIAG (temporary) - each secondary store considered.
+                        log.info("AUTHDIAG fido-normalize-try domain=" + userStoreDomain
+                                + " exists=" + existsHere
+                                + " blocked=" + blockedUserStoreDomainsList.contains(userStoreDomain));
+                        if (existsHere) {
                             if (!blockedUserStoreDomainsList.contains(userStoreDomain)) {
                                 isUserResolved = true;
                                 break;
@@ -1458,6 +1531,12 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 }
             }
 
+            // AUTHDIAG (temporary) - the outcome of the domain decision.
+            log.info("AUTHDIAG fido-normalize-out resolved=" + isUserResolved
+                    + " existsInBlockedDomain=" + existsInBlockedDomain
+                    + " chosenDomain=" + userStoreDomain
+                    + " markedBlocked=" + (existsInBlockedDomain && !isUserResolved));
+
             context.setProperty(IS_USER_STORE_DOMAIN_BLOCKED, existsInBlockedDomain && !isUserResolved);
 
             // On a case-insensitive store, resolve the username to the case under which the passkey was
@@ -1465,9 +1544,17 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             // still matches the stored passkey.
             String caseDomain = StringUtils.isNotBlank(userStoreDomain)
                     ? userStoreDomain : IdentityUtil.getPrimaryDomainName();
-            if (!IdentityUtil.isUserStoreCaseSensitive(caseDomain, tenantId)) {
+            boolean caseSensitiveStore = IdentityUtil.isUserStoreCaseSensitive(caseDomain, tenantId);
+            // AUTHDIAG (temporary) - the passkey username normalisation branch.
+            log.info("AUTHDIAG fido-normalize-case caseDomain=" + caseDomain
+                    + " caseSensitive=" + caseSensitiveStore);
+            if (!caseSensitiveStore) {
                 String storedUsername = resolveStoredPasskeyUsername(
                         FIDOUtil.getUsernameWithoutDomain(username), tenantDomain, userStoreDomain);
+                // Usernames are not logged; only whether one was found and whether it differed.
+                log.info("AUTHDIAG fido-normalize-stored found=" + StringUtils.isNotBlank(storedUsername)
+                        + " differsFromRequest=" + (StringUtils.isNotBlank(storedUsername)
+                                && !storedUsername.equals(FIDOUtil.getUsernameWithoutDomain(username))));
                 if (StringUtils.isNotBlank(storedUsername)) {
                     username = storedUsername;
                 }
@@ -1515,8 +1602,14 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             throws AuthenticationFailedException {
 
         List<AuthHistory> authHistory = context.getAuthenticationStepHistory();
-        if (authHistory != null && !authHistory.isEmpty() &&
-                IDF_AUTHENTICATOR.equals(authHistory.get(0).getAuthenticatorName())) {
+        String firstAuthenticator = (authHistory != null && !authHistory.isEmpty())
+                ? authHistory.get(0).getAuthenticatorName() : null;
+        boolean willNormalize = IDF_AUTHENTICATOR.equals(firstAuthenticator);
+        // AUTHDIAG (temporary) - normalisation only runs when identifier first was the first step.
+        log.info("AUTHDIAG fido-idf-check firstAuthenticator=" + firstAuthenticator
+                + " expected=" + IDF_AUTHENTICATOR + " willNormalize=" + willNormalize
+                + " historySize=" + (authHistory == null ? -1 : authHistory.size()));
+        if (willNormalize) {
             return normalizeAuthenticatedUser(context, user);
         } else {
             return user;
