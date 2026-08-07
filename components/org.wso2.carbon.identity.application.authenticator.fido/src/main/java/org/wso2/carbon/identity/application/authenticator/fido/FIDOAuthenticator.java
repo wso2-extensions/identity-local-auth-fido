@@ -185,7 +185,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             // status page instead of a challenge.
             log.info("AUTHDIAG fido-block-gate step=" + context.getCurrentStep()
                     + " domain=" + authenticatedUser.getUserStoreDomain()
-                    + " userIdSet=" + authenticatedUser.isUserIdExists()
+                    + " userId=" + authDiagUserId(authenticatedUser)
                     + " resolvedDomainBlocked=" + isResolvedDomainBlocked
                     + " onlyInBlockedDomains=" + existsOnlyInBlockedDomains
                     + " willBlock=" + (isResolvedDomainBlocked || existsOnlyInBlockedDomains));
@@ -573,13 +573,13 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             log.info("AUTHDIAG fido-assertion webAuthn=" + isWebAuthnEnabled()
                     + " path=" + (user == null ? "usernameless" : "username")
                     + " inDomain=" + (user == null ? null : user.getUserStoreDomain())
-                    + " inUserIdSet=" + (user != null && user.isUserIdExists()));
+                    + " inUserId=" + authDiagUserId(user));
             if (isWebAuthnEnabled()) {
                 if (user == null) {
                     user = processFido2UsernamelessAuthenticationResponse(tokenResponse);
                     // AUTHDIAG (temporary) - the user the credential itself resolved to.
                     log.info("AUTHDIAG fido-usernameless-resolved domain=" + user.getUserStoreDomain()
-                            + " tenant=" + user.getTenantDomain() + " userIdSet=" + user.isUserIdExists());
+                            + " tenant=" + user.getTenantDomain() + " userId=" + authDiagUserId(user));
                 } else {
                     processFido2AuthenticationResponse(user, tokenResponse);
                 }
@@ -591,7 +591,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             // AUTHDIAG (temporary) - the subject FIDO hands back to the framework. This is the identity
             // that ends up as sub and drives claim resolution.
             log.info("AUTHDIAG fido-subject domain=" + user.getUserStoreDomain()
-                    + " tenant=" + user.getTenantDomain() + " userIdSet=" + user.isUserIdExists()
+                    + " tenant=" + user.getTenantDomain() + " userId=" + authDiagUserId(user)
                     + " federated=" + user.isFederatedUser());
             context.setSubject(user);
 
@@ -895,7 +895,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         log.info("AUTHDIAG fido-mal-gate previousIsFlowHandler=" + prevIsFlowHandler
                 + " userNull=" + (user == null)
                 + " domain=" + (user == null ? null : user.getUserStoreDomain())
-                + " userIdSet=" + (user != null && user.isUserIdExists()));
+                + " userId=" + authDiagUserId(user));
         if (prevIsFlowHandler) {
             boolean isUserResolved = FrameworkUtils.getIsUserResolved(context);
             log.info("AUTHDIAG fido-mal-gate isUserResolved=" + isUserResolved);
@@ -910,7 +910,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS
                         .equals(resolvedUserResult.getResolvedStatus())) {
                     // AUTHDIAG (temporary) - the FIDO connector overwriting the user id here.
-                    log.info("AUTHDIAG fido-mal-set oldUserIdSet=" + user.isUserIdExists()
+                    log.info("AUTHDIAG fido-mal-set oldUserId=" + authDiagUserId(user)
                             + " oldDomain=" + user.getUserStoreDomain()
                             + " newUserId=" + resolvedUserResult.getUser().getUserID()
                             + " newDomain=" + resolvedUserResult.getUser().getUserStoreDomain());
@@ -958,7 +958,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         log.info("AUTHDIAG fido-challenge mode=" + (user == null || !hasPasskeys ? "usernameless" : "username")
                 + " domain=" + (user == null ? null : user.getUserStoreDomain())
                 + " tenant=" + (user == null ? null : user.getTenantDomain())
-                + " userIdSet=" + (user != null && user.isUserIdExists())
+                + " userId=" + authDiagUserId(user)
                 + " hasPasskeys=" + hasPasskeys);
         if (user == null || !hasPasskeys) {
             if (resolvedRpId != null) {
@@ -1124,6 +1124,28 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
      * @param authenticatedUser AuthenticationContext.
      * @return User id.
      */
+    /**
+     * AUTHDIAG (temporary). Reads the user id for logging <b>without</b> resolving it.
+     * <p>
+     * {@link AuthenticatedUser#getUserId()} resolves against the user store and caches the result
+     * when the id is not already set, so calling it from a log statement would bind the id and
+     * change the behaviour being investigated. {@link AuthenticatedUser#isUserIdExists()} is a plain
+     * null check, and getUserId() short circuits to the cached value once it passes.
+     *
+     * @return the user id if already resolved, otherwise null.
+     */
+    private static String authDiagUserId(AuthenticatedUser user) {
+
+        if (user == null || !user.isUserIdExists()) {
+            return null;
+        }
+        try {
+            return user.getUserId();
+        } catch (UserIdNotFoundException e) {
+            return "unresolved";
+        }
+    }
+
     private Optional<String> getUserId(AuthenticatedUser authenticatedUser) {
 
         if (authenticatedUser == null) {
@@ -1154,7 +1176,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 // AUTHDIAG (temporary) - resolved from the subject attribute step.
                 log.info("AUTHDIAG fido-getuser source=subjectAttributeStep step=" + stepConfig.getOrder()
                         + " domain=" + authenticatedUserInStepConfig.getUserStoreDomain()
-                        + " userIdSet=" + authenticatedUserInStepConfig.isUserIdExists());
+                        + " userId=" + authDiagUserId(authenticatedUserInStepConfig));
                 return handleIdentifierFirstNormalization(context, authenticatedUserInStepConfig);
             }
         }
@@ -1162,7 +1184,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
             // AUTHDIAG (temporary) - fell back to the last authenticated user.
             log.info("AUTHDIAG fido-getuser source=lastAuthenticatedUser"
                     + " domain=" + context.getLastAuthenticatedUser().getUserStoreDomain()
-                    + " userIdSet=" + context.getLastAuthenticatedUser().isUserIdExists());
+                    + " userId=" + authDiagUserId(context.getLastAuthenticatedUser()));
             return handleIdentifierFirstNormalization(context, context.getLastAuthenticatedUser());
         }
         // AUTHDIAG (temporary) - no user identified; the usernameless path follows.
@@ -1501,7 +1523,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                     + " existsInPrimary=" + existsInPrimaryDomain
                     + " primaryBlocked=" + isPrimaryDomainBlocked
                     + " blockedList=" + blockedUserStoreDomainsList
-                    + " userIdSet=" + authenticatedUser.isUserIdExists());
+                    + " userId=" + authDiagUserId(authenticatedUser));
 
             boolean secondaryWalkRan = (isPrimaryDomainBlocked || !existsInPrimaryDomain) && !isDomainQualified;
             log.info("AUTHDIAG fido-normalize-walk willWalkSecondaries=" + secondaryWalkRan);
@@ -1573,7 +1595,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
 
         // AUTHDIAG (temporary) - this method sets the domain but never the user id.
         log.info("AUTHDIAG fido-normalize outDomain=" + authenticatedUser.getUserStoreDomain()
-                + " userIdSet=" + authenticatedUser.isUserIdExists());
+                + " userId=" + authDiagUserId(authenticatedUser));
 
         return authenticatedUser;
     }
