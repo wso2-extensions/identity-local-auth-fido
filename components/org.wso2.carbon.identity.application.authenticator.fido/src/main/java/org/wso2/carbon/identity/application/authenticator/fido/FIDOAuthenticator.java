@@ -1602,17 +1602,8 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
     }
 
     /**
-     * Re-point the authenticated user's user id at the user store domain resolved by this authenticator.
-     * <p>
-     * The user id on the subject may have been resolved and cached against a different user store than the
-     * one resolved here. That happens when something reads the user id earlier in the flow, before the user
-     * store domain is finalised - for example a listener or data publisher running at the end of a previous
-     * step, ahead of an adaptive script that changes the domain. {@link AuthenticatedUser#getUserId()} caches
-     * on first call, so the stale id then survives into claim resolution and the subject identifier, even
-     * though this authenticator resolved the correct domain.
-     * <p>
-     * This is deliberately scoped to the FIDO authenticator. The id is only replaced when it disagrees with
-     * the store resolved here, and any failure to re-resolve leaves the existing value untouched.
+     * Realign the authenticated user's user id with the user store domain resolved by this authenticator.
+     * The id may have been resolved and cached against a different user store earlier in the flow.
      *
      * @param authenticatedUser The authenticated user whose user id should be realigned.
      * @param tenantDomain      Tenant domain of the user.
@@ -1636,7 +1627,6 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 authenticatedUser.setUserId(resolvedUserId);
             }
         } catch (UserSessionException | UserIdNotFoundException | RuntimeException e) {
-            // Leave the existing user id untouched if it cannot be re-resolved.
             if (log.isDebugEnabled()) {
                 log.debug("Could not realign the user id with the resolved user store domain: "
                         + userStoreDomain, e);
