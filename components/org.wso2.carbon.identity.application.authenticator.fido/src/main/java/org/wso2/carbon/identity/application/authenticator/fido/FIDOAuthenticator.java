@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorMessage;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authenticator.fido.dto.FIDOUser;
 import org.wso2.carbon.identity.application.authenticator.fido.exception.FIDOAuthenticatorServerException;
 import org.wso2.carbon.identity.application.authenticator.fido.internal.FIDOAuthenticatorServiceComponent;
@@ -65,6 +66,7 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserRealm;
@@ -1589,6 +1591,7 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
         if (StringUtils.isNotBlank(userStoreDomain)) {
             authenticatedUser.setUserName(FIDOUtil.getUsernameWithoutDomain(username));
             authenticatedUser.setUserStoreDomain(userStoreDomain);
+            realignUserIdWithResolvedUserStore(authenticatedUser, tenantDomain, userStoreDomain);
         }
 
         // AUTHDIAG (temporary) - this method sets the domain but never the user id.
@@ -1596,6 +1599,39 @@ public class FIDOAuthenticator extends AbstractApplicationAuthenticator
                 + " userId=" + authDiagUserId(authenticatedUser));
 
         return authenticatedUser;
+    }
+
+    /**
+     * Realign the authenticated user's user id with the user store domain resolved by this authenticator.
+     * The id may have been resolved and cached against a different user store earlier in the flow.
+     *
+     * @param authenticatedUser The authenticated user whose user id should be realigned.
+     * @param tenantDomain      Tenant domain of the user.
+     * @param userStoreDomain   User store domain resolved by this authenticator.
+     */
+    private void realignUserIdWithResolvedUserStore(AuthenticatedUser authenticatedUser, String tenantDomain,
+                                                    String userStoreDomain) {
+
+        try {
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            String resolvedUserId = FrameworkUtils.resolveUserIdFromUsername(tenantId, userStoreDomain,
+                    authenticatedUser.getUserName());
+            if (StringUtils.isBlank(resolvedUserId)) {
+                return;
+            }
+            String currentUserId = authenticatedUser.isUserIdExists() ? authenticatedUser.getUserId() : null;
+            if (!resolvedUserId.equals(currentUserId)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Realigning the user id with the resolved user store domain: " + userStoreDomain);
+                }
+                authenticatedUser.setUserId(resolvedUserId);
+            }
+        } catch (UserSessionException | UserIdNotFoundException | RuntimeException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not realign the user id with the resolved user store domain: "
+                        + userStoreDomain, e);
+            }
+        }
     }
 
     private String resolveStoredPasskeyUsername(String username, String tenantDomain, String userStoreDomain)
