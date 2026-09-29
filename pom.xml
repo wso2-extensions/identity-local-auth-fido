@@ -258,7 +258,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>${fasterxml.jackson.version}</version>
+                <version>${fasterxml.jackson.annotations.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
@@ -413,8 +413,9 @@
         <identity.extension.utils.import.version.range>[1.0.8,2.0.0)</identity.extension.utils.import.version.range>
         <com.yubico.version>0.14.0</com.yubico.version>
         <google.guava.version>33.0.0-jre</google.guava.version>
-        <fasterxml.jackson.version>2.18.8</fasterxml.jackson.version>
-        <jackson-databind.version>2.18.8</jackson-databind.version>
+        <fasterxml.jackson.version>2.22.3</fasterxml.jackson.version>
+        <jackson-databind.version>2.22.3</jackson-databind.version>
+        <fasterxml.jackson.annotations.version>2.22</fasterxml.jackson.annotations.version>
         <bcprov.version>1.49.0.wso2v2</bcprov.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
         <imp.pkg.version.javax.servlet>[3.1.0, 4.0.0)</imp.pkg.version.javax.servlet>
@@ -433,8 +434,8 @@
         <lombok.version>1.18.30</lombok.version>
         <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
         <swagger.jaxrs.version>1.6.2</swagger.jaxrs.version>
-        <jackson-jaxrs-json-provider.version>2.16.1</jackson-jaxrs-json-provider.version>
-        <jackson-dataformat-xml.version>2.16.1</jackson-dataformat-xml.version>
+        <jackson-jaxrs-json-provider.version>2.22.3</jackson-jaxrs-json-provider.version>
+        <jackson-dataformat-xml.version>2.22.3</jackson-dataformat-xml.version>
         <guava.osgi.version.range>[18.0.0,34.0.0]</guava.osgi.version.range>
         <org.apache.cxf.version>3.5.9</org.apache.cxf.version>
         <maven.war.plugin.version>3.2.2</maven.war.plugin.version>
