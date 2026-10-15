@@ -370,11 +370,6 @@
                 <artifactId>json</artifactId>
                 <version>${json.wso2.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon.identity.framework</groupId>
-                <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
-                <version>${identity.framework.version}</version>
-            </dependency>
 
             <!--Test Dependencies-->
             <dependency>
