@@ -30,6 +30,7 @@ import com.webauthn4j.verifier.attestation.trustworthiness.certpath.DefaultCertP
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authenticator.fido2.exception.FIDO2AuthenticatorServerException;
+import org.wso2.carbon.identity.application.authenticator.fido2.util.FIDOUtil;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 
@@ -67,12 +68,12 @@ public class MetadataService {
      */
     public void initializeDefaultCertPathTrustworthinessVerifier() throws FIDO2AuthenticatorServerException {
 
-        objectConverter = new ObjectConverter();
+        objectConverter = FIDOUtil.createMetadataObjectConverter();
         X509Certificate rootCertificate;
         try {
             rootCertificate = getMDS3RootCertificate();
         } catch (FileNotFoundException | CertificateException e) {
-            log.error("Exception in reading the FIDO2 mds root certificate: " + e.getMessage());
+            log.error("Exception in reading the FIDO2 mds root certificate: " + e.getMessage(), e);
             throw new FIDO2AuthenticatorServerException("Exception in reading the FIDO2 mds root certificate", e);
         }
 
@@ -88,7 +89,7 @@ public class MetadataService {
                 return fidoMDS3MetadataBLOBProvider;
             } catch (RuntimeException e) {
                 log.error("Exception in constructing url based MDS blob provider for " + url
-                        + ". Specifying a null provider. Reason: " + e.getMessage());
+                        + ". Specifying a null provider. Reason: " + e.getMessage(), e);
                 return null;
             }
         }).filter(Objects::nonNull).toArray(MetadataBLOBProvider[]::new);
@@ -129,7 +130,7 @@ public class MetadataService {
                     }
                 }
             } catch (IOException e) {
-                log.error("Exception in constructing file based MDS blob provider: " + e.getMessage());
+                log.error("Exception in constructing file based MDS blob provider: " + e.getMessage(), e);
             }
         }
 

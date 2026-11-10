@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.application.authenticator.fido2.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.webauthn4j.converter.util.ObjectConverter;
 import com.yubico.internal.util.JacksonCodecs;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -46,6 +47,19 @@ public class FIDOUtil {
     public static String writeJson(Object o) throws JsonProcessingException {
 
         return jsonMapper.writeValueAsString(o);
+    }
+
+    /**
+     * Create an ObjectConverter configured with the FidoMetadataJSONModule to leniently parse
+     * FIDO metadata statements and TOC payloads.
+     *
+     * @return Configured ObjectConverter.
+     */
+    public static ObjectConverter createMetadataObjectConverter() {
+
+        ObjectConverter objectConverter = new ObjectConverter();
+        objectConverter.getJsonConverter().registerModule(new FidoMetadataJSONModule());
+        return objectConverter;
     }
 
     public static String getOrigin(HttpServletRequest request) {
