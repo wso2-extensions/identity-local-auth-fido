@@ -24,6 +24,7 @@
             <class name="org.wso2.carbon.identity.application.authenticator.fido2.core.WebAuthnServiceTest"/>
             <class name="org.wso2.carbon.identity.application.authenticator.fido2.dao.FIDO2DeviceStoreDAOTest"/>
             <class name="org.wso2.carbon.identity.application.authenticator.fido2.executor.FIDO2ExecutorTest"/>
+            <class name="org.wso2.carbon.identity.application.authenticator.fido2.util.FidoMetadataJSONModuleTest"/>
         </classes>
     </test>
 </suite>
