@@ -154,6 +154,7 @@ import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.LAST_NAME_CLAIM_URL;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.TRUSTED_ORIGINS;
 import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN;
+import static org.wso2.carbon.identity.application.authenticator.fido2.util.FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_NAME;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_ATTRIBUTE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
 
@@ -842,7 +843,8 @@ public class WebAuthnService {
                 // RelyingParty matches the credential's rpIdHash.  Otherwise fall back to the legacy
                 // derivation from the cached origin URL (browser-redirect flows).
                 if (cacheEntry.getExplicitRpId() != null) {
-                    relyingParty = buildRelyingPartyWithExplicitRpId(cacheEntry.getExplicitRpId(), APPLICATION_NAME);
+                    relyingParty = buildRelyingPartyWithExplicitRpId(cacheEntry.getExplicitRpId(),
+                            getRelyingPartyName());
                 } else {
                     relyingParty = buildRelyingParty(cacheEntry.getOrigin());
                 }
@@ -910,7 +912,7 @@ public class WebAuthnService {
             // RelyingParty matches the credential's rpIdHash.  Otherwise fall back to the legacy
             // derivation from the cached origin URL (browser-redirect flows).
             if (cacheEntry.getExplicitRpId() != null) {
-                relyingParty = buildRelyingPartyWithExplicitRpId(cacheEntry.getExplicitRpId(), APPLICATION_NAME);
+                relyingParty = buildRelyingPartyWithExplicitRpId(cacheEntry.getExplicitRpId(), getRelyingPartyName());
             } else {
                 relyingParty = buildRelyingParty(cacheEntry.getOrigin());
             }
@@ -1193,7 +1195,18 @@ public class WebAuthnService {
             rpId = originUrl.getHost();
         }
 
-        return buildRelyingPartyWithExplicitRpId(rpId, APPLICATION_NAME);
+        return buildRelyingPartyWithExplicitRpId(rpId, getRelyingPartyName());
+    }
+
+    /**
+     * Get the relying party display name configured via FIDO.WebAuthn.RelyingParty.Name.
+     *
+     * @return The configured relying party name, or APPLICATION_NAME if it is not configured.
+     */
+    private String getRelyingPartyName() {
+
+        String rpName = IdentityUtil.getProperty(FIDO_RELYING_PARTY_NAME);
+        return StringUtils.isNotBlank(rpName) ? rpName : APPLICATION_NAME;
     }
 
     /**
@@ -1202,7 +1215,7 @@ public class WebAuthnService {
      * request Origin header rather than from the IS servlet hostname.
      *
      * @param rpId   The relying party identifier (hostname) to use directly.
-     * @param rpName The relying party display name. Falls back to APPLICATION_NAME if blank.
+     * @param rpName The relying party display name. Falls back to the configured relying party name if blank.
      * @return A configured RelyingParty instance.
      * @throws FIDO2AuthenticatorServerException if trusted origins cannot be read.
      */
@@ -1210,7 +1223,7 @@ public class WebAuthnService {
             throws FIDO2AuthenticatorServerException {
 
         readTrustedOrigins();
-        String resolvedRpName = StringUtils.isNotBlank(rpName) ? rpName : APPLICATION_NAME;
+        String resolvedRpName = StringUtils.isNotBlank(rpName) ? rpName : getRelyingPartyName();
 
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
                 .id(rpId)
