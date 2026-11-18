@@ -868,6 +868,147 @@ public class WebAuthnServiceTest {
         }
     }
 
+    @DataProvider(name = "relyingPartyNameDataProvider")
+    public Object[][] relyingPartyNameDataProvider() {
+
+        return new Object[][]{
+                {"Custom RP Name", "Custom RP Name"},
+                {null, FIDO2AuthenticatorConstants.APPLICATION_NAME},
+                {"", FIDO2AuthenticatorConstants.APPLICATION_NAME},
+                {"   ", FIDO2AuthenticatorConstants.APPLICATION_NAME}
+        };
+    }
+
+    @Test(description = "Test case for the relying party name used in registration",
+            dataProvider = "relyingPartyNameDataProvider", priority = 27)
+    public void testRelyingPartyNameInRegistration(String configuredRpName, String expectedRpName)
+            throws JsonProcessingException, FIDO2AuthenticatorClientException, FIDO2AuthenticatorServerException {
+
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_NAME))
+                .thenReturn(configuredRpName);
+        try (MockedStatic<StartRegistrationOptions> startRegistrationOptionsMock =
+                     Mockito.mockStatic(StartRegistrationOptions.class)) {
+            StartRegistrationOptions startRegistrationOptions = mock(StartRegistrationOptions.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder startRegistrationOptionsBuilder =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.class);
+            StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages mandatoryStages1 =
+                    mock(StartRegistrationOptions.StartRegistrationOptionsBuilder.MandatoryStages.class);
+            startRegistrationOptionsMock.when(StartRegistrationOptions::builder).thenReturn(mandatoryStages1);
+            when(fido2DeviceStoreDAO.getUserHandleForUsername(anyString())).thenReturn(Optional.empty());
+            when(mandatoryStages1.user(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.timeout(anyLong())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.authenticatorSelection(any(AuthenticatorSelectionCriteria.class)))
+                    .thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.extensions(any())).thenReturn(startRegistrationOptionsBuilder);
+            when(startRegistrationOptionsBuilder.build()).thenReturn(startRegistrationOptions);
+            PublicKeyCredentialCreationOptions credentialCreationOptions =
+                    mock(PublicKeyCredentialCreationOptions.class);
+            when(relyingParty.startRegistration(any())).thenReturn(credentialCreationOptions);
+            when(objectMapperMock.writeValueAsString(any())).thenReturn("dummyValueAsString");
+
+            Either<String, FIDO2RegistrationRequest> result = webAuthnService.startFIDO2Registration(ORIGIN);
+            Assert.assertTrue(result.isRight());
+            Mockito.verify(mandatoryStages).identity(
+                    Mockito.argThat(identity -> expectedRpName.equals(identity.getName())));
+        }
+    }
+
+    @Test(description = "Test case for startUsernamelessAuthenticationWithRpId() falling back to the configured " +
+            "relying party name when no rp name is provided", priority = 28)
+    public void testStartUsernamelessAuthenticationWithRpIdUsesConfiguredRpName()
+            throws AuthenticationFailedException {
+
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_NAME))
+                .thenReturn("Custom RP Name");
+        try (MockedStatic<StartAssertionOptions> startAssertionOptionsMock =
+                     Mockito.mockStatic(StartAssertionOptions.class)) {
+            StartAssertionOptions.StartAssertionOptionsBuilder startAssertionOptionsBuilder =
+                    mock(StartAssertionOptions.StartAssertionOptionsBuilder.class);
+            startAssertionOptionsMock.when(StartAssertionOptions::builder).thenReturn(startAssertionOptionsBuilder);
+            StartAssertionOptions startAssertionOptions = mock(StartAssertionOptions.class);
+            when(startAssertionOptionsBuilder.build()).thenReturn(startAssertionOptions);
+            when(relyingParty.startAssertion(any(StartAssertionOptions.class))).thenReturn(assertionRequest);
+            fidoUtilMock.when(() -> FIDOUtil.writeJson(any(AssertionRequestWrapper.class)))
+                    .thenReturn("assertionRequest");
+
+            webAuthnService.startUsernamelessAuthenticationWithRpId("localhost", null, ORIGIN);
+            Mockito.verify(mandatoryStages).identity(Mockito.argThat(identity ->
+                    "localhost".equals(identity.getId()) && "Custom RP Name".equals(identity.getName())));
+        }
+    }
+
+    @Test(description = "Test case for startAuthenticationWithRpId() keeping the provided rp name when a " +
+            "relying party name is configured", priority = 29)
+    public void testStartAuthenticationWithRpIdKeepsProvidedRpName() throws AuthenticationFailedException {
+
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_NAME))
+                .thenReturn("Custom RP Name");
+        try (MockedStatic<StartAssertionOptions> startAssertionOptionsMock =
+                     Mockito.mockStatic(StartAssertionOptions.class)) {
+            StartAssertionOptions.StartAssertionOptionsBuilder startAssertionOptionsBuilder =
+                    mock(StartAssertionOptions.StartAssertionOptionsBuilder.class);
+            startAssertionOptionsMock.when(StartAssertionOptions::builder).thenReturn(startAssertionOptionsBuilder);
+            when(startAssertionOptionsBuilder.username(anyString())).thenReturn(startAssertionOptionsBuilder);
+            StartAssertionOptions startAssertionOptions = mock(StartAssertionOptions.class);
+            when(startAssertionOptionsBuilder.build()).thenReturn(startAssertionOptions);
+            when(relyingParty.startAssertion(any(StartAssertionOptions.class))).thenReturn(assertionRequest);
+            fidoUtilMock.when(() -> FIDOUtil.writeJson(any(AssertionRequestWrapper.class)))
+                    .thenReturn("assertionRequest");
+
+            webAuthnService.startAuthenticationWithRpId(
+                    "localhost", "Test App", USERNAME, TENANT_DOMAIN, USER_STORE_DOMAIN, ORIGIN);
+            Mockito.verify(mandatoryStages).identity(
+                    Mockito.argThat(identity -> "Test App".equals(identity.getName())));
+        }
+    }
+
+    @Test(description = "Test case for finishUsernamelessAuthentication() using the configured relying party name " +
+            "for an explicit rpId", priority = 30)
+    public void testFinishUsernamelessAuthenticationWithExplicitRpIdUsesConfiguredRpName()
+            throws JsonProcessingException, AuthenticationFailedException, MalformedURLException,
+            AssertionFailedException {
+
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_NAME))
+                .thenReturn("Custom RP Name");
+        when(objectMapperMock.readValue(finishUsernamelessAuthenticationResponseString, AssertionResponse.class))
+                .thenReturn(finishUsernamelessAuthenticationResponse);
+        when(fido2Cache.getValueFromCacheByRequestId(any(FIDO2CacheKey.class))).thenReturn(fido2CacheEntry);
+        when(fido2CacheEntry.getAssertionRequest()).thenReturn("assertionRequest");
+        when(fido2CacheEntry.getOrigin()).thenReturn(new URL(ORIGIN));
+        when(fido2CacheEntry.getExplicitRpId()).thenReturn("localhost");
+        when(objectMapperMock.readValue("assertionRequest", AssertionRequest.class)).thenReturn(assertionRequest);
+        when(relyingParty.finishAssertion(any(FinishAssertionOptions.class))).thenReturn(assertionResult);
+        when(assertionResult.isSuccess()).thenReturn(true);
+        when(assertionResult.getUsername()).thenReturn(USERNAME);
+
+        webAuthnService.finishUsernamelessAuthentication(finishUsernamelessAuthenticationResponseString);
+        Mockito.verify(mandatoryStages).identity(Mockito.argThat(identity ->
+                "localhost".equals(identity.getId()) && "Custom RP Name".equals(identity.getName())));
+    }
+
+    @Test(description = "Test case for finishAuthentication() using the configured relying party name for an " +
+            "explicit rpId", priority = 31)
+    public void testFinishAuthenticationWithExplicitRpIdUsesConfiguredRpName() throws JsonProcessingException,
+            MalformedURLException, AuthenticationFailedException, AssertionFailedException {
+
+        identityUtilMock.when(() -> IdentityUtil.getProperty(FIDO2AuthenticatorConstants.FIDO_RELYING_PARTY_NAME))
+                .thenReturn("Custom RP Name");
+        when(objectMapperMock.readValue(finishAuthenticationResponseString, AssertionResponse.class))
+                .thenReturn(finishAuthenticationResponse);
+        when(fido2Cache.getValueFromCacheByRequestId(any(FIDO2CacheKey.class))).thenReturn(fido2CacheEntry);
+        when(fido2CacheEntry.getAssertionRequest()).thenReturn("assertionRequest");
+        when(fido2CacheEntry.getExplicitRpId()).thenReturn("localhost");
+        when(objectMapperMock.readValue("assertionRequest", AssertionRequest.class)).thenReturn(assertionRequest);
+        when(relyingParty.finishAssertion(any(FinishAssertionOptions.class))).thenReturn(assertionResult);
+        when(assertionResult.isSuccess()).thenReturn(true);
+        when(assertionResult.getUsername()).thenReturn(USERNAME);
+
+        webAuthnService.finishAuthentication(USERNAME, TENANT_DOMAIN, USER_STORE_DOMAIN,
+                finishAuthenticationResponseString);
+        Mockito.verify(mandatoryStages).identity(Mockito.argThat(identity ->
+                "localhost".equals(identity.getId()) && "Custom RP Name".equals(identity.getName())));
+    }
+
     @Test(description = "Test case for getTrustedOrigins() method", priority = 17)
     public void testGetTrustedOrigins() throws FIDO2AuthenticatorServerException {
 
