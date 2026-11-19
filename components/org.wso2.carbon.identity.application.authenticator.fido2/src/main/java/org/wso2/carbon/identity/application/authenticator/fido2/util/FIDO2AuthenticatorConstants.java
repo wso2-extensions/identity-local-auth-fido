@@ -61,6 +61,7 @@ public class FIDO2AuthenticatorConstants {
     public static final int FIDO_MDS_SCHEDULER_INITIAL_DELAY_DEFAULT_VALUE = 0;
     public static final String FIDO_RELYING_PARTY_USE_FULL_EFFECTIVE_DOMAIN
             = "FIDO.WebAuthn.RelyingParty.UseFullEffectiveDomain";
+    public static final String FIDO_RELYING_PARTY_NAME = "FIDO.WebAuthn.RelyingParty.Name";
 
     public static final String FIDO_CONFIG_RESOURCE_TYPE_NAME = "fido-config";
     public static final String FIDO2_CONFIG_RESOURCE_NAME = "fido2-validations";
